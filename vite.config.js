@@ -1,7 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
+const repositoryBase = '/CodexTest/';
+
+export default defineConfig(({ command }) => ({
   plugins: [react()],
-  base: '/react-tailwind-blog/'
-});
+  base: command === 'build' ? repositoryBase : '/'
+}));
