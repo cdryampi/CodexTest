@@ -10,7 +10,9 @@
       "En esta guía exploramos los conceptos de componentes, props y estado, acompañados de ejemplos sencillos para que puedas iniciar tu propio proyecto con confianza.",
       "También revisamos el ecosistema que rodea a React y cómo herramientas como Vite, Tailwind CSS y Flowbite pueden ayudarte a crear experiencias ricas y eficientes."
     ],
-    "etiquetas": ["React", "Frontend", "JavaScript"]
+    "etiquetas": ["React", "Frontend", "JavaScript"],
+    "imagen": "https://images.unsplash.com/photo-1523475472560-d2df97ec485c?auto=format&fit=crop&w=1200&q=80",
+    "imagenAlt": "Código de React en una pantalla con iluminación tenue"
   },
   {
     "id": "diseno-con-tailwind",
@@ -23,7 +25,9 @@
       "Veremos cómo personalizar la configuración, reutilizar patrones de diseño y mantener un estilo coherente en tu proyecto.",
       "Para complementar, utilizamos componentes de Flowbite que aceleran el desarrollo y ofrecen una base visual bien definida."
     ],
-    "etiquetas": ["Tailwind", "Diseño", "Productividad"]
+    "etiquetas": ["Tailwind", "Diseño", "Productividad"],
+    "imagen": "https://images.unsplash.com/photo-1523475472560-5a6bc78c15a0?auto=format&fit=crop&w=1200&q=80",
+    "imagenAlt": "Persona diseñando componentes en un tablero con notas adhesivas"
   },
   {
     "id": "navegacion-con-react-router",
@@ -36,6 +40,8 @@
       "En este artículo cubrimos la configuración básica, el uso de parámetros de ruta y la integración con componentes de terceros.",
       "Aprenderás a crear experiencias fluidas para tus usuarios, incluyendo navegación programática y enlaces accesibles."
     ],
-    "etiquetas": ["React Router", "Routing", "Buenas prácticas"]
+    "etiquetas": ["React Router", "Routing", "Buenas prácticas"],
+    "imagen": "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1200&q=80",
+    "imagenAlt": "Panel de control con múltiples caminos iluminados"
   }
 ]

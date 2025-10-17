@@ -6,6 +6,9 @@ Proyecto de blog clásico construido con **React**, **Vite**, **Tailwind CSS**, 
 
 - Frontend moderno creado con Vite y React 18.
 - Estilos utilitarios con Tailwind CSS y componentes accesibles de Flowbite React.
+- Modo oscuro/claro con persistencia en `localStorage` y compatibilidad con Flowbite.
+- Heroicons integrados en la navegación, tarjetas y comentarios para reforzar la jerarquía visual.
+- Tarjetas de posts enriquecidas con imágenes responsivas y efectos de interacción.
 - Navegación dinámica mediante React Router DOM v6.
 - Datos estáticos almacenados en archivos JSON para posts y comentarios.
 - Flujo de despliegue automatizado hacia GitHub Pages desde la rama `main`.
@@ -55,6 +58,12 @@ npm run preview
 - Actualiza los archivos en `src/data/` para modificar posts y comentarios.
 - Ajusta los componentes en `src/pages/` y `src/components/` para adaptar el contenido o estilo.
 - Si cambias el nombre del repositorio, actualiza la propiedad `base` en `vite.config.js` y el basename del `BrowserRouter` en `src/main.jsx`.
+
+## Experiencia de usuario
+
+- El botón de modo oscuro se encuentra en la barra de navegación y sincroniza la preferencia con el almacenamiento local.
+- Los íconos provienen de [@heroicons/react](https://github.com/tailwindlabs/heroicons) y se utilizan para comunicar acciones y metadatos de forma visual.
+- Cada tarjeta de post cuenta con imágenes de Unsplash adaptativas y animaciones suaves para mejorar la interacción.
 
 ## Licencia
 
