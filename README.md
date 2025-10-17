@@ -50,11 +50,6 @@ npm run preview
    - Compilará el proyecto con `npm run build`.
    - Publicará el contenido de `dist/` en la rama `gh-pages` mediante [JamesIves/github-pages-deploy-action@v4](https://github.com/JamesIves/github-pages-deploy-action).
 
-## Solución de problemas
-
-- **Errores 403 al instalar dependencias**: verifica que tu entorno tenga acceso al registro de npm (https://registry.npmjs.org). Si trabajas detrás de un proxy, configura las variables `npm_config_proxy` y `npm_config_https_proxy` o consulta con tu equipo de infraestructura.
-- **El comando `npm run dev` no encuentra `vite`**: asegúrate de ejecutar `npm install` o `npm ci` antes de iniciar el servidor de desarrollo para que se descarguen las dependencias necesarias.
-
 ## Personalización
 
 - Actualiza los archivos en `src/data/` para modificar posts y comentarios.
