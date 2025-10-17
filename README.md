@@ -43,19 +43,12 @@ npm run preview
 
 ## Despliegue automático con GitHub Actions
 
-1. Habilita GitHub Pages en la rama `gh-pages` desde la configuración del repositorio.
-2. (Opcional) Si tu repositorio no se llama **react-tailwind-blog** o deseas usar un nombre diferente para el subdirectorio publicado, define la variable de entorno `VITE_BASE_PATH` con el valor deseado (por ejemplo `mi-blog`). El workflow utilizará automáticamente el nombre real del repositorio en GitHub Actions, por lo que normalmente no es necesario cambiar nada.
+1. Asegúrate de que el repositorio en GitHub se llame **react-tailwind-blog**.
+2. Habilita GitHub Pages en la rama `gh-pages` desde la configuración del repositorio.
 3. Cada vez que hagas push a `main`, el workflow `deploy.yml`:
    - Instalará dependencias con `npm ci`.
    - Compilará el proyecto con `npm run build`.
-- Publicará el contenido de `dist/` en la rama `gh-pages` mediante [JamesIves/github-pages-deploy-action@v4](https://github.com/JamesIves/github-pages-deploy-action).
-
-> **Consejo:** Si trabajas en local con un nombre de repositorio diferente y quieres previsualizar el mismo subdirectorio que usará GitHub Pages, crea un archivo `.env` con `VITE_BASE_PATH=mi-repo` antes de ejecutar `npm run build` o `npm run preview`.
-
-## Solución de problemas
-
-- **Errores 403 al instalar dependencias**: verifica que tu entorno tenga acceso al registro de npm (https://registry.npmjs.org). Si trabajas detrás de un proxy, configura las variables `npm_config_proxy` y `npm_config_https_proxy` o consulta con tu equipo de infraestructura.
-- **El comando `npm run dev` no encuentra `vite`**: asegúrate de ejecutar `npm install` o `npm ci` antes de iniciar el servidor de desarrollo para que se descarguen las dependencias necesarias.
+   - Publicará el contenido de `dist/` en la rama `gh-pages` mediante [JamesIves/github-pages-deploy-action@v4](https://github.com/JamesIves/github-pages-deploy-action).
 
 ## Personalización
 
