@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "postId": "introduccion-react",
+    "autor": "Marcos",
+    "fecha": "2024-02-05",
+    "contenido": "Excelente resumen para quienes inician en React. Me ayudó a comprender mejor el flujo de datos."
+  },
+  {
+    "id": 2,
+    "postId": "introduccion-react",
+    "autor": "Lucía",
+    "fecha": "2024-02-06",
+    "contenido": "¿Podrían profundizar en el manejo de efectos secundarios en un próximo artículo?"
+  },
+  {
+    "id": 3,
+    "postId": "diseno-con-tailwind",
+    "autor": "Pedro",
+    "fecha": "2024-02-18",
+    "contenido": "Tailwind cambió mi forma de trabajar. Gracias por los tips sobre componentes reutilizables."
+  },
+  {
+    "id": 4,
+    "postId": "navegacion-con-react-router",
+    "autor": "Sofía",
+    "fecha": "2024-02-25",
+    "contenido": "La explicación sobre rutas dinámicas fue muy clara. ¡Sigan así!"
+  }
+]
