@@ -1,0 +1,41 @@
+[
+  {
+    "id": "introduccion-react",
+    "titulo": "Introducción a React",
+    "resumen": "Descubre los fundamentos de React y cómo empezar a crear interfaces modernas.",
+    "autor": "Laura Gómez",
+    "fecha": "2024-02-01",
+    "contenido": [
+      "React es una biblioteca de JavaScript enfocada en la construcción de interfaces de usuario. Fue creada por Facebook y su adopción ha crecido gracias a su enfoque declarativo y orientado a componentes.",
+      "En esta guía exploramos los conceptos de componentes, props y estado, acompañados de ejemplos sencillos para que puedas iniciar tu propio proyecto con confianza.",
+      "También revisamos el ecosistema que rodea a React y cómo herramientas como Vite, Tailwind CSS y Flowbite pueden ayudarte a crear experiencias ricas y eficientes."
+    ],
+    "etiquetas": ["React", "Frontend", "JavaScript"]
+  },
+  {
+    "id": "diseno-con-tailwind",
+    "titulo": "Diseño eficiente con Tailwind CSS",
+    "resumen": "Aprende a crear interfaces responsivas y consistentes utilizando utilidades de Tailwind.",
+    "autor": "Carlos Pérez",
+    "fecha": "2024-02-15",
+    "contenido": [
+      "Tailwind CSS propone un enfoque basado en utilidades que permite construir interfaces complejas con clases predefinidas.",
+      "Veremos cómo personalizar la configuración, reutilizar patrones de diseño y mantener un estilo coherente en tu proyecto.",
+      "Para complementar, utilizamos componentes de Flowbite que aceleran el desarrollo y ofrecen una base visual bien definida."
+    ],
+    "etiquetas": ["Tailwind", "Diseño", "Productividad"]
+  },
+  {
+    "id": "navegacion-con-react-router",
+    "titulo": "Navegación moderna con React Router",
+    "resumen": "Gestiona rutas dinámicas, parámetros y vistas anidadas con React Router DOM.",
+    "autor": "Ana Martínez",
+    "fecha": "2024-02-22",
+    "contenido": [
+      "React Router DOM se ha convertido en el estándar para manejar la navegación en aplicaciones de React.",
+      "En este artículo cubrimos la configuración básica, el uso de parámetros de ruta y la integración con componentes de terceros.",
+      "Aprenderás a crear experiencias fluidas para tus usuarios, incluyendo navegación programática y enlaces accesibles."
+    ],
+    "etiquetas": ["React Router", "Routing", "Buenas prácticas"]
+  }
+]
