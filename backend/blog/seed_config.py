@@ -6,10 +6,16 @@ from typing import Tuple
 
 from django.conf import settings
 
+
+def _is_env_flag_true(value: str) -> bool:
+    return value.lower() in {"1", "true", "yes"}
+
+
 POST_COUNT = 300
 COMMENTS_PER_POST_MIN = 3
 COMMENTS_PER_POST_MAX = 12
 USER_COUNT = 40
+STATIC_SEED_MODE = _is_env_flag_true(os.getenv("STATIC_SEED_MODE", "true"))
 TAGS_POOL = [
     "django",
     "react",
@@ -24,12 +30,11 @@ DEFAULT_PASSWORD = "password123"
 BULK_BATCH_SIZE = 500
 
 
-def _is_env_flag_true(value: str) -> bool:
-    return value.lower() in {"1", "true", "yes"}
-
-
 def is_seed_allowed() -> bool:
     """Return True if the current environment allows running seeds."""
+
+    if STATIC_SEED_MODE:
+        return True
 
     allow_seed = _is_env_flag_true(os.getenv("ALLOW_SEED", "false"))
     return bool(getattr(settings, "DEBUG", False) or allow_seed)

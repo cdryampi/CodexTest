@@ -46,7 +46,9 @@ La API de Django incorpora comandos de gestión para generar datos masivos de pr
 
 ## Guardas de entorno
 
-- Las semillas solo se ejecutan si `settings.DEBUG` es `True` **o** `ALLOW_SEED=true`.
+- Por defecto el repositorio opera en **modo estático**, por lo que las semillas están habilitadas sin necesidad de variables extras.
+  Si quieres volver al comportamiento anterior, exporta `STATIC_SEED_MODE=false`.
+- Cuando `STATIC_SEED_MODE=false`, las semillas solo se ejecutan si `settings.DEBUG` es `True` **o** `ALLOW_SEED=true`.
 - `SEED_ON_MIGRATE=true` habilita la ejecución automática de `seed_all` tras `migrate` (respeta las guardas anteriores).
 - `ALLOW_SEED_RESET=true` permite usar `--reset` en `seed_all`.
 
