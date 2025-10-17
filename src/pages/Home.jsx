@@ -390,8 +390,8 @@ function Home() {
             {paginatedPosts.map((post) => (
               <Card
                 key={post.id}
-                imgAlt={post.imagenAlt}
-                imgSrc={post.imagen}
+                imgAlt={post.imageAlt ?? post.imagenAlt}
+                imgSrc={post.image ?? post.imagen}
                 className="flex h-full flex-col justify-between overflow-hidden border border-slate-200 bg-white/90 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-sky-500/10 dark:border-slate-800 dark:bg-slate-900/70 dark:hover:shadow-sky-400/10"
               >
                 <div className="space-y-3">
