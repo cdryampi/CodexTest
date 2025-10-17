@@ -11,9 +11,9 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
-      default:
+      backend_net:
         aliases:
-          - posgres
+          - postgres
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
       interval: 10s
@@ -43,9 +43,17 @@ services:
       POSTGRES_HOST: "${POSTGRES_HOST:-postgres}"
       POSTGRES_PORT: "${POSTGRES_PORT:-5432}"
       GUNICORN_WORKERS: "${GUNICORN_WORKERS:-3}"
+    networks:
+      backend_net:
+        aliases:
+          - backend
     ports:
       - "8001:8000"
 
 volumes:
   pgdata:
     name: pgdata
+
+networks:
+  backend_net:
+    driver: bridge
