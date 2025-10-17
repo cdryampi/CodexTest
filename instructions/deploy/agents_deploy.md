@@ -6,7 +6,7 @@ El módulo de deploy ya incluye los artefactos necesarios para contenedizar el b
 - `deploy/backend.Dockerfile`: imagen basada en `python:3.12-alpine` que instala dependencias de sistema (para `psycopg2`), copia `backend/`, instala `requirements.txt` y arranca Gunicorn (`backendblog.wsgi:application`).
 - `deploy/docker-compose.yml`: define los servicios `postgres` y `backend` preparados para Dokploy.
   - `postgres`: imagen oficial `postgres:16`, variables (`POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`) recibidas del entorno y volumen nombrado `pgdata` para persistencia en `/var/lib/postgresql/data`. Incluye healthcheck con `pg_isready`.
-  - `backend`: construye usando `deploy/backend.Dockerfile`, hereda variables (`SECRET`, `DJANGO_DEBUG`, `DJANGO_SECURE_SSL_REDIRECT`, `DATABASE_URL` o `POSTGRES_*`, `GUNICORN_WORKERS`, etc.), depende del servicio de base de datos hasta que esté `healthy` y expone el puerto interno `8000` (Dokploy lo publicará tras el proxy HTTPS).
+  - `backend`: construye usando `deploy/backend.Dockerfile`, hereda variables (`SECRET`, `DJANGO_DEBUG`, `DJANGO_SECURE_SSL_REDIRECT`, `DATABASE_URL` o `POSTGRES_*`, `GUNICORN_WORKERS`, etc.), depende del servicio de base de datos hasta que esté `healthy`, expone el puerto interno `8000` y lo publica en el host `8001` para evitar conflictos locales (Dokploy lo publicará tras el proxy HTTPS).
 
 ## Configuración y seguridad
 - `ALLOWED_HOSTS` ya considera `backendblog.yampi.eu`, `localhost` y `127.0.0.1`; se pueden añadir extras vía `DJANGO_ALLOWED_HOSTS`.
