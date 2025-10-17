@@ -43,19 +43,12 @@ npm run preview
 
 ## Despliegue automático con GitHub Actions
 
-1. Habilita GitHub Pages en la rama `gh-pages` desde la configuración del repositorio.
-2. Este repositorio está preparado para desplegarse en **CodexTest**, por lo que la propiedad `base` de Vite ya apunta a `/CodexTest/` al generar el build. Si clonas el proyecto en otro repositorio, recuerda ajustar este valor en `vite.config.js` para que coincida con el nuevo nombre.
+1. Asegúrate de que el repositorio en GitHub se llame **react-tailwind-blog**.
+2. Habilita GitHub Pages en la rama `gh-pages` desde la configuración del repositorio.
 3. Cada vez que hagas push a `main`, el workflow `deploy.yml`:
    - Instalará dependencias con `npm ci`.
    - Compilará el proyecto con `npm run build`.
-- Publicará el contenido de `dist/` en la rama `gh-pages` mediante [JamesIves/github-pages-deploy-action@v4](https://github.com/JamesIves/github-pages-deploy-action).
-
-> **Consejo:** Tras modificar el nombre del repositorio, ejecuta `npm run build` y revisa el archivo `dist/index.html` para confirmar que los assets se referencian con el subdirectorio correcto.
-
-## Solución de problemas
-
-- **Errores 403 al instalar dependencias**: verifica que tu entorno tenga acceso al registro de npm (https://registry.npmjs.org). Si trabajas detrás de un proxy, configura las variables `npm_config_proxy` y `npm_config_https_proxy` o consulta con tu equipo de infraestructura.
-- **El comando `npm run dev` no encuentra `vite`**: asegúrate de ejecutar `npm install` o `npm ci` antes de iniciar el servidor de desarrollo para que se descarguen las dependencias necesarias.
+   - Publicará el contenido de `dist/` en la rama `gh-pages` mediante [JamesIves/github-pages-deploy-action@v4](https://github.com/JamesIves/github-pages-deploy-action).
 
 ## Personalización
 
