@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Dict
 
-from django.core.management import call_command
+from django.core.management import get_commands, load_command_class
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
@@ -103,19 +103,44 @@ class Command(BaseCommand):
         verbosity = int(options.get("verbosity", 1))
         domain = options.get("domain", "example.com")
 
+        available_commands = get_commands()
+
+        def run_seed_command(name: str, **command_options):
+            """Ejecuta un comando de seeds y devuelve su resumen."""
+
+            try:
+                app_name = available_commands[name]
+            except KeyError as exc:  # pragma: no cover - defensive guard
+                raise CommandError(
+                    f"El comando '{name}' no está disponible en esta instalación."
+                ) from exc
+
+            command = load_command_class(app_name, name)
+            command.stdout = self.stdout
+            command.stderr = self.stderr
+            command.style = self.style
+            summary = command.handle(**command_options)
+            if summary is None:
+                return {"created": 0, "skipped": 0}
+            if not isinstance(summary, dict):  # pragma: no cover - future proofing
+                raise CommandError(
+                    "Los comandos de semillas deben devolver un diccionario con el resumen"
+                )
+            return summary
+
         self.stdout.write("Iniciando ejecución de seeds...")
-        users_summary = call_command(
+        users_summary = run_seed_command(
             "seed_users",
             count=counts["users"],
             domain=domain,
             verbosity=verbosity,
         )
-        posts_summary = call_command(
+        posts_summary = run_seed_command(
             "seed_posts",
             count=counts["posts"],
             verbosity=verbosity,
         )
-        comments_summary = call_command(
+        comments_summary = run_seed_command(
             "seed_comments",
             per_post_min=counts["comments_min"],
             per_post_max=counts["comments_max"],
