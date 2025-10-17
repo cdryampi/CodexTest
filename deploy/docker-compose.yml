@@ -1,0 +1,22 @@
+# docker-compose.yml de ejemplo para la orquestación futura.
+# Servicios esperados:
+#   - frontend: servirá los archivos estáticos generados en la carpeta dist.
+#   - backend: ejecutará la API de Django con Gunicorn.
+#   - nginx: reverse proxy para Dokploy.
+#
+# No agregar servicios reales hasta que se integre la entrega continua basada en Docker y GHCR.
+version: '3.9'
+services:
+  frontend:
+    # imagen: ghcr.io/organizacion/blog-frontend:latest
+    # build:
+    #   context: ..
+    #   dockerfile: deploy/Dockerfile
+    # TODO: definir configuración cuando se habilite.
+    restart: "no"
+  backend:
+    # imagen: ghcr.io/organizacion/blog-backend:latest
+    restart: "no"
+  nginx:
+    # usará la configuración de deploy/nginx.conf
+    restart: "no"
