@@ -65,13 +65,12 @@ function Home() {
     const accumulator = new Map();
 
     posts.forEach((post) => {
-      post.tags.forEach((value, index) => {
-        const label = post.etiquetas?.[index] ?? value;
+      post.tags.forEach((value) => {
         const existing = accumulator.get(value);
         if (existing) {
           existing.count += 1;
         } else {
-          accumulator.set(value, { value, label, count: 1 });
+          accumulator.set(value, { value, label: value, count: 1 });
         }
       });
     });
@@ -244,10 +243,10 @@ function Home() {
     () =>
       filteredByTags.map((post) => ({
         ...post,
-        title: post.titulo,
-        excerpt: post.resumen,
-        content: post.contenido.join(' '),
-        tags: [...post.tags, ...(post.etiquetas ?? [])]
+        title: post.title,
+        excerpt: post.excerpt,
+        content: typeof post.content === 'string' ? post.content.replace(/\n+/g, ' ') : '',
+        tags: [...post.tags]
       })),
     [filteredByTags]
   );
@@ -389,14 +388,18 @@ function Home() {
           <div className="grid gap-8 md:grid-cols-2">
             {paginatedPosts.map((post) => (
               <Card
-                key={post.id}
-                imgAlt={post.imageAlt ?? post.imagenAlt}
-                imgSrc={post.image ?? post.imagen}
+                key={post.slug}
                 className="flex h-full flex-col justify-between overflow-hidden border border-slate-200 bg-white/90 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-sky-500/10 dark:border-slate-800 dark:bg-slate-900/70 dark:hover:shadow-sky-400/10"
               >
+                <img
+                  src={post.thumb}
+                  alt={post.imageAlt}
+                  loading="lazy"
+                  className="h-48 w-full rounded-2xl object-cover transition duration-300 transform hover:scale-[1.02] hover:shadow-lg"
+                />
                 <div className="space-y-3">
                   <div className="flex flex-wrap gap-2">
-                    {post.etiquetas.map((tag) => (
+                    {post.tags.map((tag) => (
                       <Badge
                         key={tag}
                         color="info"
@@ -407,23 +410,23 @@ function Home() {
                     ))}
                   </div>
                   <h2 className="text-2xl font-semibold text-slate-900 transition-colors duration-300 dark:text-white">
-                    {post.titulo}
+                    {post.title}
                   </h2>
                   <p className="flex flex-wrap items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
                     <span className="inline-flex items-center gap-1">
                       <UserCircleIcon className="h-4 w-4" aria-hidden="true" />
-                      {post.autor}
+                      {post.author}
                     </span>
                     <span className="inline-flex items-center gap-1">
                       <ClockIcon className="h-4 w-4" aria-hidden="true" />
-                      {new Date(post.fecha).toLocaleDateString('es-ES', { dateStyle: 'long' })}
+                      {new Date(post.date).toLocaleDateString('es-ES', { dateStyle: 'long' })}
                     </span>
                   </p>
-                  <p className="text-base text-slate-600 dark:text-slate-300">{post.resumen}</p>
+                  <p className="text-base text-slate-600 dark:text-slate-300">{post.excerpt}</p>
                 </div>
                 <div className="pt-4">
                   <Link
-                    to={`/post/${post.id}`}
+                    to={`/post/${post.slug}`}
                     className="inline-flex items-center gap-2 text-sm font-semibold text-sky-600 transition duration-300 hover:gap-3 hover:text-sky-500 dark:text-sky-300 dark:hover:text-sky-200"
                   >
                     Leer artículo completo

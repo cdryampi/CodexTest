@@ -12,14 +12,33 @@ import posts from '../data/posts.json';
 import comments from '../data/comments.json';
 
 function Post() {
-  const { postId } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
 
-  const post = useMemo(() => posts.find((item) => item.id === postId), [postId]);
-  const postComments = useMemo(
-    () => comments.filter((comment) => comment.postId === postId),
-    [postId]
+  const post = useMemo(() => posts.find((item) => item.slug === slug), [slug]);
+  const postComments = useMemo(() => {
+    if (!post) {
+      return [];
+    }
+
+    return comments.filter((comment) => comment.postId === post.id);
+  }, [post]);
+
+  const orderedComments = useMemo(
+    () =>
+      postComments
+        .map((comment) => ({ ...comment }))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+    [postComments]
   );
+
+  const contentParagraphs = useMemo(() => {
+    if (!post?.content) {
+      return [];
+    }
+
+    return post.content.split('\n\n').filter((paragraph) => paragraph.trim().length > 0);
+  }, [post]);
 
   if (!post) {
     return (
@@ -45,8 +64,8 @@ function Post() {
       <header className="space-y-6">
         <figure className="overflow-hidden rounded-3xl border border-slate-200 shadow-sm transition duration-300 dark:border-slate-800 dark:shadow-slate-900/40">
           <img
-            src={post.image ?? post.imagen}
-            alt={post.imageAlt ?? post.imagenAlt}
+            src={post.image}
+            alt={post.imageAlt}
             className="h-72 w-full object-cover transition duration-500 hover:scale-[1.02]"
             loading="lazy"
           />
@@ -55,11 +74,11 @@ function Post() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 dark:text-slate-400">
               <UserCircleIcon className="h-5 w-5" aria-hidden="true" />
-              {post.autor}
+              {post.author}
             </span>
             <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 dark:text-slate-400">
               <ClockIcon className="h-5 w-5" aria-hidden="true" />
-              {new Date(post.fecha).toLocaleDateString('es-ES', { dateStyle: 'long' })}
+              {new Date(post.date).toLocaleDateString('es-ES', { dateStyle: 'long' })}
             </span>
             <span className="inline-flex items-center gap-1 text-sm font-medium text-sky-600 dark:text-sky-300">
               <ChatBubbleLeftRightIcon className="h-5 w-5" aria-hidden="true" />
@@ -67,10 +86,10 @@ function Post() {
             </span>
           </div>
           <h1 className="text-4xl font-bold text-slate-900 transition-colors duration-300 dark:text-white">
-            {post.titulo}
+            {post.title}
           </h1>
           <div className="flex flex-wrap gap-2">
-            {post.etiquetas.map((tag) => (
+            {post.tags.map((tag) => (
               <Badge
                 key={tag}
                 color="info"
@@ -85,7 +104,7 @@ function Post() {
       </header>
 
       <section className="space-y-6 text-lg leading-relaxed text-slate-700 dark:text-slate-300">
-        {post.contenido.map((paragraph, index) => (
+        {contentParagraphs.map((paragraph, index) => (
           <p key={index} className="transition duration-300">
             {paragraph}
           </p>
@@ -106,13 +125,13 @@ function Post() {
           <h2 className="text-2xl font-semibold text-slate-900 transition-colors duration-300 dark:text-white">
             Comentarios ({postComments.length})
           </h2>
-          {postComments.length === 0 ? (
+          {orderedComments.length === 0 ? (
             <p className="text-slate-600 dark:text-slate-400">
               Aún no hay comentarios. ¡Sé la primera persona en compartir tus ideas!
             </p>
           ) : (
             <div className="space-y-4">
-              {postComments.map((comment) => (
+              {orderedComments.map((comment) => (
                 <Card
                   key={comment.id}
                   className="border border-slate-200 bg-white/90 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-sky-500/50 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/70 dark:hover:border-sky-400/50"
@@ -120,14 +139,14 @@ function Post() {
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <span className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
                       <UserCircleIcon className="h-5 w-5" aria-hidden="true" />
-                      {comment.autor}
+                      {comment.author}
                     </span>
                     <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                       <ClockIcon className="h-4 w-4" aria-hidden="true" />
-                      {new Date(comment.fecha).toLocaleDateString('es-ES', { dateStyle: 'medium' })}
+                      {new Date(comment.date).toLocaleDateString('es-ES', { dateStyle: 'medium' })}
                     </span>
                   </div>
-                  <p className="mt-1 text-slate-600 dark:text-slate-300">{comment.contenido}</p>
+                  <p className="mt-1 text-slate-600 dark:text-slate-300">{comment.content}</p>
                 </Card>
               ))}
             </div>

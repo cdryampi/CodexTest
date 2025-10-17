@@ -63,7 +63,7 @@ npm run preview
 
 - El botón de modo oscuro se encuentra en la barra de navegación y sincroniza la preferencia con el almacenamiento local.
 - Los íconos provienen de [@heroicons/react](https://github.com/tailwindlabs/heroicons) y se utilizan para comunicar acciones y metadatos de forma visual.
-- Cada tarjeta de post utiliza imágenes en formato SVG descargadas de Wikimedia Commons, almacenadas localmente y optimizadas para la web.
+- Cada tarjeta de post utiliza imágenes remotas generadas mediante seeds estables en Picsum Photos.
 
 ## Búsqueda, filtros y paginación
 
@@ -80,14 +80,17 @@ npm run preview
 4. Cambiar de página y usar los botones Atrás/Adelante del navegador para confirmar que el estado se sincroniza correctamente.
 5. Forzar una búsqueda sin resultados para visualizar el estado vacío y restablecer filtros desde el botón disponible.
 
+## Contenido de ejemplo
+
+- Las imágenes de las tarjetas y cabeceras provienen de la API pública [Picsum Photos](https://picsum.photos).
+- Cada post utiliza una `seed` única basada en su `slug` para mantener la misma fotografía en cada build.
+- Puedes modificar la URL cambiando los parámetros `seed`, `width` y `height`. Por ejemplo, `https://picsum.photos/seed/nuevo-slug/800/600` generará otra variante manteniendo la relación con ese identificador.
+- Si deseas usar tus propios recursos, sustituye las URLs en `src/data/posts.json` por las rutas deseadas y ajusta los tamaños según tus necesidades.
+
 ## Imágenes y licencias
 
-- Las ilustraciones de los posts se descargan de [Wikimedia Commons](https://commons.wikimedia.org/) y se almacenan localmente en `public/images/<slug>/` para evitar el hotlinking.
-- Cada carpeta de imágenes incluye un archivo `CREDITS.md` con el autor, el título original, la URL de referencia y la licencia de uso correspondiente.
-- Las imágenes licenciadas como **CC BY-SA 4.0** (Tailwind CSS Logo) requieren mantener la atribución indicada en `CREDITS.md` y compartirse bajo los mismos términos.
-- Las imágenes con licencia **CC0 1.0** (Minimal traffic light icon symbol) pueden reutilizarse sin restricciones, pero se conserva la referencia para mantener el contexto.
-- El logotipo de React se distribuye como texto en **dominio público**; ten en cuenta que sigue siendo una marca registrada de Facebook/Meta y se debe respetar el uso de la marca.
-- En `src/data/posts.json` se añadió metadata de accesibilidad y procedencia (`image`, `imageAlt`, `imageSource`, `author`, `license`, `licenseUrl`) para que la interfaz y cualquier consumidor adicional de los datos disponga de la información necesaria.
+- Picsum Photos entrega fotografías libres de uso para prototipos y demostraciones; revisa sus términos si planeas un uso comercial.
+- Mantener seeds estables asegura que el contenido visual no cambie inesperadamente entre deploys.
 
 ## Licencia
 
