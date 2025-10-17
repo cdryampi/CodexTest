@@ -1,22 +1,47 @@
-# docker-compose.yml de ejemplo para la orquestación futura.
-# Servicios esperados:
-#   - frontend: servirá los archivos estáticos generados en la carpeta dist.
-#   - backend: ejecutará la API de Django con Gunicorn.
-#   - nginx: reverse proxy para Dokploy.
-#
-# No agregar servicios reales hasta que se integre la entrega continua basada en Docker y GHCR.
-version: '3.9'
+version: "3.9"
+
 services:
-  frontend:
-    # imagen: ghcr.io/organizacion/blog-frontend:latest
-    # build:
-    #   context: ..
-    #   dockerfile: deploy/Dockerfile
-    # TODO: definir configuración cuando se habilite.
-    restart: "no"
+  postgres:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
   backend:
-    # imagen: ghcr.io/organizacion/blog-backend:latest
-    restart: "no"
-  nginx:
-    # usará la configuración de deploy/nginx.conf
-    restart: "no"
+    build:
+      context: ..
+      dockerfile: deploy/backend.Dockerfile
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SECRET: ${SECRET}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-False}
+      DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-True}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+      DJANGO_CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-}
+      DATABASE_URL: ${DATABASE_URL:-}
+      POSTGRES_DB: ${POSTGRES_DB:-}
+      POSTGRES_USER: ${POSTGRES_USER:-}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+    ports:
+      - "8000:8000"
+
+volumes:
+  pgdata:
+    name: pgdata
