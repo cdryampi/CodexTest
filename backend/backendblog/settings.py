@@ -1,20 +1,39 @@
 """Django settings for backendblog project."""
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import Dict
 from urllib.parse import parse_qs, urlparse
 
-from decouple import Csv, config
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = config("SECRET", default="unsafe-secret-key")
-DEBUG = config("DJANGO_DEBUG", cast=bool, default=False)
+def _env(key: str, default: str | None = None) -> str | None:
+    value = os.getenv(key)
+    if value is None:
+        return default
+    value = value.strip()
+    return value if value else default
+
+
+def _env_bool(key: str, default: bool = False) -> bool:
+    value = os.getenv(key)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_csv(key: str) -> list[str]:
+    raw = os.getenv(key, "")
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+SECRET_KEY = _env("SECRET_KEY", "unsafe-secret-key")
+DEBUG = _env_bool("DEBUG", False)
 
 _default_allowed_hosts = ["backendblog.yampi.eu", "localhost", "127.0.0.1"]
-_extra_allowed_hosts = [host for host in config("DJANGO_ALLOWED_HOSTS", default="", cast=Csv()) if host]
+_extra_allowed_hosts = _env_csv("ALLOWED_HOSTS")
 ALLOWED_HOSTS = list(dict.fromkeys(_default_allowed_hosts + _extra_allowed_hosts))
 
 INSTALLED_APPS = [
@@ -33,6 +52,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -60,7 +80,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "backendblog.wsgi.application"
 
-_DATABASE_URL = config("DATABASE_URL", default=None)
+_DATABASE_URL = _env("DATABASE_URL")
 if _DATABASE_URL:
     parsed = urlparse(_DATABASE_URL)
     DATABASES: Dict[str, Dict[str, object]] = {
@@ -80,11 +100,11 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": config("POSTGRES_DB", default="postgres"),
-            "USER": config("POSTGRES_USER", default="postgres"),
-            "PASSWORD": config("POSTGRES_PASSWORD", default="postgres"),
-            "HOST": config("POSTGRES_HOST", default="postgres"),
-            "PORT": str(config("POSTGRES_PORT", default=5432, cast=int)),
+            "NAME": _env("POSTGRES_DB", "postgres"),
+            "USER": _env("POSTGRES_USER", "postgres"),
+            "PASSWORD": _env("POSTGRES_PASSWORD", "postgres"),
+            "HOST": _env("POSTGRES_HOST", "postgres"),
+            "PORT": str(_env("POSTGRES_PORT", "5432")),
         }
     }
 
@@ -100,30 +120,27 @@ TIME_ZONE = "Europe/Madrid"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+_static_dir = BASE_DIR / "static"
+if _static_dir.exists():
+    STATICFILES_DIRS = [_static_dir]
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-SECURE_SSL_REDIRECT = config("DJANGO_SECURE_SSL_REDIRECT", cast=bool, default=not DEBUG)
+SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", not DEBUG)
 if SECURE_SSL_REDIRECT:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-CSRF_TRUSTED_ORIGINS = list(
-    dict.fromkeys(
-        config(
-            "DJANGO_CSRF_TRUSTED_ORIGINS",
-            default="https://backendblog.yampi.eu,https://cdryampi.github.io",
-            cast=Csv(),
-        )
-    )
-)
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(_env_csv("CSRF_TRUSTED_ORIGINS")))
 
-_raw_cors_origins = config(
-    "DJANGO_CORS_ALLOWED_ORIGINS",
-    default="https://cdryampi.github.io/CodexTest/",
-    cast=Csv(),
-)
+_raw_cors_origins = _env_csv("CORS_ALLOWED_ORIGINS")
 CORS_ALLOWED_ORIGINS: list[str] = []
 CORS_ALLOWED_ORIGIN_REGEXES: list[str] = []
 for origin in _raw_cors_origins:
