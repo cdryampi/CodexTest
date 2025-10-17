@@ -52,3 +52,26 @@ class Post(models.Model):
                 candidate = f"{base_slug}-{suffix}"
             self.slug = candidate
         super().save(*args, **kwargs)
+
+
+class Comment(models.Model):
+    """Comment associated to a post."""
+
+    post = models.ForeignKey(
+        Post,
+        related_name="comments",
+        on_delete=models.CASCADE,
+        verbose_name="Entrada",
+    )
+    author_name = models.CharField("Autor", max_length=255)
+    content = models.TextField("Contenido")
+    created_at = models.DateTimeField("Creado", default=timezone.now)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        verbose_name = "Comentario"
+        verbose_name_plural = "Comentarios"
+
+    def __str__(self) -> str:
+        author = self.author_name or "Anónimo"
+        return f"{author} en {self.post.title}"
