@@ -65,6 +65,21 @@ npm run preview
 - Los íconos provienen de [@heroicons/react](https://github.com/tailwindlabs/heroicons) y se utilizan para comunicar acciones y metadatos de forma visual.
 - Cada tarjeta de post cuenta con imágenes de Unsplash adaptativas y animaciones suaves para mejorar la interacción.
 
+## Búsqueda, filtros y paginación
+
+- El listado de posts admite búsqueda instantánea con [Fuse.js](https://fusejs.io/) sobre el título, resumen, contenido y etiquetas.
+- Puedes combinar la búsqueda con un filtro multiselección por etiquetas; los cambios se reflejan en la URL (`?q=`, `&tags=` y `&page=`) y se recuerdan automáticamente en `localStorage` (`blog:list:state`).
+- Los atajos `/` (enfocar) y `Esc` (limpiar y desenfocar) permiten interactuar con el buscador sin usar el mouse.
+- La paginación muestra 6 entradas por página e incluye navegación anterior/siguiente con mantenimiento del estado entre recargas.
+
+### Pruebas manuales recomendadas
+
+1. Buscar por palabras específicas del contenido y validar que los resultados se actualizan al escribir.
+2. Seleccionar varias etiquetas, comprobar que solo se muestran los posts relacionados y que la URL incluye `tags=`.
+3. Recargar la página y verificar que se conserva la última búsqueda, filtros y página activa.
+4. Cambiar de página y usar los botones Atrás/Adelante del navegador para confirmar que el estado se sincroniza correctamente.
+5. Forzar una búsqueda sin resultados para visualizar el estado vacío y restablecer filtros desde el botón disponible.
+
 ## Licencia
 
 Este proyecto se distribuye bajo la licencia MIT. Siéntete libre de adaptarlo a tus necesidades.
