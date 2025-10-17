@@ -45,8 +45,8 @@ function Post() {
       <header className="space-y-6">
         <figure className="overflow-hidden rounded-3xl border border-slate-200 shadow-sm transition duration-300 dark:border-slate-800 dark:shadow-slate-900/40">
           <img
-            src={post.imagen}
-            alt={post.imagenAlt}
+            src={post.image ?? post.imagen}
+            alt={post.imageAlt ?? post.imagenAlt}
             className="h-72 w-full object-cover transition duration-500 hover:scale-[1.02]"
             loading="lazy"
           />

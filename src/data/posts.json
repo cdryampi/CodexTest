@@ -12,8 +12,14 @@
     ],
     "etiquetas": ["React", "Frontend", "JavaScript"],
     "tags": ["react", "frontend", "javascript"],
-    "imagen": "https://images.unsplash.com/photo-1523475472560-d2df97ec485c?auto=format&fit=crop&w=1200&q=80",
-    "imagenAlt": "Código de React en una pantalla con iluminación tenue"
+    "imagen": "/images/introduccion-react/react-icon.svg",
+    "imagenAlt": "Logotipo oficial de React en color celeste sobre un fondo oscuro",
+    "image": "/images/introduccion-react/react-icon.svg",
+    "imageAlt": "Logotipo oficial de React en color celeste sobre un fondo oscuro",
+    "imageSource": "wikimedia",
+    "author": "Facebook",
+    "license": "Public domain",
+    "licenseUrl": "https://en.wikipedia.org/wiki/Public_domain"
   },
   {
     "id": "diseno-con-tailwind",
@@ -28,8 +34,14 @@
     ],
     "etiquetas": ["Tailwind", "Diseño", "Productividad"],
     "tags": ["tailwind", "diseno", "productividad"],
-    "imagen": "https://images.unsplash.com/photo-1523475472560-5a6bc78c15a0?auto=format&fit=crop&w=1200&q=80",
-    "imagenAlt": "Persona diseñando componentes en un tablero con notas adhesivas"
+    "imagen": "/images/diseno-con-tailwind/tailwindcss-logo.svg",
+    "imagenAlt": "Logotipo de Tailwind CSS en tonos azul y verde sobre fondo blanco",
+    "image": "/images/diseno-con-tailwind/tailwindcss-logo.svg",
+    "imageAlt": "Logotipo de Tailwind CSS en tonos azul y verde sobre fondo blanco",
+    "imageSource": "wikimedia",
+    "author": "Tailwind CSS",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
   },
   {
     "id": "navegacion-con-react-router",
@@ -44,7 +56,13 @@
     ],
     "etiquetas": ["React Router", "Routing", "Buenas prácticas"],
     "tags": ["react-router", "routing", "buenas-practicas"],
-    "imagen": "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1200&q=80",
-    "imagenAlt": "Panel de control con múltiples caminos iluminados"
+    "imagen": "/images/navegacion-con-react-router/traffic-light.svg",
+    "imagenAlt": "Ícono minimalista de un semáforo con sus tres luces en vertical",
+    "image": "/images/navegacion-con-react-router/traffic-light.svg",
+    "imageAlt": "Ícono minimalista de un semáforo con sus tres luces en vertical",
+    "imageSource": "wikimedia",
+    "author": "Peter Cooper Jr.",
+    "license": "CC0 1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
   }
 ]
