@@ -29,6 +29,11 @@ python manage.py loaddata blog/fixtures/seed_posts.json
 python manage.py createsuperuser  # opcional
 ```
 
+## Pruebas y migraciones en entornos de CI/CD
+- Antes de construir la imagen del backend ejecuta `python manage.py test` contra la base de datos PostgreSQL. Con Docker Compose puedes hacerlo con `docker compose run --rm backend python manage.py test` tras levantar `docker compose up -d postgres`.
+- Si el repositorio introduce migraciones nuevas, añade un paso que ejecute `python manage.py migrate` usando la misma base de datos preparada para las pruebas. Esto garantiza que el esquema queda sincronizado antes de desplegar.
+- Limpia los contenedores temporales de prueba (`docker compose rm -f backend`) para mantener los entornos efímeros y evitar datos residuales entre ejecuciones.
+
 Validar después del primer despliegue:
 - `/admin/` muestra el panel Jazzmin.
 - `GET https://backendblog.yampi.eu/api/posts/` responde con la lista paginada.
