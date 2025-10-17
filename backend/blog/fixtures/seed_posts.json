@@ -1,0 +1,43 @@
+[
+  {
+    "model": "blog.tag",
+    "pk": 1,
+    "fields": {
+      "name": "react"
+    }
+  },
+  {
+    "model": "blog.tag",
+    "pk": 2,
+    "fields": {
+      "name": "rendimiento"
+    }
+  },
+  {
+    "model": "blog.tag",
+    "pk": 3,
+    "fields": {
+      "name": "frontend"
+    }
+  },
+  {
+    "model": "blog.post",
+    "pk": 1,
+    "fields": {
+      "title": "Optimiza el renderizado en React",
+      "slug": "optimizacion-render-react",
+      "excerpt": "Aprende a identificar y resolver cuellos de botella en aplicaciones React usando memoización, Suspense y perfiles de rendimiento.",
+      "content": "Cuando una UI en React se vuelve lenta, casi siempre hay componentes que se renderizan más de lo necesario.\n\nEn este artículo repasamos cómo usar herramientas como React Profiler y las DevTools del navegador para detectar qué componentes provocan trabajo innecesario. También mostramos ejemplos prácticos de memoización con `React.memo`, `useMemo` y `useCallback`, junto con técnicas de división de código (code-splitting) para cargar solo lo imprescindible.\n\nPor último, analizamos cómo Suspense y las nuevas APIs concurrentes ayudan a que la experiencia de usuario se mantenga fluida incluso cuando el backend tarda en responder.",
+      "date": "2024-05-12",
+      "image": "https://images.codex.so/blog/react-performance-cover.jpg",
+      "thumb": "https://images.codex.so/blog/react-performance-thumb.jpg",
+      "imageAlt": "Componentes de React optimizados",
+      "author": "Equipo Codex",
+      "tags": [
+        1,
+        2,
+        3
+      ]
+    }
+  }
+]
