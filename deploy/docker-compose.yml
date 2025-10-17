@@ -10,6 +10,10 @@ services:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      default:
+        aliases:
+          - posgres
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
       interval: 10s
