@@ -28,6 +28,15 @@ El backend del blog ya está operativo con Django REST Framework y Jazzmin.
 - `POST /api/posts/`: crea un post permitiendo pasar tags por nombre (se crean si no existen).
 - `GET /api/posts/<slug>/`: detalle por slug.
 
+## Pruebas automatizadas
+- Las pruebas viven en `blog/tests.py` y cubren el listado de posts y la creación de tags bajo demanda.
+- Ejecútalas con `python manage.py test` desde la carpeta `/backend`.
+- Antes de lanzarlas asegúrate de que la base de datos PostgreSQL está operativa. Si trabajas con Docker utiliza `docker compose up -d postgres` desde `/deploy` y luego `docker compose run --rm backend python manage.py test`.
+- Cuando modifiques modelos o migraciones, corre `python manage.py migrate` contra la base de datos en marcha para alinear el esquema previo a las pruebas.
+
+## Agente de pruebas backend
+Se creó un agente específico en `instructions/backend/agents_backend_tests.md` para profundizar en la estrategia de testing automatizado.
+
 ## Puesta en marcha local
 ```bash
 cd backend
