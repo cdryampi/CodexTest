@@ -6,7 +6,8 @@ import {
   MagnifyingGlassIcon,
   MoonIcon,
   SunIcon,
-  HomeIcon
+  HomeIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 import { useUIStore, selectIsDark, selectSearch } from '../store/useUI';
 
@@ -88,6 +89,15 @@ function NavBar() {
         <Navbar.Link as={Link} to="/" active={location.pathname === '/'} className="flex items-center gap-2 text-base text-slate-600 transition duration-300 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300">
           <HomeIcon className="h-5 w-5" aria-hidden="true" />
           Inicio
+        </Navbar.Link>
+        <Navbar.Link
+          as={Link}
+          to="/timeline"
+          active={location.pathname.startsWith('/timeline')}
+          className="flex items-center gap-2 text-base text-slate-600 transition duration-300 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
+        >
+          <ClockIcon className="h-5 w-5" aria-hidden="true" />
+          Timeline
         </Navbar.Link>
         <form
           role="search"
