@@ -136,4 +136,3 @@ class CommentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("El comentario debe tener al menos 5 caracteres.")
         return cleaned
 
-*** End of File
