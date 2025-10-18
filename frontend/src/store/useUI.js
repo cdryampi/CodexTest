@@ -238,7 +238,7 @@ export const useUIStore = create((set, get) => {
     },
     resetFilters: () => {
       safeStorage.remove(SEARCH_STORAGE_KEY);
-      set({ search: '', ordering: '-created_at', selectedTags: [], selectedCategory: null, page: 1 });
+      set({ search: '', ordering: '-date', selectedTags: [], selectedCategory: null, page: 1 });
     }
   };
 });

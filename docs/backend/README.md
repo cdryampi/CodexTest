@@ -150,12 +150,13 @@ Todas las rutas están bajo `/api/` según `backend/backendblog/urls.py`.
 - Esquema JSON: `GET /api/schema/`
 
 ### Posts
-- **Listar** `GET /api/posts/?page=&page_size=&search=&ordering=&tags=`
+- **Listar** `GET /api/posts/?page=&page_size=&search=&ordering=&tags=&category=`
   - Parámetros:
     - `page` / `page_size`: paginación numérica (máx. `page_size=50`).
     - `search`: busca en `title`, `content` y nombres de tags.
     - `ordering`: `created_at` (`date`), `-created_at`, `title`, `-title`.
     - `tags`: múltiple usando `?tags=python&tags=django` (usa `tags__name`).
+    - `category`: slug único que filtra por la categoría asociada al post.
   - Respuesta (extracto):
 
 ```json
@@ -170,6 +171,11 @@ Todas las rutas están bajo `/api/` según `backend/backendblog/urls.py`.
       "slug": "optimiza-el-renderizado-en-react",
       "excerpt": "Resumen del artículo...",
       "tags": ["react", "tutorial"],
+      "categories": ["frontend", "rendimiento"],
+      "categories_detail": [
+        { "slug": "frontend", "name": "Frontend", "description": "UI y diseño" },
+        { "slug": "rendimiento", "name": "Rendimiento", "description": "Perf tuning" }
+      ],
       "created_at": "2024-02-12",
       "image": "https://picsum.photos/seed/react/1200/800"
     }
@@ -186,6 +192,7 @@ Todas las rutas están bajo `/api/` según `backend/backendblog/urls.py`.
   "excerpt": "Resumen de las nuevas características...",
   "content": "El contenido debe tener al menos 20 caracteres...",
   "tags": ["django", "devops"],
+  "categories": ["backend", "productividad"],
   "date": "2024-03-15",
   "author": "Equipo CodexTest"
 }
@@ -195,6 +202,7 @@ Validaciones clave:
 - `title` ≥ 5 caracteres.
 - `content` ≥ 20 caracteres.
 - Los tags inexistentes se crean automáticamente.
+- Las categorías se envían por `slug`; si no existen se ignoran y se conserva la integridad de la relación.
 
 ### Comentarios
 - **Listar** `GET /api/posts/{slug}/comments/`
@@ -211,9 +219,17 @@ Validaciones clave:
 - Comentarios se ordenan por `created_at` descendente.
 - Validaciones: `author_name` no vacío, `content` ≥ 5 caracteres.
 
+### Categorías
+- **Listar** `GET /api/categories/?q=&is_active=&with_counts=`
+  - `q`: búsqueda textual en nombre o descripción (case-insensitive).
+  - `is_active`: admite `true/false`, `1/0` o `yes/no` para limitar por estado.
+  - `with_counts`: cuando es verdadero (`true`, `1`, `yes`) añade `post_count` con el total de posts asociados.
+- **Detalle** `GET /api/categories/{slug}/`
+- **Crear/Actualizar** `POST|PUT|PATCH /api/categories/` (requiere autenticación). Los slugs se generan automáticamente y se validan para evitar duplicados.
+
 ### Paginación, filtros y ordenación
 - Paginación: `PageNumberPagination` personalizada (`blog/pagination.py`) con `page`, `page_size` y límite de 50.
-- Filtros: `django-filter` permite `?tags=python` (se puede repetir el parámetro para múltiples tags).
+- Filtros: `django-filter` permite `?tags=python` (se puede repetir el parámetro para múltiples tags) y `?category=frontend` para restringir por slug de categoría.
 - Ordenación: `?ordering=created_at` o `?ordering=-title`.
 
 Consulta de ejemplo con `curl` y `jq`:

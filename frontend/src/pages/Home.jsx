@@ -43,6 +43,8 @@ function Home() {
     error: null
   });
   const [categoriesToken, setCategoriesToken] = useState(0);
+  const [categorySearch, setCategorySearch] = useState('');
+  const [onlyActiveCategories, setOnlyActiveCategories] = useState(true);
 
   const fetchPosts = useCallback(
     async (controller) => {
@@ -128,11 +130,16 @@ function Home() {
   };
 
   const fetchCategories = useCallback(
-    async (controller) => {
+    async (controller, { searchTerm = '', onlyActive = false } = {}) => {
       setCategoriesState((prev) => ({ ...prev, loading: true, error: null }));
 
       try {
-        const data = await getCategories({ with_counts: true, signal: controller.signal });
+        const data = await getCategories({
+          with_counts: true,
+          q: searchTerm,
+          is_active: onlyActive ? 'true' : undefined,
+          signal: controller.signal
+        });
         const items = Array.isArray(data.results) ? data.results : [];
         setCategoriesState({ items, loading: false, error: null });
       } catch (error) {
@@ -147,12 +154,35 @@ function Home() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchCategories(controller);
+    fetchCategories(controller, { searchTerm: categorySearch, onlyActive: onlyActiveCategories });
 
     return () => {
       controller.abort();
     };
-  }, [fetchCategories, categoriesToken]);
+  }, [fetchCategories, categoriesToken, categorySearch, onlyActiveCategories]);
+
+  const handleCategorySearchChange = (value) => {
+    setCategorySearch(value);
+  };
+
+  const handleCategorySearchClear = () => {
+    if (categorySearch) {
+      setCategorySearch('');
+    } else {
+      setCategoriesToken((value) => value + 1);
+    }
+  };
+
+  const handleCategoryOnlyActiveChange = (value) => {
+    setOnlyActiveCategories(Boolean(value));
+  };
+
+  const handleCategoryFiltersReset = () => {
+    setCategorySearch('');
+    setOnlyActiveCategories(true);
+    setSelectedCategory(null);
+    setCategoriesToken((value) => value + 1);
+  };
 
   const selectedCategoryLabel = useMemo(() => {
     if (!selectedCategory) {
@@ -239,6 +269,12 @@ function Home() {
               error={categoriesState.error}
               onSelect={handleCategoryChange}
               onRetry={handleCategoriesRetry}
+              searchValue={categorySearch}
+              onSearchChange={handleCategorySearchChange}
+              onSearchClear={handleCategorySearchClear}
+              onlyActive={onlyActiveCategories}
+              onOnlyActiveChange={handleCategoryOnlyActiveChange}
+              onResetFilters={handleCategoryFiltersReset}
             />
           )}
         </aside>
