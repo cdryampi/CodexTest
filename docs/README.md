@@ -3,6 +3,7 @@
 Este directorio centraliza guías impresas y versionables para el monorepo CodexTest. Antes de editar, revisa las instrucciones de colaboración en `../instructions/agents.md`.
 
 ## Índice
+- [Frontend – Buenas prácticas y guía operativa](frontend/README.md)
 - [Backend – Documentación](backend/README.md)
 - [Agentes del Backend](backend/agents.md)
 
