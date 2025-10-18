@@ -24,11 +24,89 @@ const API_BASE_URL = resolveApiBaseUrl();
 
 const DEFAULT_TIMEOUT = 12000;
 
+const isAbsoluteUrl = (value) => /^https?:\/\//i.test(value);
+
+const joinRelativePath = (base, targetPath) => {
+  const normalizedTarget = typeof targetPath === 'string' ? targetPath : '';
+  const baseSegments = (base || '').split('/').filter(Boolean);
+  const targetSegmentsRaw = normalizedTarget.split('/').filter(Boolean);
+  const hasTrailingSlash = normalizedTarget === '/' || normalizedTarget.endsWith('/');
+
+  let targetSegments = targetSegmentsRaw;
+  if (baseSegments.length && targetSegmentsRaw.length) {
+    const maxOverlap = Math.min(baseSegments.length, targetSegmentsRaw.length);
+    let overlapCount = 0;
+    while (overlapCount < maxOverlap && targetSegmentsRaw[overlapCount] === baseSegments[overlapCount]) {
+      overlapCount += 1;
+    }
+    if (overlapCount === baseSegments.length) {
+      targetSegments = targetSegmentsRaw.slice(overlapCount);
+    } else if (targetSegmentsRaw[0] === baseSegments[baseSegments.length - 1]) {
+      targetSegments = targetSegmentsRaw.slice(1);
+    }
+  }
+
+  const combinedSegments = [...baseSegments, ...targetSegments];
+
+  if (!combinedSegments.length) {
+    return hasTrailingSlash ? '/' : '/';
+  }
+
+  const joinedPath = `/${combinedSegments.join('/')}`;
+  return hasTrailingSlash ? `${joinedPath}/` : joinedPath;
+};
+
+const joinAbsolutePath = (base, targetPath) => {
+  const normalizedTarget = typeof targetPath === 'string' ? targetPath : '';
+  const baseUrl = new URL(base);
+  const baseSegments = baseUrl.pathname.split('/').filter(Boolean);
+  const targetSegmentsRaw = normalizedTarget.split('/').filter(Boolean);
+  const hasTrailingSlash = normalizedTarget === '/' || normalizedTarget.endsWith('/');
+
+  let targetSegments = targetSegmentsRaw;
+  if (baseSegments.length && targetSegmentsRaw.length) {
+    const maxOverlap = Math.min(baseSegments.length, targetSegmentsRaw.length);
+    let overlapCount = 0;
+    while (overlapCount < maxOverlap && targetSegmentsRaw[overlapCount] === baseSegments[overlapCount]) {
+      overlapCount += 1;
+    }
+    if (overlapCount === baseSegments.length) {
+      targetSegments = targetSegmentsRaw.slice(overlapCount);
+    } else if (targetSegmentsRaw[0] === baseSegments[baseSegments.length - 1]) {
+      targetSegments = targetSegmentsRaw.slice(1);
+    }
+  }
+
+  const combinedSegments = [...baseSegments, ...targetSegments];
+  let finalPath = combinedSegments.length ? `/${combinedSegments.join('/')}` : '/';
+
+  if (hasTrailingSlash && finalPath !== '/') {
+    finalPath = `${finalPath}/`;
+  }
+
+  baseUrl.pathname = finalPath;
+  return baseUrl.toString();
+};
+
 const buildUrl = (path, params = {}) => {
-  const normalizedPath = path.startsWith('http')
-    ? path
-    : `${API_BASE_URL.replace(/\/?$/, '')}/${path.replace(/^\//, '')}`;
-  const url = new URL(normalizedPath);
+  let normalizedPath;
+
+  if (!path) {
+    normalizedPath = isAbsoluteUrl(API_BASE_URL)
+      ? joinAbsolutePath(API_BASE_URL, '')
+      : joinRelativePath(API_BASE_URL, '');
+  } else if (isAbsoluteUrl(path)) {
+    normalizedPath = path;
+  } else {
+    normalizedPath = isAbsoluteUrl(API_BASE_URL)
+      ? joinAbsolutePath(API_BASE_URL, path)
+      : joinRelativePath(API_BASE_URL, path.startsWith('/') ? path : `/${path}`);
+  }
+
+  const baseForUrl = typeof window !== 'undefined' && window.location?.origin
+    ? window.location.origin
+    : 'http://localhost';
+  const url = new URL(normalizedPath, baseForUrl);
   Object.entries(params)
     .filter(([, value]) => value !== undefined && value !== null && value !== '')
     .forEach(([key, value]) => {
