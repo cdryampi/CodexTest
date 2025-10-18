@@ -541,6 +541,9 @@ export const listPosts = async ({
         previous: data?.previous ?? null
       };
     } catch (error) {
+      if (error?.name === 'AbortError') {
+        throw error;
+      }
       remoteAvailable = false;
     }
   }
@@ -564,6 +567,9 @@ export const getPost = async (slug, { signal } = {}) => {
       const { data } = await apiGet(`/api/posts/${slug}/`, { signal });
       return sanitizePost(normalizePostRecord(data));
     } catch (error) {
+      if (error?.name === 'AbortError') {
+        throw error;
+      }
       remoteAvailable = false;
     }
   }
@@ -596,6 +602,9 @@ export const listComments = async (slug, { signal } = {}) => {
       const stored = readStoredComments(slug);
       return sortByCreatedAt([...normalized, ...stored]).map(({ postSlug, postId, ...comment }) => ({ ...comment }));
     } catch (error) {
+      if (error?.name === 'AbortError') {
+        throw error;
+      }
       if (error?.status === 404) {
         return [];
       }
@@ -632,6 +641,9 @@ export const createComment = async (slug, payload, { signal } = {}) => {
       const { data } = await apiPost(`/api/posts/${slug}/comments/`, { body, signal });
       return data;
     } catch (error) {
+      if (error?.name === 'AbortError') {
+        throw error;
+      }
       remoteAvailable = false;
     }
   }
@@ -680,6 +692,9 @@ export const getCategories = async ({
         previous: data?.previous ?? null
       };
     } catch (error) {
+      if (error?.name === 'AbortError') {
+        throw error;
+      }
       remoteAvailable = false;
     }
   }
