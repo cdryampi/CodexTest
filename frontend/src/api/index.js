@@ -6,7 +6,21 @@ import categoriesSeed from '../data/categories.json';
 const DEFAULT_PAGE_SIZE = 9;
 const COMMENT_STORAGE_PREFIX = 'blog:comments:';
 
-const sanitizeSearchTerm = (value = '') => value.toString().trim().toLowerCase();
+const sanitizeSearchTerm = (value = '') => {
+  if (value == null) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value.trim().toLowerCase();
+  }
+
+  try {
+    return value.toString().trim().toLowerCase();
+  } catch (error) {
+    return '';
+  }
+};
 
 const sanitizeTags = (tags = []) => {
   const unique = new Set();
@@ -18,7 +32,30 @@ const sanitizeTags = (tags = []) => {
   return Array.from(unique);
 };
 
-const sanitizeCategory = (value = '') => value.toString().trim().toLowerCase();
+const sanitizeCategory = (value = '') => {
+  if (value == null) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value.trim().toLowerCase();
+  }
+
+  try {
+    return value.toString().trim().toLowerCase();
+  } catch (error) {
+    return '';
+  }
+};
+
+const FALLBACK_UNCATEGORIZED = Object.freeze({
+  slug: 'sin-categoria',
+  name: 'Sin categoría',
+  description: 'Publicaciones sin una categoría asignada.',
+  is_active: true,
+  post_count: 0,
+  is_virtual: true
+});
 
 const normalizeOrderingForApi = (ordering) => {
   if (ordering == null) {
@@ -154,9 +191,17 @@ const normalizeCategoryRecord = (rawCategory = {}) => {
   };
 };
 
-const seededCategories = ensureArray(categoriesSeed)
-  .map((category) => normalizeCategoryRecord(category))
-  .filter(Boolean);
+const seededCategories = (() => {
+  const normalized = ensureArray(categoriesSeed)
+    .map((category) => normalizeCategoryRecord(category))
+    .filter(Boolean);
+
+  if (!normalized.some((category) => category.slug === FALLBACK_UNCATEGORIZED.slug)) {
+    normalized.push({ ...FALLBACK_UNCATEGORIZED });
+  }
+
+  return normalized;
+})();
 const seededCategoriesBySlug = new Map(
   seededCategories.map((category) => [category.slug, category])
 );
@@ -196,6 +241,10 @@ const normalizePostRecord = (rawPost = {}, { categoriesLookup = seededCategories
     .filter(Boolean);
 
   const categorySlugsSet = new Set([...categorySlugsFromDetail, ...categoriesFromField]);
+  if (categorySlugsSet.size === 0) {
+    categorySlugsSet.add(FALLBACK_UNCATEGORIZED.slug);
+  }
+
   const categorySlugs = Array.from(categorySlugsSet);
 
   if (!categoriesDetail.length && categoriesLookup instanceof Map) {
@@ -215,6 +264,14 @@ const normalizePostRecord = (rawPost = {}, { categoriesLookup = seededCategories
       }
       return category;
     });
+  }
+
+  if (!categoriesDetail.length) {
+    const fallbackCategory =
+      categoriesLookup instanceof Map && categoriesLookup.has(FALLBACK_UNCATEGORIZED.slug)
+        ? categoriesLookup.get(FALLBACK_UNCATEGORIZED.slug)
+        : FALLBACK_UNCATEGORIZED;
+    categoriesDetail = [{ ...fallbackCategory }];
   }
 
   const normalizedCategoryNames = categoriesDetail
@@ -669,6 +726,10 @@ export const getCategories = async ({
     const normalizedItems = rawItems
       .map((category) => normalizeCategoryRecord(category))
       .filter(Boolean);
+
+    if (!normalizedItems.some((category) => category.slug === FALLBACK_UNCATEGORIZED.slug)) {
+      normalizedItems.push({ ...FALLBACK_UNCATEGORIZED });
+    }
 
     return {
       results: normalizedItems,
