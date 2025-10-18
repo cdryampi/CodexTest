@@ -42,7 +42,7 @@ function PostCard({ post }) {
   }
 
   const { slug, title, excerpt, tags = [], created_at: createdAt } = post;
-  const thumbnail = post.thumbnail ?? post.image ?? null;
+  const thumbnail = post.thumbnail ?? post.thumb ?? post.image ?? null;
   const readingMinutes = estimateReadingMinutes(excerpt || title);
   const displayExcerpt = truncateText(excerpt);
   const detailPath = slug ? generatePath('/post/:slug', { slug }) : '#';

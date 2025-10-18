@@ -188,7 +188,7 @@ function PostDetail() {
           <figure className="overflow-hidden rounded-3xl border border-slate-200 shadow-sm transition duration-300 dark:border-slate-800 dark:shadow-slate-900/40">
             <img
               src={post.image}
-              alt={`Imagen de portada para ${post.title}`}
+              alt={post.imageAlt || (post.title ? `Imagen de portada para ${post.title}` : 'Imagen representativa de la publicación')}
               className="h-72 w-full object-cover"
               loading="lazy"
             />
