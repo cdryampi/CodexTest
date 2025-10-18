@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Button, Select } from 'flowbite-react';
+import { Helmet } from 'react-helmet-async';
 import { getCategories, listPosts } from '../api';
 import PostList from '../components/PostList';
 import MotionProvider from '../components/motion/MotionProvider';
@@ -760,7 +761,8 @@ function Home() {
         onOnlyActiveChange={handleCategoryOnlyActiveChange}
         onResetFilters={handleCategoryFiltersReset}
       />
-    </div>
+      </div>
+    </>
   );
 }
 

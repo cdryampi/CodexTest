@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button } from 'flowbite-react';
+import { Helmet } from 'react-helmet-async';
 import {
   ArrowLeftIcon,
   CalendarIcon,
@@ -11,6 +12,14 @@ import { getPost, listComments } from '../api';
 import CommentsSection from '../components/CommentsSection';
 import Skeleton from '../components/common/Skeleton';
 import ReadingProgress from '../components/post/ReadingProgress';
+import {
+  buildPageTitle,
+  DEFAULT_OG_IMAGE,
+  DEFAULT_TWITTER_CARD,
+  sanitizeMetaText,
+  SITE_DESCRIPTION,
+  SITE_NAME
+} from '../seo/config.js';
 
 const formatDate = (value) => {
   if (!value) {
@@ -121,6 +130,43 @@ function Post() {
       .filter((paragraph) => paragraph.length > 0);
   }, [post]);
 
+  const seo = useMemo(() => {
+    if (!post) {
+      return {
+        title: buildPageTitle('Publicación'),
+        description: sanitizeMetaText(SITE_DESCRIPTION),
+        image: DEFAULT_OG_IMAGE,
+        imageAlt: sanitizeMetaText(SITE_NAME, 120)
+      };
+    }
+
+    const descriptionCandidates = [
+      post.seo_description,
+      post.meta_description,
+      post.description,
+      post.summary,
+      post.excerpt,
+      paragraphs[0],
+      SITE_DESCRIPTION
+    ];
+
+    const rawDescription =
+      descriptionCandidates
+        .map((value) => sanitizeMetaText(value, 280))
+        .find((value) => value && value.length > 0)
+      || SITE_DESCRIPTION;
+
+    const image = post.image ?? post.thumbnail ?? post.thumb ?? DEFAULT_OG_IMAGE;
+    const imageAltSource = post.imageAlt ?? post.title ?? SITE_NAME;
+
+    return {
+      title: buildPageTitle(post.title),
+      description: sanitizeMetaText(rawDescription),
+      image,
+      imageAlt: sanitizeMetaText(imageAltSource, 120)
+    };
+  }, [post, paragraphs]);
+
   const handleRetryPost = () => {
     setPostToken((value) => value + 1);
   };
@@ -183,97 +229,113 @@ function Post() {
   }
 
   return (
-    <article className="relative space-y-12">
-      <ReadingProgress />
-
-      <div className="pointer-events-none sticky top-24 z-40 flex justify-start">
-        <Button
-          color="light"
-          onClick={() => navigate('/')}
-          className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-5 py-2 text-sm font-semibold text-slate-700 shadow-lg shadow-slate-900/5 backdrop-blur transition duration-300 hover:-translate-y-0.5 hover:border-sky-500 hover:text-sky-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:border-sky-400 dark:hover:text-sky-300 dark:focus-visible:ring-offset-slate-900"
-        >
-          <ArrowLeftIcon className="h-4 w-4" aria-hidden="true" />
-          Volver
-        </Button>
-      </div>
-
-      <header className="relative overflow-hidden rounded-3xl border border-slate-200 shadow-sm transition duration-300 dark:border-slate-800 dark:shadow-slate-900/40">
-        {post.image ? (
-          <img
-            src={post.image}
-            alt={post.imageAlt || (post.title ? `Imagen de portada para ${post.title}` : 'Imagen representativa de la publicación')}
-            className="absolute inset-0 h-full w-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-sky-500/40 via-slate-900/50 to-slate-900/70 dark:from-sky-400/30 dark:via-slate-950/70 dark:to-slate-950/90" aria-hidden="true" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/50 to-slate-900/70 dark:from-slate-950/90 dark:via-slate-950/60 dark:to-slate-950/80" aria-hidden="true" />
-        <div className="relative flex min-h-[22rem] flex-col justify-end gap-6 px-6 py-16 sm:px-12">
-          <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-slate-200">
-            <CalendarIcon className="h-5 w-5" aria-hidden="true" />
-            <span>{formatDate(post.created_at)}</span>
+    <>
+      <Helmet prioritizeSeoTags>
+        <title>{seo.title}</title>
+        <meta name="description" content={seo.description} />
+        <meta property="og:title" content={seo.title} />
+        <meta property="og:description" content={seo.description} />
+        <meta property="og:type" content="article" />
+        <meta property="og:image" content={seo.image} />
+        {seo.imageAlt ? <meta property="og:image:alt" content={seo.imageAlt} /> : null}
+        <meta name="twitter:card" content={DEFAULT_TWITTER_CARD} />
+        <meta name="twitter:title" content={seo.title} />
+        <meta name="twitter:description" content={seo.description} />
+        <meta name="twitter:image" content={seo.image} />
+        {seo.imageAlt ? <meta name="twitter:image:alt" content={seo.imageAlt} /> : null}
+      </Helmet>
+      <article className="relative space-y-12">
+        <ReadingProgress />
+  
+        <div className="pointer-events-none sticky top-24 z-40 flex justify-start">
+          <Button
+            color="light"
+            onClick={() => navigate('/')}
+            className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-5 py-2 text-sm font-semibold text-slate-700 shadow-lg shadow-slate-900/5 backdrop-blur transition duration-300 hover:-translate-y-0.5 hover:border-sky-500 hover:text-sky-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:border-sky-400 dark:hover:text-sky-300 dark:focus-visible:ring-offset-slate-900"
+          >
+            <ArrowLeftIcon className="h-4 w-4" aria-hidden="true" />
+            Volver
+          </Button>
+        </div>
+  
+        <header className="relative overflow-hidden rounded-3xl border border-slate-200 shadow-sm transition duration-300 dark:border-slate-800 dark:shadow-slate-900/40">
+          {post.image ? (
+            <img
+              src={post.image}
+              alt={post.imageAlt || (post.title ? `Imagen de portada para ${post.title}` : 'Imagen representativa de la publicación')}
+              className="absolute inset-0 h-full w-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-sky-500/40 via-slate-900/50 to-slate-900/70 dark:from-sky-400/30 dark:via-slate-950/70 dark:to-slate-950/90" aria-hidden="true" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/50 to-slate-900/70 dark:from-slate-950/90 dark:via-slate-950/60 dark:to-slate-950/80" aria-hidden="true" />
+          <div className="relative flex min-h-[22rem] flex-col justify-end gap-6 px-6 py-16 sm:px-12">
+            <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-slate-200">
+              <CalendarIcon className="h-5 w-5" aria-hidden="true" />
+              <span>{formatDate(post.created_at)}</span>
+            </div>
+            <h1 className="text-4xl font-bold text-white drop-shadow-md sm:text-5xl">
+              {post.title}
+            </h1>
+            <div className="flex flex-wrap gap-2">
+              {categories.length > 0 ? (
+                categories.map((category, index) => {
+                  const key = category.slug ?? category.name ?? `category-${index}`;
+                  return (
+                    <Badge
+                      key={key}
+                      color="purple"
+                      className="border border-white/40 bg-white/15 text-white backdrop-blur"
+                    >
+                      <Squares2X2Icon className="h-4 w-4" aria-hidden="true" />
+                      {category.name ?? category.slug ?? 'Categoría sin nombre'}
+                    </Badge>
+                  );
+                })
+              ) : (
+                <Badge color="gray" className="border border-white/40 bg-white/10 text-white/80">
+                  <Squares2X2Icon className="h-4 w-4" aria-hidden="true" />
+                  Esta publicación aún no tiene categorías asignadas
+                </Badge>
+              )}
+            </div>
           </div>
-          <h1 className="text-4xl font-bold text-white drop-shadow-md sm:text-5xl">
-            {post.title}
-          </h1>
+        </header>
+  
+        {post.tags?.length ? (
           <div className="flex flex-wrap gap-2">
-            {categories.length > 0 ? (
-              categories.map((category, index) => {
-                const key = category.slug ?? category.name ?? `category-${index}`;
-                return (
-                  <Badge
-                    key={key}
-                    color="purple"
-                    className="border border-white/40 bg-white/15 text-white backdrop-blur"
-                  >
-                    <Squares2X2Icon className="h-4 w-4" aria-hidden="true" />
-                    {category.name ?? category.slug ?? 'Categoría sin nombre'}
-                  </Badge>
-                );
-              })
-            ) : (
-              <Badge color="gray" className="border border-white/40 bg-white/10 text-white/80">
-                <Squares2X2Icon className="h-4 w-4" aria-hidden="true" />
-                Esta publicación aún no tiene categorías asignadas
+            {post.tags.map((tag) => (
+              <Badge
+                key={tag}
+                color="info"
+                className="flex items-center gap-1 bg-sky-100 text-sky-700 transition-colors duration-300 dark:bg-sky-900/60 dark:text-sky-200"
+              >
+                <TagIcon className="h-4 w-4" aria-hidden="true" />
+                {tag}
               </Badge>
-            )}
+            ))}
           </div>
-        </div>
-      </header>
-
-      {post.tags?.length ? (
-        <div className="flex flex-wrap gap-2">
-          {post.tags.map((tag) => (
-            <Badge
-              key={tag}
-              color="info"
-              className="flex items-center gap-1 bg-sky-100 text-sky-700 transition-colors duration-300 dark:bg-sky-900/60 dark:text-sky-200"
-            >
-              <TagIcon className="h-4 w-4" aria-hidden="true" />
-              {tag}
-            </Badge>
+        ) : null}
+  
+        <section className="space-y-6 text-lg leading-relaxed text-slate-700 dark:text-slate-300">
+          {paragraphs.map((paragraph, index) => (
+            <p key={index}>{paragraph}</p>
           ))}
-        </div>
-      ) : null}
-
-      <section className="space-y-6 text-lg leading-relaxed text-slate-700 dark:text-slate-300">
-        {paragraphs.map((paragraph, index) => (
-          <p key={index}>{paragraph}</p>
-        ))}
-      </section>
-
-      <footer className="space-y-10">
-        <CommentsSection
-          slug={slug}
-          comments={commentsState.items}
-          loading={commentsState.loading}
-          error={commentsState.error}
-          onRetry={handleRetryComments}
-          onRefresh={handleRefreshComments}
-        />
-      </footer>
-    </article>
+        </section>
+  
+        <footer className="space-y-10">
+          <CommentsSection
+            slug={slug}
+            comments={commentsState.items}
+            loading={commentsState.loading}
+            error={commentsState.error}
+            onRetry={handleRetryComments}
+            onRefresh={handleRefreshComments}
+          />
+        </footer>
+      </article>
+    </>
   );
 }
 
