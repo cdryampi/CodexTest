@@ -1,4 +1,22 @@
-# Backend – Semillas de datos
+# Backend – API y semillas de datos
+
+La API pública del blog está construida con Django REST Framework y documentada con Swagger/OpenAPI.
+
+## Endpoints principales
+
+- `GET /api/posts/` – listado paginado de entradas. Acepta `?search=` para buscar por título o contenido, `?ordering=` para ordenar (`date`, `-date`, `title`, `-title`), `?tags__name=` para filtrar por etiqueta y los parámetros de paginación (`?page=`, `?page_size=`).
+- `GET /api/posts/<slug>/` – detalle completo de la entrada.
+- `POST /api/posts/` – creación de una entrada incluyendo etiquetas por nombre (se crean si no existen).
+- `GET /api/posts/<slug>/comments/` – comentarios anidados de una entrada.
+- `POST /api/posts/<slug>/comments/` – creación de comentarios públicos.
+
+La documentación auto-generada se expone en:
+
+- `GET /api/schema/` – esquema OpenAPI en JSON.
+- `GET /api/docs/` – Swagger UI navegable.
+- `GET /api/redoc/` – documentación Redoc.
+
+## Semillas de datos
 
 La API de Django incorpora comandos de gestión para generar datos masivos de pruebas sin duplicar contenido existente. Todos los comandos viven en `blog.management.commands`.
 
