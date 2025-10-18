@@ -16,8 +16,8 @@ import {
 } from '../store/useUI';
 
 const ORDER_OPTIONS = [
-  { value: '-created_at', label: 'Más recientes' },
-  { value: 'created_at', label: 'Más antiguos' },
+  { value: '-date', label: 'Más recientes' },
+  { value: 'date', label: 'Más antiguos' },
   { value: 'title', label: 'Título (A-Z)' }
 ];
 

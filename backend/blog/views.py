@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, viewsets
@@ -20,12 +20,16 @@ from .serializers import (
 class PostViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """Manage blog posts using viewsets."""
 
-    queryset = Post.objects.prefetch_related("tags", "categories").order_by("-date", "-id")
+    queryset = (
+        Post.objects.annotate(created_at=F("date"))
+        .prefetch_related("tags", "categories")
+        .order_by("-date", "-id")
+    )
     lookup_field = "slug"
     lookup_url_kwarg = "slug"
     filterset_fields = ["tags__name", "categories__slug", "categories__name"]
     search_fields = ["title", "content", "tags__name", "categories__name"]
-    ordering_fields = ["date", "title"]
+    ordering_fields = ["date", "created_at", "title"]
     ordering = ["-date"]
     permission_classes = [IsAuthenticatedOrReadOnly]
 

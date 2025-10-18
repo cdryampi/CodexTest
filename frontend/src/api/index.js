@@ -20,6 +20,48 @@ const sanitizeTags = (tags = []) => {
 
 const sanitizeCategory = (value = '') => value.toString().trim().toLowerCase();
 
+const normalizeOrderingForApi = (ordering) => {
+  if (ordering == null) {
+    return '-date';
+  }
+
+  const value = ordering.toString().trim();
+  if (!value) {
+    return '-date';
+  }
+
+  const isDescending = value.startsWith('-');
+  const field = isDescending ? value.slice(1) : value;
+  if (field === 'created_at') {
+    return `${isDescending ? '-' : ''}date`;
+  }
+  if (field === 'date' || field === 'title') {
+    return `${isDescending ? '-' : ''}${field}`;
+  }
+  return '-date';
+};
+
+const normalizeOrderingForSeed = (ordering) => {
+  if (ordering == null) {
+    return '-created_at';
+  }
+
+  const value = ordering.toString().trim();
+  if (!value) {
+    return '-created_at';
+  }
+
+  const isDescending = value.startsWith('-');
+  const field = isDescending ? value.slice(1) : value;
+  if (field === 'date') {
+    return `${isDescending ? '-' : ''}created_at`;
+  }
+  if (field === 'created_at' || field === 'title') {
+    return `${isDescending ? '-' : ''}${field}`;
+  }
+  return '-created_at';
+};
+
 const safeStorage = {
   get: (key) => {
     if (typeof window === 'undefined') {
@@ -314,8 +356,11 @@ const orderPosts = (posts, ordering) => {
 
   const sorted = [...posts];
 
-  if (normalizedOrdering === 'title') {
-    sorted.sort((a, b) => a.title.localeCompare(b.title, 'es', { sensitivity: 'base' }));
+  if (normalizedOrdering === 'title' || normalizedOrdering === '-title') {
+    const direction = normalizedOrdering.startsWith('-') ? -1 : 1;
+    sorted.sort(
+      (a, b) => direction * a.title.localeCompare(b.title, 'es', { sensitivity: 'base' })
+    );
   } else {
     const direction = normalizedOrdering.startsWith('-') ? -1 : 1;
     sorted.sort((a, b) => {
@@ -357,6 +402,7 @@ const listPostsFromSeed = ({
   tags = [],
   category = ''
 } = {}) => {
+  const normalizedOrdering = normalizeOrderingForSeed(ordering);
   const term = sanitizeSearchTerm(search);
   const normalizedTags = sanitizeTags(tags);
   const normalizedCategory = sanitizeCategory(category);
@@ -365,7 +411,7 @@ const listPostsFromSeed = ({
     filterPostsByTags(filterPostsBySearch(seedPosts, term), normalizedTags),
     normalizedCategory
   );
-  const ordered = orderPosts(filtered, ordering);
+  const ordered = orderPosts(filtered, normalizedOrdering);
   return paginatePosts(ordered, page);
 };
 
@@ -463,18 +509,20 @@ let remoteAvailable = true;
 export const listPosts = async ({
   page = 1,
   search = '',
-  ordering = '-created_at',
+  ordering = '-date',
   tags = [],
   category = '',
   signal
 } = {}) => {
   const normalizedCategory = sanitizeCategory(category);
+  const apiOrdering = normalizeOrderingForApi(ordering);
+  const localOrdering = normalizeOrderingForSeed(ordering);
 
   if (remoteAvailable) {
     try {
       const params = {
         page,
-        ordering,
+        ordering: apiOrdering,
         search: sanitizeSearchTerm(search),
         tags: sanitizeTags(tags).join(',')
       };
@@ -497,7 +545,13 @@ export const listPosts = async ({
     }
   }
 
-  return listPostsFromSeed({ page, search, ordering, tags, category: normalizedCategory });
+  return listPostsFromSeed({
+    page,
+    search,
+    ordering: localOrdering,
+    tags,
+    category: normalizedCategory
+  });
 };
 
 export const getPost = async (slug, { signal } = {}) => {
