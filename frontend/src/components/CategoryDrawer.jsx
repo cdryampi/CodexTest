@@ -1,10 +1,12 @@
 import { useEffect, useMemo } from 'react';
-import { Badge, Button, TextInput, ToggleSwitch } from 'flowbite-react';
+import { Badge, Button, Card, HelperText, TextInput, ToggleSwitch } from 'flowbite-react';
 import {
   Squares2X2Icon,
   ExclamationTriangleIcon,
   MagnifyingGlassIcon,
-  XMarkIcon
+  XMarkIcon,
+  AdjustmentsHorizontalIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 
 function CategoryDrawer({
@@ -126,37 +128,69 @@ function CategoryDrawer({
           </Button>
         </div>
 
-        <div className="mt-6 space-y-4">
-          <div className="relative">
-            <TextInput
-              type="search"
-              value={searchValue}
-              onChange={handleSearchChange}
-              icon={MagnifyingGlassIcon}
-              placeholder="Buscar categorías"
-              aria-label="Buscar categorías"
-              className="pr-10"
-              disabled={loading}
-            />
-            {searchValue ? (
-              <button
-                type="button"
-                onClick={handleClearSearch}
-                className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 transition duration-200 hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300 dark:focus-visible:ring-offset-slate-900"
-                aria-label="Limpiar búsqueda de categorías"
-              >
-                <XMarkIcon className="h-5 w-5" aria-hidden="true" />
-              </button>
-            ) : null}
+        <Card className="mt-6 border border-sky-100/60 bg-sky-50/70 shadow-sm ring-1 ring-sky-100/60 dark:border-sky-500/40 dark:bg-slate-900/30 dark:ring-sky-500/20">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-sky-500 shadow-sm ring-1 ring-sky-200/60 dark:bg-slate-900 dark:text-sky-300 dark:ring-sky-500/40">
+                <AdjustmentsHorizontalIcon className="h-6 w-6" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Filtro destacado</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Refina tu exploración de categorías con un solo vistazo.</p>
+              </div>
+            </div>
+            <Badge color={hasFiltersApplied ? 'info' : 'gray'} size="sm" className="rounded-full uppercase tracking-wide">
+              {hasFiltersApplied ? 'Filtro activo' : 'Exploración libre'}
+            </Badge>
           </div>
 
-          <ToggleSwitch
-            checked={onlyActive}
-            label={onlyActive ? 'Mostrando solo categorías activas' : 'Incluyendo categorías inactivas'}
-            onChange={handleToggleActive}
-            className="flex w-full items-center justify-between rounded-2xl bg-slate-100/60 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400"
-          />
-        </div>
+          <div className="mt-4 space-y-4">
+            <div className="space-y-2">
+              <div className="relative rounded-2xl border border-sky-100/70 bg-white/80 shadow-sm focus-within:border-sky-300 focus-within:ring-2 focus-within:ring-sky-200 dark:border-slate-700 dark:bg-slate-900/60 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/40">
+                <TextInput
+                  type="search"
+                  value={searchValue}
+                  onChange={handleSearchChange}
+                  icon={MagnifyingGlassIcon}
+                  placeholder="Buscar categorías"
+                  aria-label="Buscar categorías"
+                  className="pr-12"
+                  color={hasFiltersApplied ? 'info' : 'gray'}
+                  shadow
+                  disabled={loading}
+                />
+                {searchValue ? (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 transition duration-200 hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300 dark:focus-visible:ring-offset-slate-900"
+                    aria-label="Limpiar búsqueda de categorías"
+                  >
+                    <XMarkIcon className="h-5 w-5" aria-hidden="true" />
+                  </button>
+                ) : null}
+              </div>
+              <HelperText className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                <SparklesIcon className="h-4 w-4 text-sky-500 dark:text-sky-300" aria-hidden="true" />
+                Usa palabras clave para filtrar al instante tus categorías favoritas.
+              </HelperText>
+            </div>
+
+            <div className="rounded-2xl border border-sky-100/70 bg-white/70 p-3 shadow-sm dark:border-sky-500/40 dark:bg-slate-900/60">
+              <ToggleSwitch
+                checked={onlyActive}
+                label={onlyActive ? 'Solo categorías con publicaciones activas' : 'Mostrar también categorías en pausa'}
+                onChange={handleToggleActive}
+                className="flex w-full items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300"
+              />
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                {onlyActive
+                  ? 'Ocultamos las categorías sin actividad reciente para ayudarte a decidir más rápido.'
+                  : 'Incluimos categorías en pausa por si quieres revisar su estado o volver a activarlas.'}
+              </p>
+            </div>
+          </div>
+        </Card>
 
         {selectionHidden ? (
           <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-700 shadow-sm dark:border-amber-500/40 dark:bg-amber-900/30 dark:text-amber-200">
