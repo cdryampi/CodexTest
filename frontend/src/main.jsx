@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { Flowbite } from 'flowbite-react';
 import App from './App.jsx';
 import './index.css';
+import './store/useUI';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
