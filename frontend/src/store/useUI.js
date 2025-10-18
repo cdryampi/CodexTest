@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 const THEME_STORAGE_KEY = 'blog:ui:theme';
+const LEGACY_THEME_KEYS = ['blog-theme-preference'];
 const SEARCH_STORAGE_KEY = 'blog:ui:last-search';
 
 const safeStorage = {
@@ -49,6 +50,15 @@ const getInitialTheme = () => {
   if (stored === 'dark' || stored === 'light') {
     return stored;
   }
+
+  for (const legacyKey of LEGACY_THEME_KEYS) {
+    const legacyValue = safeStorage.get(legacyKey);
+    if (legacyValue === 'dark' || legacyValue === 'light') {
+      safeStorage.set(THEME_STORAGE_KEY, legacyValue);
+      return legacyValue;
+    }
+  }
+
   return resolveSystemTheme();
 };
 
@@ -142,6 +152,7 @@ export const useUIStore = create((set, get) => {
     setTheme: (nextTheme) => {
       const theme = nextTheme === 'dark' ? 'dark' : 'light';
       safeStorage.set(THEME_STORAGE_KEY, theme);
+      LEGACY_THEME_KEYS.forEach((key) => safeStorage.set(key, theme));
       applyTheme(theme);
       set({ theme });
     },
