@@ -31,9 +31,10 @@ else:
     raise SystemExit("Database not available")
 PY
 
-python manage.py makemigrations --noinput
 python manage.py migrate --noinput
-python manage.py seed_categories
+if [ "${SEED_ON_STARTUP:-}" = "1" ]; then
+    python manage.py seed_categories
+fi
 python manage.py collectstatic --noinput
 
 WORKERS="${GUNICORN_WORKERS:-3}"
