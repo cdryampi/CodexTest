@@ -653,6 +653,7 @@ const paginatePosts = (posts, page, pageSize = DEFAULT_PAGE_SIZE) => {
  */
 const listPostsFromSeed = ({
   page = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
   search = '',
   ordering = '-created_at',
   tags = [],
@@ -668,7 +669,7 @@ const listPostsFromSeed = ({
     normalizedCategory
   );
   const ordered = orderPosts(filtered, normalizedOrdering);
-  return paginatePosts(ordered, page);
+  return paginatePosts(ordered, page, pageSize);
 };
 
 /**
@@ -780,6 +781,7 @@ const getCategoriesFromSeed = ({ q = '', is_active = undefined } = {}) => {
 /**
  * @param {{
  *   page?: number;
+ *   pageSize?: number;
  *   search?: string;
  *   ordering?: string;
  *   tags?: TagName[];
@@ -790,6 +792,7 @@ const getCategoriesFromSeed = ({ q = '', is_active = undefined } = {}) => {
  */
 export const listPosts = async ({
   page = 1,
+  pageSize = undefined,
   search = '',
   ordering = '-date',
   tags = [],
@@ -807,6 +810,9 @@ export const listPosts = async ({
       search: sanitizeSearchTerm(search),
       tags: sanitizeTags(tags).join(',')
     };
+    if (Number.isFinite(pageSize) && pageSize > 0) {
+      params.page_size = Math.floor(pageSize);
+    }
     if (normalizedCategory) {
       params.category = normalizedCategory;
     }
@@ -831,6 +837,7 @@ export const listPosts = async ({
 
   return listPostsFromSeed({
     page,
+    pageSize,
     search,
     ordering: localOrdering,
     tags,
