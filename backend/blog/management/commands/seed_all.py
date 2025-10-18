@@ -4,8 +4,9 @@ from __future__ import annotations
 from typing import Dict
 
 from django.core.management import get_commands, load_command_class
-from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.core.management.base import BaseCommand, CommandError, OutputWrapper
+from django.core.management.color import color_style, no_style
+from django.db import DEFAULT_DB_ALIAS, connections, transaction
 
 from ...models import Comment, Post, Tag
 from ...seed_config import (
@@ -28,6 +29,41 @@ FAST_PRESET = {
 
 class Command(BaseCommand):
     help = "Ejecuta todos los comandos de semillas del blog garantizando idempotencia."
+
+    def execute(self, *args, **options):  # pragma: no cover - behavioral parity tweak
+        """Replica la lógica base evitando imprimir resúmenes dictados."""
+
+        if options["force_color"] and options["no_color"]:
+            raise CommandError(
+                "The --no-color and --force-color options can't be used together."
+            )
+        if options["force_color"]:
+            self.style = color_style(force_color=True)
+        elif options["no_color"]:
+            self.style = no_style()
+            self.stderr.style_func = None
+        if options.get("stdout"):
+            self.stdout = OutputWrapper(options["stdout"])
+        if options.get("stderr"):
+            self.stderr = OutputWrapper(options["stderr"])
+
+        if self.requires_system_checks and not options["skip_checks"]:
+            check_kwargs = self.get_check_kwargs(options)
+            self.check(**check_kwargs)
+        if self.requires_migrations_checks:
+            self.check_migrations()
+
+        output = self.handle(*args, **options)
+        if output and not isinstance(output, dict):
+            if self.output_transaction:
+                connection = connections[options.get("database", DEFAULT_DB_ALIAS)]
+                output = "%s\n%s\n%s" % (
+                    self.style.SQL_KEYWORD(connection.ops.start_transaction_sql()),
+                    output,
+                    self.style.SQL_KEYWORD(connection.ops.end_transaction_sql()),
+                )
+            self.stdout.write(output)
+        return output
 
     def add_arguments(self, parser):
         parser.add_argument(
