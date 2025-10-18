@@ -1,0 +1,62 @@
+[
+  {
+    "slug": "frontend",
+    "name": "Frontend",
+    "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+    "is_active": true
+  },
+  {
+    "slug": "backend",
+    "name": "Backend",
+    "description": "APIs, bases de datos y servicios que sustentan cada experiencia.",
+    "is_active": true
+  },
+  {
+    "slug": "devops",
+    "name": "DevOps",
+    "description": "Automatización, despliegues y observabilidad continua.",
+    "is_active": true
+  },
+  {
+    "slug": "ux",
+    "name": "UX",
+    "description": "Investigación, accesibilidad y narrativa centrada en las personas.",
+    "is_active": true
+  },
+  {
+    "slug": "calidad",
+    "name": "Calidad",
+    "description": "Pruebas, QA y estrategias para lanzar con confianza.",
+    "is_active": true
+  },
+  {
+    "slug": "productividad",
+    "name": "Productividad",
+    "description": "Herramientas, rituales y hacks para flujos de trabajo sanos.",
+    "is_active": true
+  },
+  {
+    "slug": "comunidad",
+    "name": "Comunidad",
+    "description": "Historias, eventos y aprendizajes compartidos dentro del ecosistema.",
+    "is_active": true
+  },
+  {
+    "slug": "investigacion",
+    "name": "Investigación",
+    "description": "Tendencias emergentes y experimentos que marcan el futuro.",
+    "is_active": true
+  },
+  {
+    "slug": "documentacion",
+    "name": "Documentación",
+    "description": "Guías claras, comunicación efectiva y transferencia de conocimiento.",
+    "is_active": true
+  },
+  {
+    "slug": "innovacion",
+    "name": "Innovación",
+    "description": "Ideas disruptivas, prototipos y visión estratégica.",
+    "is_active": true
+  }
+]

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Textarea, TextInput, Button, Spinner } from 'flowbite-react';
-import { createComment } from '../lib/api';
+import { createComment } from '../api';
 
 const MAX_LENGTH = 2000;
 

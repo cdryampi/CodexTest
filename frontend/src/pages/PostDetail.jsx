@@ -4,9 +4,10 @@ import { Badge, Button } from 'flowbite-react';
 import {
   ArrowLeftIcon,
   CalendarIcon,
-  TagIcon
+  TagIcon,
+  Squares2X2Icon
 } from '@heroicons/react/24/outline';
-import { getPost, listComments } from '../lib/api';
+import { getPost, listComments } from '../api';
 import CommentsSection from '../components/CommentsSection';
 import Skeleton from '../components/Skeleton';
 
@@ -97,6 +98,18 @@ function PostDetail() {
   }, [slug]);
 
   const post = postState.data;
+  const categories = useMemo(() => {
+    if (!post) {
+      return [];
+    }
+    if (Array.isArray(post.categories_detail) && post.categories_detail.length > 0) {
+      return post.categories_detail;
+    }
+    if (Array.isArray(post.categories)) {
+      return post.categories.map((category) => ({ slug: category, name: category }));
+    }
+    return [];
+  }, [post]);
   const paragraphs = useMemo(() => {
     if (!post?.content) {
       return [];
@@ -189,6 +202,18 @@ function PostDetail() {
           <h1 className="text-4xl font-bold text-slate-900 transition-colors duration-300 dark:text-white">
             {post.title}
           </h1>
+          <div className="flex flex-wrap gap-2">
+            {categories.map((category) => (
+              <Badge
+                key={category.slug}
+                color="purple"
+                className="flex items-center gap-1 bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/60 dark:text-fuchsia-200"
+              >
+                <Squares2X2Icon className="h-4 w-4" aria-hidden="true" />
+                {category.name ?? category.slug}
+              </Badge>
+            ))}
+          </div>
           <div className="flex flex-wrap gap-2">
             {post.tags?.map((tag) => (
               <Badge

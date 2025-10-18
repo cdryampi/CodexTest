@@ -105,6 +105,14 @@ const sanitizeTags = (tags = []) => {
   return Array.from(unique).sort((a, b) => a.localeCompare(b, 'es'));
 };
 
+const sanitizeCategoryValue = (category) => {
+  if (category == null) {
+    return null;
+  }
+  const slug = category.toString().trim().toLowerCase();
+  return slug || null;
+};
+
 const initialTheme = getInitialTheme();
 const initialSearch = sanitizeSearch(getInitialSearch());
 
@@ -161,6 +169,7 @@ export const useUIStore = create((set, get) => {
     search: initialSearch,
     ordering: '-created_at',
     selectedTags: [],
+    selectedCategory: null,
     page: 1,
     setTheme: (nextTheme) => {
       const theme = nextTheme === 'dark' ? 'dark' : 'light';
@@ -189,6 +198,9 @@ export const useUIStore = create((set, get) => {
     setSelectedTags: (tags) => {
       set({ selectedTags: sanitizeTags(tags), page: 1 });
     },
+    setSelectedCategory: (category) => {
+      set({ selectedCategory: sanitizeCategoryValue(category), page: 1 });
+    },
     toggleTag: (tag) => {
       if (!tag) {
         return;
@@ -209,7 +221,7 @@ export const useUIStore = create((set, get) => {
     },
     resetFilters: () => {
       safeStorage.remove(SEARCH_STORAGE_KEY);
-      set({ search: '', ordering: '-created_at', selectedTags: [], page: 1 });
+      set({ search: '', ordering: '-created_at', selectedTags: [], selectedCategory: null, page: 1 });
     }
   };
 });
@@ -219,4 +231,5 @@ export const selectIsDark = (state) => state.theme === 'dark';
 export const selectSearch = (state) => state.search;
 export const selectOrdering = (state) => state.ordering;
 export const selectSelectedTags = (state) => state.selectedTags;
+export const selectSelectedCategory = (state) => state.selectedCategory;
 export const selectPage = (state) => state.page;

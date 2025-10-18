@@ -8,10 +8,11 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils.text import slugify
 
-from ...models import Post, Tag
+from ...models import Category, Post, Tag
 from ...seed_config import (
     BULK_BATCH_SIZE,
     POST_COUNT,
+    CATEGORIES_POOL,
     TAGS_POOL,
     get_faker,
     is_seed_allowed,
@@ -48,6 +49,11 @@ class Command(BaseCommand):
         existing_slugs = set(Post.objects.values_list("slug", flat=True))
         posts_to_create: List[Post] = []
         post_tags: Dict[str, List[str]] = {}
+        post_categories: Dict[str, List[str]] = {}
+        category_slugs = [entry["slug"] for entry in CATEGORIES_POOL]
+        category_defaults = {
+            entry["slug"]: entry["name"] for entry in CATEGORIES_POOL
+        }
 
         created = 0
         skipped = 0
@@ -59,6 +65,13 @@ class Command(BaseCommand):
         with transaction.atomic():
             Tag.objects.bulk_create(
                 [Tag(name=name) for name in TAGS_POOL],
+                ignore_conflicts=True,
+            )
+            Category.objects.bulk_create(
+                [
+                    Category(name=category_defaults[slug], slug=slug)
+                    for slug in category_slugs
+                ],
                 ignore_conflicts=True,
             )
 
@@ -91,6 +104,10 @@ class Command(BaseCommand):
                 tags = random.sample(
                     TAGS_POOL, k=random.randint(2, min(5, len(TAGS_POOL)))
                 )
+                categories = random.sample(
+                    category_slugs,
+                    k=random.randint(1, min(3, len(category_slugs))),
+                )
 
                 posts_to_create.append(
                     Post(
@@ -106,6 +123,7 @@ class Command(BaseCommand):
                     )
                 )
                 post_tags[slug] = tags
+                post_categories[slug] = categories
                 existing_titles.add(title)
                 existing_slugs.add(slug)
                 created += 1
@@ -122,6 +140,10 @@ class Command(BaseCommand):
             tag_lookup = {
                 tag.name: tag for tag in Tag.objects.filter(name__in=TAGS_POOL)
             }
+            category_lookup = {
+                category.slug: category
+                for category in Category.objects.filter(slug__in=category_slugs)
+            }
             created_posts = {
                 post.slug: post
                 for post in Post.objects.filter(slug__in=list(post_tags.keys()))
@@ -131,6 +153,13 @@ class Command(BaseCommand):
                 if not post:
                     continue
                 post.tags.set([tag_lookup[name] for name in tag_names if name in tag_lookup])
+                post.categories.set(
+                    [
+                        category_lookup[category_slug]
+                        for category_slug in post_categories.get(slug, [])
+                        if category_slug in category_lookup
+                    ]
+                )
 
         if attempts >= max_attempts and created < target:
             self.stdout.write(

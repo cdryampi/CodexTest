@@ -165,6 +165,10 @@ class Command(BaseCommand):
             return summary
 
         self.stdout.write("Iniciando ejecución de seeds...")
+        categories_summary = run_seed_command(
+            "seed_categories",
+            verbosity=verbosity,
+        )
         users_summary = run_seed_command(
             "seed_users",
             count=counts["users"],
@@ -184,6 +188,7 @@ class Command(BaseCommand):
         )
 
         summary = {
+            "categories": categories_summary or {"created": 0, "updated": 0},
             "users": users_summary or {"created": 0, "skipped": 0},
             "posts": posts_summary or {"created": 0, "skipped": 0},
             "comments": comments_summary or {"created": 0, "skipped": 0},
@@ -192,7 +197,12 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Seeds ejecutadas correctamente."))
         for section, data in summary.items():
             created = data.get("created", 0)
-            skipped = data.get("skipped", 0)
-            self.stdout.write(f"- {section}: {created} nuevos, {skipped} omitidos")
+            if "updated" in data:
+                self.stdout.write(
+                    f"- {section}: {created} nuevos, {data.get('updated', 0)} actualizados"
+                )
+            else:
+                skipped = data.get("skipped", 0)
+                self.stdout.write(f"- {section}: {created} nuevos, {skipped} omitidos")
 
         return summary
