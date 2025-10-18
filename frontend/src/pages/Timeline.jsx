@@ -151,9 +151,9 @@ function Timeline() {
               </p>
             </div>
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {featuredPosts.map((post) => {
+              {featuredPosts.map((post, index) => {
                 const key = post?.slug || post?.id;
-                return <AnimatedPostCard key={key ?? `featured-${Math.random().toString(36).slice(2)}`} post={post} />;
+                return <AnimatedPostCard key={key ?? `featured-${index}`} post={post} />;
               })}
             </div>
           </section>
