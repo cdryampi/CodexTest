@@ -1,6 +1,9 @@
 Django
 djangorestframework
 django-cors-headers
+django-filter
+drf-nested-routers
+drf-spectacular
 django-jazzmin
 gunicorn
 psycopg2-binary
