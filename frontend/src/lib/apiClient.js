@@ -1,5 +1,26 @@
-const API_BASE_URL = 'https://backendblog.yampi.eu';
-// TODO: parametrizar con window.__ENV__?.API_BASE_URL || import.meta.env.VITE_API_BASE_URL || '/api/'
+const DEFAULT_API_BASE_URL = 'https://backendblog.yampi.eu';
+
+const resolveApiBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    const runtimeBase = window.__ENV__?.API_BASE_URL;
+    if (runtimeBase) {
+      return runtimeBase;
+    }
+  }
+
+  const envBase = import.meta.env.VITE_API_BASE_URL;
+  if (envBase) {
+    return envBase;
+  }
+
+  if (import.meta.env.DEV) {
+    return '/api';
+  }
+
+  return DEFAULT_API_BASE_URL;
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const DEFAULT_TIMEOUT = 12000;
 

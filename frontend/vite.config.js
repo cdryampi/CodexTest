@@ -12,6 +12,15 @@ export default defineConfig(({ command }) => ({
   base: command === 'build' ? repositoryBase : '/',
   root: __dirname,
   publicDir: resolve(__dirname, 'public'),
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://backendblog.yampi.eu',
+        changeOrigin: true,
+        secure: true
+      }
+    }
+  },
   build: {
     outDir: resolve(__dirname, '../dist'),
     emptyOutDir: true
