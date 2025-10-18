@@ -12,14 +12,12 @@ Este módulo vive dentro de `/frontend` del monorepo y contiene el cliente React
 
 ## Configuración de API
 
-La URL base actual se define como constante en `src/lib/apiClient.js`:
+La URL base se resuelve dinámicamente en `src/lib/apiClient.js` siguiendo esta prioridad:
 
-```js
-const API_BASE_URL = 'https://backendblog.yampi.eu';
-// TODO: parametrizar con window.__ENV__?.API_BASE_URL || import.meta.env.VITE_API_BASE_URL || '/api/'
-```
-
-> ⚠️ Próximo paso: reemplazar la constante por las variables de entorno mencionadas en el comentario para soportar despliegues multi-entorno.
+1. `window.__ENV__?.API_BASE_URL` inyectado en tiempo de ejecución.
+2. `import.meta.env.VITE_API_BASE_URL` definido por Vite.
+3. `/api` durante el desarrollo local (usa el proxy configurado en `vite.config.js`).
+4. `https://backendblog.yampi.eu` como valor por defecto para builds de producción.
 
 ### Endpoints consumidos
 
@@ -107,9 +105,9 @@ El workflow `.github/workflows/deploy.yml` continúa desplegando en GitHub Pages
 
 ## Próximos pasos sugeridos
 
-- Parametrizar `API_BASE_URL` mediante `window.__ENV__?.API_BASE_URL` o `import.meta.env.VITE_API_BASE_URL` con _fallback_ a `/api/`.
 - Añadir _retry_ automático opcional para errores de red en el cliente.
 - Integrar tests de contrato contra la API para validar cambios futuros.
+- Documentar un ejemplo de `window.__ENV__` para despliegues sin rebuild.
 
 ---
 
