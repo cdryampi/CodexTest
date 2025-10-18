@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Link, generatePath } from 'react-router-dom';
 import { Badge } from 'flowbite-react';
 import {
@@ -155,6 +155,9 @@ function AnimatedPostCard({ post }) {
     [prefersReducedMotion]
   );
 
+  const titleId = useId();
+  const descriptionId = `${titleId}-description`;
+
   return (
     <m.article
       ref={cardRef}
@@ -164,11 +167,13 @@ function AnimatedPostCard({ post }) {
       whileHover="hover"
       whileTap="tap"
       className="h-full"
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
     >
       <Link
         to={detailPath}
         aria-label={`Abrir artículo: ${title}`}
-        className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white/80 shadow-xl transition-all duration-300 hover:shadow-2xl hover:ring-1 hover:ring-cyan-400/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800/70 dark:bg-slate-900/50 dark:hover:ring-cyan-500/40 dark:focus-visible:ring-offset-slate-950"
+        className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white/80 shadow-xl motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out hover:shadow-2xl hover:ring-1 hover:ring-cyan-400/40 motion-reduce:transform-none motion-reduce:transition-none motion-reduce:hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-500 focus-visible:outline-offset-4 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-4 dark:border-slate-800/70 dark:bg-slate-900/50 dark:hover:ring-cyan-500/40 dark:focus-visible:outline-cyan-300 dark:focus-visible:ring-cyan-300 dark:focus-visible:ring-offset-slate-950"
         onKeyDown={(event) => {
           if (event.key === ' ') {
             event.preventDefault();
@@ -190,7 +195,7 @@ function AnimatedPostCard({ post }) {
                 loading="lazy"
                 onLoad={() => setImageLoaded(true)}
                 onError={() => setImageLoaded(true)}
-                className={`h-full w-full object-cover transition-opacity duration-300 ${
+                className={`h-full w-full object-cover motion-safe:transition-opacity motion-safe:duration-300 motion-reduce:opacity-100 motion-reduce:transition-none ${
                   imageLoaded ? 'opacity-100' : 'opacity-0'
                 }`}
                 variants={imageVariants}
@@ -200,10 +205,13 @@ function AnimatedPostCard({ post }) {
             ) : (
               <div className="h-full w-full rounded-xl bg-slate-200/80 dark:bg-slate-700/70" />
             )}
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/10 to-transparent transition-opacity duration-300 group-hover:opacity-90" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/10 to-transparent motion-safe:transition-opacity motion-safe:duration-300 motion-reduce:transition-none group-hover:opacity-90" />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-1 p-4 text-white">
               <span className="text-sm font-medium text-slate-200/90">{formattedDate}</span>
-              <h2 className="text-xl font-semibold leading-tight text-white drop-shadow-[0_2px_6px_rgba(15,23,42,0.45)]">
+              <h2
+                id={titleId}
+                className="text-xl font-semibold leading-tight text-white drop-shadow-[0_2px_6px_rgba(15,23,42,0.45)]"
+              >
                 {title}
               </h2>
             </div>
@@ -213,34 +221,40 @@ function AnimatedPostCard({ post }) {
           <div className="flex flex-wrap gap-2">
             <Badge
               color="gray"
-              className="inline-flex items-center gap-1 rounded-full border border-slate-300/70 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 shadow-sm transition-colors duration-200 dark:border-slate-700/60 dark:bg-slate-800/80 dark:text-slate-300"
+              className="inline-flex items-center gap-1 rounded-full border border-slate-300/70 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 shadow-sm motion-safe:transition-colors motion-safe:duration-200 dark:border-slate-700/60 dark:bg-slate-800/80 dark:text-slate-300"
             >
               <ClockIcon className="h-4 w-4" aria-hidden="true" />
               {`${readingMinutes} min de lectura`}
             </Badge>
             <Badge
               color="info"
-              className="inline-flex items-center gap-1 rounded-full border border-cyan-300/60 bg-cyan-100/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-700 shadow-sm transition-colors duration-200 dark:border-cyan-500/40 dark:bg-cyan-900/40 dark:text-cyan-200"
+              className="inline-flex items-center gap-1 rounded-full border border-cyan-300/60 bg-cyan-100/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-700 shadow-sm motion-safe:transition-colors motion-safe:duration-200 dark:border-cyan-500/40 dark:bg-cyan-900/40 dark:text-cyan-200"
             >
               <Squares2X2Icon className="h-4 w-4" aria-hidden="true" />
               {primaryCategory}
             </Badge>
           </div>
           {post?.excerpt ? (
-            <p className="max-h-24 overflow-hidden text-sm leading-relaxed text-slate-600 transition-colors duration-300 dark:text-slate-300">
+            <p
+              id={descriptionId}
+              className="max-h-24 overflow-hidden text-sm leading-relaxed text-slate-600 motion-safe:transition-colors motion-safe:duration-300 dark:text-slate-300"
+            >
               {post.excerpt}
             </p>
           ) : (
-            <p className="text-sm text-slate-600 transition-colors duration-300 dark:text-slate-300">
+            <p
+              id={descriptionId}
+              className="text-sm text-slate-600 motion-safe:transition-colors motion-safe:duration-300 dark:text-slate-300"
+            >
               Descubre los detalles y ejemplos prácticos dentro del artículo.
             </p>
           )}
           <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-2 text-sm">
-            <div className="inline-flex items-center gap-2 text-slate-500 transition-colors duration-300 dark:text-slate-400">
+            <div className="inline-flex items-center gap-2 text-slate-500 motion-safe:transition-colors motion-safe:duration-300 dark:text-slate-400">
               <CalendarIcon className="h-4 w-4" aria-hidden="true" />
               <span>{formattedDate || 'Fecha no disponible'}</span>
             </div>
-            <span className="inline-flex items-center gap-2 font-semibold text-cyan-600 transition-colors duration-300 group-hover:text-cyan-500 dark:text-cyan-300 dark:group-hover:text-cyan-200">
+            <span className="inline-flex items-center gap-2 font-semibold text-cyan-600 motion-safe:transition-colors motion-safe:duration-300 group-hover:text-cyan-500 dark:text-cyan-300 dark:group-hover:text-cyan-200">
               Leer artículo
               <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
             </span>
