@@ -3,6 +3,31 @@ import postsSeed from '../data/posts.json';
 import commentsSeed from '../data/comments.json';
 import categoriesSeed from '../data/categories.json';
 
+/**
+ * @typedef {import('./types.js').Category} Category
+ * @typedef {import('./types.js').TagName} TagName
+ * @typedef {import('./types.js').PostListItem} PostListItem
+ * @typedef {import('./types.js').PostDetail} PostDetail
+ * @typedef {import('./types.js').Comment} Comment
+ * @typedef {import('./types.js').PaginatedResponse<PostListItem>} PostListResponse
+ * @typedef {import('./types.js').PaginatedResponse<Category>} CategoryListResponse
+ */
+
+/**
+ * @typedef {PostDetail & {
+ *   _normalizedTags: string[];
+ *   _normalizedCategories: string[];
+ *   _searchHaystack: string;
+ * }} NormalizedPost
+ */
+
+/**
+ * @typedef {Comment & {
+ *   postSlug: string | null;
+ *   postId: number | string | null;
+ }} NormalizedComment
+ */
+
 const DEFAULT_PAGE_SIZE = 9;
 const COMMENT_STORAGE_PREFIX = 'blog:comments:';
 
@@ -48,6 +73,74 @@ const sanitizeCategory = (value = '') => {
   }
 };
 
+const sanitizeSlug = (value = '') => {
+  if (value == null) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  try {
+    return value.toString().trim();
+  } catch (error) {
+    return '';
+  }
+};
+
+const slugify = (value = '') => {
+  const text = value?.toString().trim();
+  if (!text) {
+    return '';
+  }
+
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 120);
+};
+
+const resolvePostSlug = (rawPost) => {
+  if (rawPost && typeof rawPost === 'object') {
+    const candidate = sanitizeSlug(rawPost.slug ?? rawPost.id ?? rawPost.identifier);
+    if (candidate) {
+      return candidate;
+    }
+
+    const fromTitle = slugify(rawPost.title ?? rawPost.name ?? '');
+    if (fromTitle) {
+      return fromTitle;
+    }
+  }
+
+  return `post-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
+
+const uniqueOriginalTags = (tags = []) => {
+  const seen = new Set();
+  const result = [];
+
+  tags.forEach((tag) => {
+    const original = tag.toString().trim();
+    if (!original) {
+      return;
+    }
+    const normalized = original.toLowerCase();
+    if (seen.has(normalized)) {
+      return;
+    }
+    seen.add(normalized);
+    result.push(original);
+  });
+
+  return { values: result, normalized: Array.from(seen) };
+};
+
+/** @type {(Category & { is_virtual: boolean })} */
 const FALLBACK_UNCATEGORIZED = Object.freeze({
   slug: 'sin-categoria',
   name: 'Sin categoría',
@@ -143,6 +236,10 @@ const toISOString = (value) => {
 
 const ensureArray = (value) => (Array.isArray(value) ? value : []);
 
+/**
+ * @param {unknown} rawCategory
+ * @returns {(Category & { is_virtual?: boolean }) | null}
+ */
 const normalizeCategoryRecord = (rawCategory = {}) => {
   if (rawCategory == null) {
     return null;
@@ -191,6 +288,7 @@ const normalizeCategoryRecord = (rawCategory = {}) => {
   };
 };
 
+/** @type {(Category & { is_virtual?: boolean })[]} */
 const seededCategories = (() => {
   const normalized = ensureArray(categoriesSeed)
     .map((category) => normalizeCategoryRecord(category))
@@ -202,17 +300,27 @@ const seededCategories = (() => {
 
   return normalized;
 })();
+/** @type {Map<string, Category>} */
 const seededCategoriesBySlug = new Map(
   seededCategories.map((category) => [category.slug, category])
 );
 
+/**
+ * @param {any} rawPost
+ * @param {{ categoriesLookup?: Map<string, Category> }} [options]
+ * @returns {NormalizedPost}
+ */
 const normalizePostRecord = (rawPost = {}, { categoriesLookup = seededCategoriesBySlug } = {}) => {
   const createdAt = toISOString(rawPost.created_at ?? rawPost.createdAt ?? rawPost.date);
+  const updatedAt = toISOString(
+    rawPost.updated_at ?? rawPost.updatedAt ?? rawPost.modified ?? rawPost.date ?? createdAt
+  );
+  const slug = resolvePostSlug(rawPost);
+  const identifier = rawPost.id ?? slug ?? globalThis.crypto?.randomUUID?.() ?? `${Date.now()}`;
 
-  const tags = ensureArray(rawPost.tags)
-    .map((tag) => tag.toString().trim())
-    .filter(Boolean);
-  const normalizedTags = tags.map((tag) => tag.toLowerCase());
+  const { values: tags, normalized: normalizedTags } = uniqueOriginalTags(
+    ensureArray(rawPost.tags ?? rawPost.tag_list ?? [])
+  );
 
   const categoriesDetailRaw = ensureArray(
     rawPost.categories_detail ?? rawPost.categoriesDetail ?? []
@@ -278,55 +386,92 @@ const normalizePostRecord = (rawPost = {}, { categoriesLookup = seededCategories
     .map((category) => category.name?.toString().trim().toLowerCase())
     .filter(Boolean);
 
+  const title = rawPost.title?.toString().trim() || 'Publicación sin título';
+  const excerpt = rawPost.excerpt?.toString() ?? '';
+  const content = rawPost.content?.toString() ?? '';
+  const author = rawPost.author?.toString().trim() || 'Equipo React Tailwind Blog';
+  const image = rawPost.image ?? rawPost.cover ?? null;
+  const thumb = rawPost.thumb ?? rawPost.thumbnail ?? null;
+  const thumbnail = rawPost.thumbnail ?? rawPost.thumb ?? image ?? null;
+  const imageAltRaw = rawPost.imageAlt ?? rawPost.image_alt ?? rawPost.image_alt_text ?? null;
+  const imageAlt = imageAltRaw ? imageAltRaw.toString().trim() || null : null;
+
+  const searchHaystack = [
+    title,
+    excerpt,
+    content,
+    normalizedTags.join(' '),
+    normalizedCategoryNames.join(' '),
+    author.toLowerCase()
+  ]
+    .join(' ')
+    .toLowerCase();
+
   return {
-    id: rawPost.id ?? rawPost.slug ?? globalThis.crypto?.randomUUID?.() ?? `${Date.now()}`,
-    slug: rawPost.slug,
-    title: rawPost.title ?? 'Publicación sin título',
-    excerpt: rawPost.excerpt ?? '',
-    content: rawPost.content ?? '',
+    id: identifier,
+    slug,
+    title,
+    excerpt,
+    content,
     created_at: createdAt,
+    updated_at: updatedAt,
     tags,
     categories: categorySlugs,
     categories_detail: categoriesDetail,
-    author: rawPost.author ?? 'Equipo React Tailwind Blog',
-    image: rawPost.image ?? rawPost.cover ?? null,
-    thumbnail: rawPost.thumb ?? rawPost.thumbnail ?? rawPost.image ?? null,
+    author,
+    image: image ?? null,
+    thumb: thumb ?? null,
+    thumbnail,
+    imageAlt,
     _normalizedTags: normalizedTags,
     _normalizedCategories: categorySlugs,
-    _searchHaystack: [
-      rawPost.title ?? '',
-      rawPost.excerpt ?? '',
-      rawPost.content ?? '',
-      normalizedTags.join(' '),
-      normalizedCategoryNames.join(' ')
-    ]
-      .join(' ')
-      .toLowerCase()
+    _searchHaystack: searchHaystack
   };
 };
 
+/**
+ * @param {any} rawComment
+ * @param {string|null} slug
+ * @param {number|string|null} postId
+ * @returns {NormalizedComment}
+ */
 const normalizeCommentRecord = (rawComment = {}, slug = null, postId = null) => {
   const createdAt = toISOString(
     rawComment.created_at ?? rawComment.createdAt ?? rawComment.date ?? Date.now()
   );
+  const resolvedSlug = sanitizeSlug(
+    slug ?? rawComment.post ?? rawComment.post_slug ?? rawComment.postSlug ?? ''
+  );
+  const commentPostId = postId ?? rawComment.postId ?? rawComment.post_id ?? null;
+  const parentId = rawComment.parent ?? rawComment.parent_id ?? rawComment.parentId ?? null;
+  const authorName = rawComment.author_name?.toString().trim()
+    || rawComment.author?.toString().trim()
+    || 'Anónimo';
+  const content = rawComment.content?.toString().trim() ?? '';
+
+  let identifier = rawComment.id ?? rawComment.pk ?? null;
+  if (identifier == null) {
+    identifier = `${resolvedSlug || 'comment'}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
 
   return {
-    id:
-      rawComment.id ?? `${slug ?? 'comment'}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    author_name: rawComment.author_name ?? rawComment.author ?? 'Anónimo',
-    content: rawComment.content ?? '',
+    id: identifier,
+    author_name: authorName,
+    content,
     created_at: createdAt,
-    parent: rawComment.parent ?? rawComment.parent_id ?? rawComment.parentId ?? null,
-    postSlug: slug ?? rawComment.postSlug ?? null,
-    postId: postId ?? rawComment.postId ?? null
+    parent: parentId ?? null,
+    postSlug: resolvedSlug || null,
+    postId: commentPostId ?? null
   };
 };
 
+/** @type {NormalizedPost[]} */
 const seedPosts = ensureArray(postsSeed)
   .map((post) => normalizePostRecord(post, { categoriesLookup: seededCategoriesBySlug }));
 const postsBySlug = new Map(seedPosts.filter((post) => post.slug).map((post) => [post.slug, post]));
 const postsById = new Map(seedPosts.map((post) => [post.id, post]));
 
+/** @type {NormalizedComment[]} */
 const seedComments = ensureArray(commentsSeed)
   .map((comment) => {
     const post = postsById.get(comment.postId);
@@ -335,6 +480,7 @@ const seedComments = ensureArray(commentsSeed)
   })
   .filter((comment) => !!comment.postSlug || !!comment.postId);
 
+/** @type {Map<string, number>} */
 const categoryUsage = new Map();
 seedPosts.forEach((post) => {
   ensureArray(post._normalizedCategories).forEach((slug) => {
@@ -342,6 +488,10 @@ seedPosts.forEach((post) => {
   });
 });
 
+/**
+ * @param {string} slug
+ * @returns {NormalizedComment[]}
+ */
 const readStoredComments = (slug) => {
   if (!slug) {
     return [];
@@ -365,6 +515,10 @@ const readStoredComments = (slug) => {
   }
 };
 
+/**
+ * @param {string} slug
+ * @param {NormalizedComment[]} comments
+ */
 const persistStoredComments = (slug, comments) => {
   if (!slug) {
     return;
@@ -373,6 +527,11 @@ const persistStoredComments = (slug, comments) => {
   safeStorage.set(`${COMMENT_STORAGE_PREFIX}${slug}`, JSON.stringify(comments));
 };
 
+/**
+ * @template T extends { created_at?: string | null }
+ * @param {T[]} items
+ * @returns {T[]}
+ */
 const sortByCreatedAt = (items = []) =>
   [...items].sort((a, b) => {
     const timeA = new Date(a.created_at ?? 0).getTime();
@@ -380,6 +539,11 @@ const sortByCreatedAt = (items = []) =>
     return timeA - timeB;
   });
 
+/**
+ * @param {NormalizedPost[]} posts
+ * @param {string} term
+ * @returns {NormalizedPost[]}
+ */
 const filterPostsBySearch = (posts, term) => {
   if (!term) {
     return posts;
@@ -387,6 +551,11 @@ const filterPostsBySearch = (posts, term) => {
   return posts.filter((post) => post._searchHaystack.includes(term));
 };
 
+/**
+ * @param {NormalizedPost[]} posts
+ * @param {TagName[]} tags
+ * @returns {NormalizedPost[]}
+ */
 const filterPostsByTags = (posts, tags) => {
   if (!tags.length) {
     return posts;
@@ -395,6 +564,11 @@ const filterPostsByTags = (posts, tags) => {
   return posts.filter((post) => tags.every((tag) => post._normalizedTags.includes(tag)));
 };
 
+/**
+ * @param {NormalizedPost[]} posts
+ * @param {string} category
+ * @returns {NormalizedPost[]}
+ */
 const filterPostsByCategory = (posts, category) => {
   if (!category) {
     return posts;
@@ -408,6 +582,11 @@ const filterPostsByCategory = (posts, category) => {
   return posts.filter((post) => post._normalizedCategories.includes(normalized));
 };
 
+/**
+ * @param {NormalizedPost[]} posts
+ * @param {string} ordering
+ * @returns {NormalizedPost[]}
+ */
 const orderPosts = (posts, ordering) => {
   const normalizedOrdering = ordering || '-created_at';
 
@@ -430,11 +609,21 @@ const orderPosts = (posts, ordering) => {
   return sorted;
 };
 
+/**
+ * @param {NormalizedPost} post
+ * @returns {PostDetail}
+ */
 const sanitizePost = (post) => {
   const { _searchHaystack, _normalizedTags, _normalizedCategories, ...publicPost } = post;
   return { ...publicPost };
 };
 
+/**
+ * @param {NormalizedPost[]} posts
+ * @param {number} page
+ * @param {number} [pageSize]
+ * @returns {PostListResponse}
+ */
 const paginatePosts = (posts, page, pageSize = DEFAULT_PAGE_SIZE) => {
   const parsedPage = Number(page);
   const parsedSize = Number(pageSize);
@@ -452,6 +641,16 @@ const paginatePosts = (posts, page, pageSize = DEFAULT_PAGE_SIZE) => {
   };
 };
 
+/**
+ * @param {{
+ *   page?: number;
+ *   search?: string;
+ *   ordering?: string;
+ *   tags?: TagName[];
+ *   category?: string;
+ * }} params
+ * @returns {PostListResponse}
+ */
 const listPostsFromSeed = ({
   page = 1,
   search = '',
@@ -472,6 +671,10 @@ const listPostsFromSeed = ({
   return paginatePosts(ordered, page);
 };
 
+/**
+ * @param {string} slug
+ * @returns {PostDetail | null}
+ */
 const getPostFromSeed = (slug) => {
   if (!slug) {
     return null;
@@ -485,6 +688,10 @@ const getPostFromSeed = (slug) => {
   return sanitizePost(post);
 };
 
+/**
+ * @param {string} slug
+ * @returns {Comment[]}
+ */
 const listCommentsFromSeed = (slug) => {
   if (!slug) {
     return [];
@@ -510,6 +717,11 @@ const listCommentsFromSeed = (slug) => {
   return sortByCreatedAt([...baseComments, ...stored]).map(({ postSlug, postId, ...comment }) => ({ ...comment }));
 };
 
+/**
+ * @param {string} slug
+ * @param {{ author_name: string; content: string }} comment
+ * @returns {Comment | null}
+ */
 const storeLocalComment = (slug, comment) => {
   if (!slug) {
     return null;
@@ -523,6 +735,10 @@ const storeLocalComment = (slug, comment) => {
   return publicComment;
 };
 
+/**
+ * @param {{ q?: string; is_active?: string | boolean }} [params]
+ * @returns {CategoryListResponse}
+ */
 const getCategoriesFromSeed = ({ q = '', is_active = undefined } = {}) => {
   const term = q.toString().trim().toLowerCase();
   const hasTerm = term.length > 0;
@@ -561,6 +777,17 @@ const getCategoriesFromSeed = ({ q = '', is_active = undefined } = {}) => {
   };
 };
 
+/**
+ * @param {{
+ *   page?: number;
+ *   search?: string;
+ *   ordering?: string;
+ *   tags?: TagName[];
+ *   category?: string;
+ *   signal?: AbortSignal;
+ * }} [params]
+ * @returns {Promise<PostListResponse>}
+ */
 export const listPosts = async ({
   page = 1,
   search = '',
@@ -586,7 +813,9 @@ export const listPosts = async ({
 
     const { data } = await apiGet('/api/posts/', { params, signal });
     const results = Array.isArray(data?.results)
-      ? data.results.map((post) => sanitizePost(normalizePostRecord(post)))
+      ? data.results
+          .map((post) => normalizePostRecord(post, { categoriesLookup: seededCategoriesBySlug }))
+          .map((post) => sanitizePost(post))
       : [];
     return {
       results,
@@ -609,6 +838,11 @@ export const listPosts = async ({
   });
 };
 
+/**
+ * @param {string} slug
+ * @param {{ signal?: AbortSignal }} [options]
+ * @returns {Promise<PostDetail>}
+ */
 export const getPost = async (slug, { signal } = {}) => {
   if (!slug) {
     throw new Error('Slug de publicación requerido');
@@ -616,7 +850,7 @@ export const getPost = async (slug, { signal } = {}) => {
 
   try {
     const { data } = await apiGet(`/api/posts/${slug}/`, { signal });
-    return sanitizePost(normalizePostRecord(data));
+    return sanitizePost(normalizePostRecord(data, { categoriesLookup: seededCategoriesBySlug }));
   } catch (error) {
     if (error?.name === 'AbortError') {
       throw error;
@@ -633,6 +867,11 @@ export const getPost = async (slug, { signal } = {}) => {
   return post;
 };
 
+/**
+ * @param {string} slug
+ * @param {{ signal?: AbortSignal }} [options]
+ * @returns {Promise<Comment[]>}
+ */
 export const listComments = async (slug, { signal } = {}) => {
   if (!slug) {
     return [];
@@ -661,6 +900,12 @@ export const listComments = async (slug, { signal } = {}) => {
   return listCommentsFromSeed(slug);
 };
 
+/**
+ * @param {string} slug
+ * @param {{ author_name?: string; content?: string }} payload
+ * @param {{ signal?: AbortSignal }} [options]
+ * @returns {Promise<Comment>}
+ */
 export const createComment = async (slug, payload, { signal } = {}) => {
   if (!slug) {
     throw new Error('Slug de publicación requerido');
@@ -684,7 +929,9 @@ export const createComment = async (slug, payload, { signal } = {}) => {
   try {
     const body = { author_name: authorName, content };
     const { data } = await apiPost(`/api/posts/${slug}/comments/`, { body, signal });
-    return data;
+    const normalized = normalizeCommentRecord(data, slug);
+    const { postSlug, postId, ...comment } = normalized;
+    return { ...comment };
   } catch (error) {
     if (error?.name === 'AbortError') {
       throw error;
@@ -695,6 +942,15 @@ export const createComment = async (slug, payload, { signal } = {}) => {
   return { ...stored, isLocalOnly: true };
 };
 
+/**
+ * @param {{
+ *   q?: string;
+ *   is_active?: string | boolean;
+ *   with_counts?: boolean;
+ *   signal?: AbortSignal;
+ * }} [params]
+ * @returns {Promise<CategoryListResponse>}
+ */
 export const getCategories = async ({
   q = '',
   is_active = undefined,
