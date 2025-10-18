@@ -7,7 +7,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from blog.models import Comment, Post, Tag
+from blog.models import Category, Comment, Post, Tag
 
 
 class PostAPITestCase(APITestCase):
@@ -91,6 +91,38 @@ class PostAPITestCase(APITestCase):
         results = response.data["results"]
         self.assertEqual(results[0]["slug"], older.slug)
         self.assertEqual(results[-1]["slug"], newer.slug)
+
+    def test_ordering_posts_using_created_at_alias(self) -> None:
+        """Ordering by the created_at alias should be accepted by the API."""
+
+        newer = self._create_post("Más nuevo", days_offset=0)
+        older = self._create_post("Más antiguo", days_offset=5)
+
+        response = self.client.get(self.list_url, {"ordering": "created_at"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data["results"]
+        self.assertGreaterEqual(len(results), 2)
+        self.assertEqual(results[0]["slug"], older.slug)
+        self.assertEqual(results[-1]["slug"], newer.slug)
+
+    def test_post_detail_includes_category_metadata(self) -> None:
+        """The post detail endpoint should expose category information safely."""
+
+        post = self._create_post("Con categorías")
+        category = Category.objects.create(name="Frontend")
+        post.categories.add(category)
+
+        url = reverse("blog:posts-detail", kwargs={"slug": post.slug})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = response.data
+        self.assertIn("categories_detail", payload)
+        self.assertGreaterEqual(len(payload["categories_detail"]), 1)
+        detail = payload["categories_detail"][0]
+        self.assertEqual(detail["slug"], category.slug)
+        self.assertIn("post_count", detail)
 
 
 class CommentAPITestCase(APITestCase):

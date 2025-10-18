@@ -113,6 +113,23 @@ const sanitizeCategoryValue = (category) => {
   return slug || null;
 };
 
+const normalizeOrderingValue = (ordering) => {
+  if (ordering == null) {
+    return '-date';
+  }
+  const value = ordering.toString().trim();
+  if (!value) {
+    return '-date';
+  }
+  if (value.includes('created_at')) {
+    return value.replace(/created_at/g, 'date');
+  }
+  if (['-date', 'date', 'title', '-title'].includes(value)) {
+    return value;
+  }
+  return '-date';
+};
+
 const initialTheme = getInitialTheme();
 const initialSearch = sanitizeSearch(getInitialSearch());
 
@@ -167,7 +184,7 @@ export const useUIStore = create((set, get) => {
   return {
     theme: initialTheme,
     search: initialSearch,
-    ordering: '-created_at',
+    ordering: '-date',
     selectedTags: [],
     selectedCategory: null,
     page: 1,
@@ -193,7 +210,7 @@ export const useUIStore = create((set, get) => {
       set({ search: sanitized, page: 1 });
     },
     setOrdering: (ordering) => {
-      set({ ordering: ordering || '-created_at', page: 1 });
+      set({ ordering: normalizeOrderingValue(ordering), page: 1 });
     },
     setSelectedTags: (tags) => {
       set({ selectedTags: sanitizeTags(tags), page: 1 });

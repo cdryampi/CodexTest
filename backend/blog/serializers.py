@@ -12,12 +12,40 @@ from .models import Category, Comment, Post, Tag
 class CategorySerializer(serializers.ModelSerializer):
     """Public representation of a blog category."""
 
-    post_count = serializers.IntegerField(read_only=True, default=0)
+    post_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
         fields = ["name", "slug", "description", "is_active", "post_count"]
         read_only_fields = ["slug", "post_count"]
+
+    def get_post_count(self, obj: Category) -> int:
+        """Return the number of posts associated with the category.
+
+        The API can annotate ``post_count`` when explicitly requested, but
+        serializers should degrade gracefully if that annotation is not present.
+        When the attribute does not exist we fallback to counting the cached
+        ``posts`` relation (if it was prefetched) or, as a last resort, perform a
+        lightweight count query.
+        """
+
+        annotated_value = getattr(obj, "post_count", None)
+        try:
+            if annotated_value is not None:
+                return int(annotated_value)
+        except (TypeError, ValueError):
+            pass
+
+        if hasattr(obj, "_prefetched_objects_cache"):
+            cached = obj._prefetched_objects_cache.get("posts")
+            if cached is not None:
+                return len(cached)
+
+        related_posts = getattr(obj, "posts", None)
+        if hasattr(related_posts, "count"):
+            return related_posts.count()
+
+        return 0
 
 
 class TagNameField(serializers.SlugRelatedField):
