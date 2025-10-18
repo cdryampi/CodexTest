@@ -146,8 +146,13 @@ CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(_env_csv("CSRF_TRUSTED_ORIGINS")))
 _default_cors_origins = [
     "https://cdryampi.github.io",
     "https://cdryampi.github.io/CodexTest/",
+    "https://codextest-front.vercel.app",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+]
+
+_default_cors_origin_regexes = [
+    r"^https://codextest-front(?:-[\w-]+)?\.vercel\.app/?$",
 ]
 
 _raw_cors_origins = _env_csv("CORS_ALLOWED_ORIGINS")
@@ -156,7 +161,7 @@ if _raw_cors_origins:
 else:
     _raw_cors_origins = list(_default_cors_origins)
 CORS_ALLOWED_ORIGINS: list[str] = []
-CORS_ALLOWED_ORIGIN_REGEXES: list[str] = []
+CORS_ALLOWED_ORIGIN_REGEXES: list[str] = list(_default_cors_origin_regexes)
 for origin in _raw_cors_origins:
     origin = origin.strip()
     if not origin:
