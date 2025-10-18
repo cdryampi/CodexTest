@@ -85,7 +85,6 @@ function TimelineItem({ post, position = 'left', prefersReducedMotion = false })
       className="relative pl-12 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-12 lg:pl-0"
     >
       <span
-        aria-hidden="true"
         className="pointer-events-none absolute left-4 top-6 h-4 w-4 -translate-x-1/2 rounded-full border-2 border-sky-500 bg-white shadow-md transition-colors duration-300 dark:border-sky-400 dark:bg-slate-950 lg:left-1/2 lg:-translate-x-1/2"
       >
         <span className="block h-2 w-2 rounded-full bg-sky-500 dark:bg-sky-300" />
