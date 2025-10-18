@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Select } from 'flowbite-react';
+import { Badge, Button, Select } from 'flowbite-react';
 import { getCategories, listPosts } from '../api';
 import PostList from '../components/PostList';
 import TagFilter from '../components/TagFilter';
 import Pagination from '../components/Pagination';
-import CategorySidebar from '../components/CategorySidebar';
-import CategorySkeleton from '../components/CategorySkeleton';
+import CategoryDrawer from '../components/CategoryDrawer';
 import {
   useUIStore,
   selectOrdering,
@@ -45,6 +44,7 @@ function Home() {
   const [categoriesToken, setCategoriesToken] = useState(0);
   const [categorySearch, setCategorySearch] = useState('');
   const [onlyActiveCategories, setOnlyActiveCategories] = useState(true);
+  const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
 
   const fetchPosts = useCallback(
     async (controller) => {
@@ -206,6 +206,18 @@ function Home() {
     return filters.join(' · ');
   }, [search, selectedTags, selectedCategoryLabel]);
 
+  const openCategoryDrawer = () => {
+    setIsCategoryDrawerOpen(true);
+  };
+
+  const closeCategoryDrawer = () => {
+    setIsCategoryDrawerOpen(false);
+  };
+
+  const clearSelectedCategory = () => {
+    setSelectedCategory(null);
+  };
+
   return (
     <div className="space-y-10">
       <header className="space-y-4">
@@ -220,65 +232,100 @@ function Home() {
         ) : null}
       </header>
 
-      <div className="flex flex-col gap-8 lg:flex-row">
-        <section className="flex-1 space-y-6">
-          <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-2">
-              <label htmlFor="ordering" className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-                Ordenar por
-              </label>
-              <Select id="ordering" value={ordering} onChange={handleOrderingChange} aria-label="Ordenar publicaciones">
-                {ORDER_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="flex flex-col gap-2">
-              <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Página actual</span>
-              <span className="text-lg font-bold text-slate-900 dark:text-white">{page}</span>
-            </div>
+      <section className="space-y-6">
+        <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="ordering" className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+              Ordenar por
+            </label>
+            <Select id="ordering" value={ordering} onChange={handleOrderingChange} aria-label="Ordenar publicaciones">
+              {ORDER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
           </div>
+          <div className="flex flex-col gap-2 text-right sm:text-left">
+            <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Página actual</span>
+            <span className="text-lg font-bold text-slate-900 dark:text-white">{page}</span>
+          </div>
+        </div>
 
-          <TagFilter value={selectedTags} onChange={handleTagsChange} />
+        <div className="space-y-3 rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button color="dark" onClick={openCategoryDrawer} disabled={categoriesState.loading}>
+              {selectedCategoryLabel ? 'Cambiar categoría' : 'Filtrar por categoría'}
+            </Button>
+            {categoriesState.loading ? (
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                Cargando categorías...
+              </span>
+            ) : null}
+            {categoriesState.error ? (
+              <button
+                type="button"
+                onClick={handleCategoriesRetry}
+                className="text-xs font-semibold text-red-600 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:text-red-400 dark:focus-visible:ring-offset-slate-900"
+              >
+                Reintentar carga de categorías
+              </button>
+            ) : null}
+            {selectedCategoryLabel ? (
+              <Badge color="info" className="flex items-center gap-2">
+                <span>{selectedCategoryLabel}</span>
+                <button
+                  type="button"
+                  onClick={clearSelectedCategory}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-sky-100 transition hover:bg-sky-200 hover:text-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:text-sky-900 dark:hover:bg-sky-200 dark:focus-visible:ring-offset-slate-900"
+                  aria-label="Quitar filtro de categoría"
+                >
+                  ×
+                </button>
+              </Badge>
+            ) : (
+              <span className="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">Todas las categorías</span>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Selecciona una categoría para refinar los resultados. Puedes combinarla con etiquetas y búsqueda para obtener coincidencias más precisas.
+          </p>
+        </div>
 
-          <PostList
-            items={state.items}
-            loading={state.loading}
-            error={state.error}
-            onRetry={handleRetry}
-            emptyMessage="Sin resultados. Ajusta la búsqueda o prueba con otras etiquetas."
-          />
+        <TagFilter value={selectedTags} onChange={handleTagsChange} />
 
-          <Pagination
-            page={page}
-            totalItems={state.count}
-            pageSize={pageSize}
-            onPageChange={handlePageChange}
-          />
-        </section>
+        <PostList
+          items={state.items}
+          loading={state.loading}
+          error={state.error}
+          onRetry={handleRetry}
+          emptyMessage="Sin resultados. Ajusta la búsqueda o prueba con otras etiquetas."
+        />
 
-        <aside className="lg:w-72 xl:w-80">
-          {categoriesState.loading ? (
-            <CategorySkeleton />
-          ) : (
-            <CategorySidebar
-              categories={categoriesState.items}
-              selected={selectedCategory}
-              error={categoriesState.error}
-              onSelect={handleCategoryChange}
-              onRetry={handleCategoriesRetry}
-              searchValue={categorySearch}
-              onSearchChange={handleCategorySearchChange}
-              onSearchClear={handleCategorySearchClear}
-              onlyActive={onlyActiveCategories}
-              onOnlyActiveChange={handleCategoryOnlyActiveChange}
-              onResetFilters={handleCategoryFiltersReset}
-            />
-          )}
-        </aside>
-      </div>
+        <Pagination
+          page={page}
+          totalItems={state.count}
+          pageSize={pageSize}
+          onPageChange={handlePageChange}
+        />
+      </section>
+
+      <CategoryDrawer
+        open={isCategoryDrawerOpen}
+        onClose={closeCategoryDrawer}
+        categories={categoriesState.items}
+        selected={selectedCategory}
+        loading={categoriesState.loading}
+        error={categoriesState.error}
+        onSelect={handleCategoryChange}
+        onRetry={handleCategoriesRetry}
+        searchValue={categorySearch}
+        onSearchChange={handleCategorySearchChange}
+        onSearchClear={handleCategorySearchClear}
+        onlyActive={onlyActiveCategories}
+        onOnlyActiveChange={handleCategoryOnlyActiveChange}
+        onResetFilters={handleCategoryFiltersReset}
+      />
     </div>
   );
 }
