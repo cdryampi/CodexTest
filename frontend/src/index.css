@@ -21,6 +21,10 @@
     @apply bg-slate-950 text-slate-100;
   }
 
+  img {
+    @apply object-cover;
+  }
+
   a,
   button {
     @apply transition-colors duration-300;

@@ -9,7 +9,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { getPost, listComments } from '../api';
 import CommentsSection from '../components/CommentsSection';
-import Skeleton from '../components/Skeleton';
+import Skeleton from '../components/common/Skeleton';
 
 const formatDate = (value) => {
   if (!value) {

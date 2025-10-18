@@ -1,8 +1,41 @@
+import { cloneElement, isValidElement } from 'react';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import PostCard from './PostCard';
-import Skeleton from './Skeleton';
+import { m } from 'framer-motion';
+import AnimatedPostCard from './motion/AnimatedPostCard';
+import Skeleton from './common/Skeleton';
+import useInViewOnce from '../hooks/useInViewOnce';
 
-function PostList({ items = [], loading = false, error = null, onRetry, emptyMessage = 'Sin resultados por ahora.' }) {
+const listVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.075
+    }
+  }
+};
+
+function PostList({
+  items = [],
+  loading = false,
+  error = null,
+  onRetry,
+  emptyMessage = 'Sin resultados por ahora.',
+  renderItem
+}) {
+  const [gridRef, gridInView] = useInViewOnce({ rootMargin: '0px 0px -10% 0px' });
+
+  const renderCard = (item, index) => {
+    if (typeof renderItem === 'function') {
+      const element = renderItem(item, index);
+      if (isValidElement(element)) {
+        const key = element.key ?? item.slug ?? item.id ?? index;
+        return cloneElement(element, { key });
+      }
+    }
+    const key = item.slug ?? item.id ?? index;
+    return <AnimatedPostCard key={key} post={item} />;
+  };
+
   if (loading) {
     return (
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
@@ -54,11 +87,15 @@ function PostList({ items = [], loading = false, error = null, onRetry, emptyMes
   }
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-      {items.map((item) => (
-        <PostCard key={item.slug} post={item} />
-      ))}
-    </div>
+    <m.div
+      ref={gridRef}
+      className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3"
+      variants={listVariants}
+      initial="hidden"
+      animate={gridInView ? 'visible' : 'hidden'}
+    >
+      {items.map((item, index) => renderCard(item, index))}
+    </m.div>
   );
 }
 
