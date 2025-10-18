@@ -504,8 +504,6 @@ const getCategoriesFromSeed = ({ q = '', is_active = undefined } = {}) => {
   };
 };
 
-let remoteAvailable = true;
-
 export const listPosts = async ({
   page = 1,
   search = '',
@@ -518,30 +516,30 @@ export const listPosts = async ({
   const apiOrdering = normalizeOrderingForApi(ordering);
   const localOrdering = normalizeOrderingForSeed(ordering);
 
-  if (remoteAvailable) {
-    try {
-      const params = {
-        page,
-        ordering: apiOrdering,
-        search: sanitizeSearchTerm(search),
-        tags: sanitizeTags(tags).join(',')
-      };
-      if (normalizedCategory) {
-        params.category = normalizedCategory;
-      }
+  try {
+    const params = {
+      page,
+      ordering: apiOrdering,
+      search: sanitizeSearchTerm(search),
+      tags: sanitizeTags(tags).join(',')
+    };
+    if (normalizedCategory) {
+      params.category = normalizedCategory;
+    }
 
-      const { data } = await apiGet('/api/posts/', { params, signal });
-      const results = Array.isArray(data?.results)
-        ? data.results.map((post) => sanitizePost(normalizePostRecord(post)))
-        : [];
-      return {
-        results,
-        count: typeof data?.count === 'number' ? data.count : results.length,
-        next: data?.next ?? null,
-        previous: data?.previous ?? null
-      };
-    } catch (error) {
-      remoteAvailable = false;
+    const { data } = await apiGet('/api/posts/', { params, signal });
+    const results = Array.isArray(data?.results)
+      ? data.results.map((post) => sanitizePost(normalizePostRecord(post)))
+      : [];
+    return {
+      results,
+      count: typeof data?.count === 'number' ? data.count : results.length,
+      next: data?.next ?? null,
+      previous: data?.previous ?? null
+    };
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw error;
     }
   }
 
@@ -559,12 +557,12 @@ export const getPost = async (slug, { signal } = {}) => {
     throw new Error('Slug de publicación requerido');
   }
 
-  if (remoteAvailable) {
-    try {
-      const { data } = await apiGet(`/api/posts/${slug}/`, { signal });
-      return sanitizePost(normalizePostRecord(data));
-    } catch (error) {
-      remoteAvailable = false;
+  try {
+    const { data } = await apiGet(`/api/posts/${slug}/`, { signal });
+    return sanitizePost(normalizePostRecord(data));
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw error;
     }
   }
 
@@ -583,23 +581,23 @@ export const listComments = async (slug, { signal } = {}) => {
     return [];
   }
 
-  if (remoteAvailable) {
-    try {
-      const { data } = await apiGet(`/api/posts/${slug}/comments/`, { signal });
-      const remoteComments = Array.isArray(data)
-        ? data
-        : Array.isArray(data?.results)
-          ? data.results
-          : [];
+  try {
+    const { data } = await apiGet(`/api/posts/${slug}/comments/`, { signal });
+    const remoteComments = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.results)
+        ? data.results
+        : [];
 
-      const normalized = remoteComments.map((comment) => normalizeCommentRecord(comment, slug));
-      const stored = readStoredComments(slug);
-      return sortByCreatedAt([...normalized, ...stored]).map(({ postSlug, postId, ...comment }) => ({ ...comment }));
-    } catch (error) {
-      if (error?.status === 404) {
-        return [];
-      }
-      remoteAvailable = false;
+    const normalized = remoteComments.map((comment) => normalizeCommentRecord(comment, slug));
+    const stored = readStoredComments(slug);
+    return sortByCreatedAt([...normalized, ...stored]).map(({ postSlug, postId, ...comment }) => ({ ...comment }));
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw error;
+    }
+    if (error?.status === 404) {
+      return [];
     }
   }
 
@@ -626,13 +624,13 @@ export const createComment = async (slug, payload, { signal } = {}) => {
     throw new Error('El comentario no puede superar los 2000 caracteres.');
   }
 
-  if (remoteAvailable) {
-    try {
-      const body = { author_name: authorName, content };
-      const { data } = await apiPost(`/api/posts/${slug}/comments/`, { body, signal });
-      return data;
-    } catch (error) {
-      remoteAvailable = false;
+  try {
+    const body = { author_name: authorName, content };
+    const { data } = await apiPost(`/api/posts/${slug}/comments/`, { body, signal });
+    return data;
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw error;
     }
   }
 
@@ -648,39 +646,39 @@ export const getCategories = async ({
 } = {}) => {
   const searchTerm = q?.toString().trim();
 
-  if (remoteAvailable) {
-    try {
-      const params = {};
-      if (searchTerm) {
-        params.q = searchTerm;
-      }
-      if (typeof is_active === 'boolean') {
-        params.is_active = is_active ? 'true' : 'false';
-      } else if (typeof is_active === 'string' && is_active) {
-        params.is_active = is_active;
-      }
-      if (with_counts) {
-        params.with_counts = 'true';
-      }
+  try {
+    const params = {};
+    if (searchTerm) {
+      params.q = searchTerm;
+    }
+    if (typeof is_active === 'boolean') {
+      params.is_active = is_active ? 'true' : 'false';
+    } else if (typeof is_active === 'string' && is_active) {
+      params.is_active = is_active;
+    }
+    if (with_counts) {
+      params.with_counts = 'true';
+    }
 
-      const { data } = await apiGet('/api/categories/', { params, signal });
-      const rawItems = Array.isArray(data?.results)
-        ? data.results
-        : Array.isArray(data)
-          ? data
-          : [];
-      const normalizedItems = rawItems
-        .map((category) => normalizeCategoryRecord(category))
-        .filter(Boolean);
+    const { data } = await apiGet('/api/categories/', { params, signal });
+    const rawItems = Array.isArray(data?.results)
+      ? data.results
+      : Array.isArray(data)
+        ? data
+        : [];
+    const normalizedItems = rawItems
+      .map((category) => normalizeCategoryRecord(category))
+      .filter(Boolean);
 
-      return {
-        results: normalizedItems,
-        count: typeof data?.count === 'number' ? data.count : normalizedItems.length,
-        next: data?.next ?? null,
-        previous: data?.previous ?? null
-      };
-    } catch (error) {
-      remoteAvailable = false;
+    return {
+      results: normalizedItems,
+      count: typeof data?.count === 'number' ? data.count : normalizedItems.length,
+      next: data?.next ?? null,
+      previous: data?.previous ?? null
+    };
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw error;
     }
   }
 
