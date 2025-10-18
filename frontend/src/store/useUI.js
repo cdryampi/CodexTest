@@ -3,26 +3,57 @@ import { create } from 'zustand';
 const THEME_STORAGE_KEY = 'blog:ui:theme';
 const SEARCH_STORAGE_KEY = 'blog:ui:last-search';
 
-const getInitialTheme = () => {
+const safeStorage = {
+  get: (key) => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    try {
+      return window.localStorage.getItem(key);
+    } catch (error) {
+      return null;
+    }
+  },
+  set: (key, value) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    try {
+      window.localStorage.setItem(key, value);
+    } catch (error) {
+      // Ignorar errores de almacenamiento (modo incógnito, espacio lleno, etc.).
+    }
+  },
+  remove: (key) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    try {
+      window.localStorage.removeItem(key);
+    } catch (error) {
+      // Ignorar errores al limpiar almacenamiento.
+    }
+  }
+};
+
+const resolveSystemTheme = () => {
   if (typeof window === 'undefined') {
     return 'light';
   }
-
-  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-  if (stored === 'dark' || stored === 'light') {
-    return stored;
-  }
-
   const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)')?.matches;
   return prefersDark ? 'dark' : 'light';
 };
 
-const getInitialSearch = () => {
-  if (typeof window === 'undefined') {
-    return '';
+const getInitialTheme = () => {
+  const stored = safeStorage.get(THEME_STORAGE_KEY);
+  if (stored === 'dark' || stored === 'light') {
+    return stored;
   }
+  return resolveSystemTheme();
+};
 
-  const stored = window.localStorage.getItem(SEARCH_STORAGE_KEY);
+const getInitialSearch = () => {
+  const stored = safeStorage.get(SEARCH_STORAGE_KEY);
   if (typeof stored === 'string') {
     return stored;
   }
@@ -54,71 +85,110 @@ const sanitizeTags = (tags = []) => {
 const initialTheme = getInitialTheme();
 const initialSearch = sanitizeSearch(getInitialSearch());
 
+let themeListenersInitialized = false;
+
+const initializeThemeListeners = (set) => {
+  if (typeof window === 'undefined' || themeListenersInitialized) {
+    return;
+  }
+
+  themeListenersInitialized = true;
+  const mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
+
+  const handleMediaChange = (event) => {
+    const storedTheme = safeStorage.get(THEME_STORAGE_KEY);
+    if (storedTheme === 'dark' || storedTheme === 'light') {
+      return;
+    }
+    const theme = event.matches ? 'dark' : 'light';
+    applyTheme(theme);
+    set({ theme });
+  };
+
+  const handleStorageChange = (event) => {
+    if (event.key !== THEME_STORAGE_KEY) {
+      return;
+    }
+
+    const nextTheme = event.newValue === 'dark' ? 'dark' : event.newValue === 'light' ? 'light' : resolveSystemTheme();
+    applyTheme(nextTheme);
+    set({ theme: nextTheme });
+  };
+
+  if (mediaQuery) {
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleMediaChange);
+    } else if (typeof mediaQuery.addListener === 'function') {
+      mediaQuery.addListener(handleMediaChange);
+    }
+  }
+
+  window.addEventListener('storage', handleStorageChange);
+};
+
 if (typeof document !== 'undefined') {
   applyTheme(initialTheme);
 }
 
-export const useUIStore = create((set, get) => ({
-  theme: initialTheme,
-  search: initialSearch,
-  ordering: '-created_at',
-  selectedTags: [],
-  page: 1,
-  setTheme: (nextTheme) => {
-    const theme = nextTheme === 'dark' ? 'dark' : 'light';
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-    }
-    applyTheme(theme);
-    set({ theme });
-  },
-  toggleTheme: () => {
-    const current = get().theme;
-    const next = current === 'dark' ? 'light' : 'dark';
-    get().setTheme(next);
-  },
-  setSearch: (value) => {
-    const sanitized = sanitizeSearch(value);
-    if (typeof window !== 'undefined') {
+export const useUIStore = create((set, get) => {
+  initializeThemeListeners(set);
+
+  return {
+    theme: initialTheme,
+    search: initialSearch,
+    ordering: '-created_at',
+    selectedTags: [],
+    page: 1,
+    setTheme: (nextTheme) => {
+      const theme = nextTheme === 'dark' ? 'dark' : 'light';
+      safeStorage.set(THEME_STORAGE_KEY, theme);
+      applyTheme(theme);
+      set({ theme });
+    },
+    toggleTheme: () => {
+      const current = get().theme;
+      const next = current === 'dark' ? 'light' : 'dark';
+      get().setTheme(next);
+    },
+    setSearch: (value) => {
+      const sanitized = sanitizeSearch(value);
       if (sanitized) {
-        window.localStorage.setItem(SEARCH_STORAGE_KEY, sanitized);
+        safeStorage.set(SEARCH_STORAGE_KEY, sanitized);
       } else {
-        window.localStorage.removeItem(SEARCH_STORAGE_KEY);
+        safeStorage.remove(SEARCH_STORAGE_KEY);
       }
-    }
-    set({ search: sanitized, page: 1 });
-  },
-  setOrdering: (ordering) => {
-    set({ ordering: ordering || '-created_at', page: 1 });
-  },
-  setSelectedTags: (tags) => {
-    set({ selectedTags: sanitizeTags(tags), page: 1 });
-  },
-  toggleTag: (tag) => {
-    if (!tag) {
-      return;
-    }
-    const sanitized = tag.trim().toLowerCase();
-    set((state) => {
-      const current = new Set(state.selectedTags);
-      if (current.has(sanitized)) {
-        current.delete(sanitized);
-      } else {
-        current.add(sanitized);
+      set({ search: sanitized, page: 1 });
+    },
+    setOrdering: (ordering) => {
+      set({ ordering: ordering || '-created_at', page: 1 });
+    },
+    setSelectedTags: (tags) => {
+      set({ selectedTags: sanitizeTags(tags), page: 1 });
+    },
+    toggleTag: (tag) => {
+      if (!tag) {
+        return;
       }
-      return { selectedTags: Array.from(current).sort((a, b) => a.localeCompare(b, 'es')), page: 1 };
-    });
-  },
-  setPage: (page) => {
-    set({ page: Math.max(1, page || 1) });
-  },
-  resetFilters: () => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(SEARCH_STORAGE_KEY);
+      const sanitized = tag.trim().toLowerCase();
+      set((state) => {
+        const current = new Set(state.selectedTags);
+        if (current.has(sanitized)) {
+          current.delete(sanitized);
+        } else {
+          current.add(sanitized);
+        }
+        return { selectedTags: Array.from(current).sort((a, b) => a.localeCompare(b, 'es')), page: 1 };
+      });
+    },
+    setPage: (page) => {
+      set({ page: Math.max(1, page || 1) });
+    },
+    resetFilters: () => {
+      safeStorage.remove(SEARCH_STORAGE_KEY);
+      set({ search: '', ordering: '-created_at', selectedTags: [], page: 1 });
     }
-    set({ search: '', ordering: '-created_at', selectedTags: [], page: 1 });
-  }
-}));
+  };
+});
 
 export const selectTheme = (state) => state.theme;
 export const selectIsDark = (state) => state.theme === 'dark';

@@ -5,7 +5,7 @@ import Skeleton from './Skeleton';
 function PostList({ items = [], loading = false, error = null, onRetry, emptyMessage = 'Sin resultados por ahora.' }) {
   if (loading) {
     return (
-      <div className="grid gap-6 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
         {Array.from({ length: 4 }).map((_, index) => (
           <Skeleton key={index} variant="card" />
         ))}
@@ -54,7 +54,7 @@ function PostList({ items = [], loading = false, error = null, onRetry, emptyMes
   }
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2">
+    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
       {items.map((item) => (
         <PostCard key={item.slug} post={item} />
       ))}

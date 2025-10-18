@@ -152,3 +152,27 @@ class CommentAPITestCase(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("author_name", response.data)
+
+    def test_list_comments_using_plain_url(self) -> None:
+        """The API must accept plain nested URLs without reversing helpers."""
+
+        Comment.objects.create(post=self.post, author_name="Ana", content="Excelente artículo")
+
+        response = self.client.get(f"/api/posts/{self.post.slug}/comments/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+
+    def test_create_comment_using_plain_url(self) -> None:
+        """Posting through the public URL should create the comment successfully."""
+
+        payload = {"author_name": "Laura", "content": "Me encantó este contenido"}
+
+        response = self.client.post(
+            f"/api/posts/{self.post.slug}/comments/",
+            payload,
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Comment.objects.filter(post=self.post, author_name="Laura").exists())
