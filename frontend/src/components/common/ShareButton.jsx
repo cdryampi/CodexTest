@@ -120,9 +120,6 @@ function ShareButton({
       <div id={statusMessageId} role="status" aria-live="polite" className="text-xs text-slate-500 dark:text-slate-400">
         {showAssistiveMessage ? statusMessage : ' '}
       </div>
-      <span className="sr-only" aria-hidden={!showAssistiveMessage}>
-        {statusMessage}
-      </span>
     </div>
   );
 }
