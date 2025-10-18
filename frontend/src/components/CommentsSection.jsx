@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChatBubbleLeftRightIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import CommentForm from './CommentForm';
-import Skeleton from './Skeleton';
+import Skeleton from './common/Skeleton';
 import Toast from './Toast';
 
 const formatDate = (value) => {

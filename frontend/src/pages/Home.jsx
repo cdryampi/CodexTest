@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Button, Select } from 'flowbite-react';
 import { getCategories, listPosts } from '../api';
 import PostList from '../components/PostList';
+import MotionProvider from '../components/motion/MotionProvider';
+import AnimatedPostCard from '../components/motion/AnimatedPostCard';
 import TagFilter from '../components/TagFilter';
 import Pagination from '../components/Pagination';
 import CategoryDrawer from '../components/CategoryDrawer';
@@ -294,13 +296,16 @@ function Home() {
 
         <TagFilter value={selectedTags} onChange={handleTagsChange} />
 
-        <PostList
-          items={state.items}
-          loading={state.loading}
-          error={state.error}
-          onRetry={handleRetry}
-          emptyMessage="Sin resultados. Ajusta la búsqueda o prueba con otras etiquetas."
-        />
+        <MotionProvider>
+          <PostList
+            items={state.items}
+            loading={state.loading}
+            error={state.error}
+            onRetry={handleRetry}
+            emptyMessage="Sin resultados. Ajusta la búsqueda o prueba con otras etiquetas."
+            renderItem={(item) => <AnimatedPostCard post={item} />}
+          />
+        </MotionProvider>
 
         <Pagination
           page={page}
