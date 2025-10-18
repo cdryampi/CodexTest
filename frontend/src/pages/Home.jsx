@@ -4,7 +4,8 @@ import { getCategories, listPosts } from '../api';
 import PostList from '../components/PostList';
 import MotionProvider from '../components/motion/MotionProvider';
 import AnimatedPostCard from '../components/motion/AnimatedPostCard';
-import TagFilter from '../components/TagFilter';
+import SearchBar from '../components/search/SearchBar';
+import TagFilters from '../components/filters/TagFilters';
 import Pagination from '../components/Pagination';
 import CategoryDrawer from '../components/CategoryDrawer';
 import {
@@ -29,6 +30,7 @@ function Home() {
   const selectedCategory = useUIStore(selectSelectedCategory);
   const page = useUIStore(selectPage);
 
+  const setSearch = useUIStore((state) => state.setSearch);
   const setOrdering = useUIStore((state) => state.setOrdering);
   const setSelectedTags = useUIStore((state) => state.setSelectedTags);
   const setSelectedCategory = useUIStore((state) => state.setSelectedCategory);
@@ -47,6 +49,7 @@ function Home() {
   const [categorySearch, setCategorySearch] = useState('');
   const [onlyActiveCategories, setOnlyActiveCategories] = useState(true);
   const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState(search);
 
   const fetchPosts = useCallback(
     async (controller) => {
@@ -99,6 +102,10 @@ function Home() {
   );
 
   useEffect(() => {
+    setSearchInput(search);
+  }, [search]);
+
+  useEffect(() => {
     const controller = new AbortController();
     fetchPosts(controller);
 
@@ -109,6 +116,18 @@ function Home() {
 
   const handleOrderingChange = (event) => {
     setOrdering(event.target.value);
+  };
+
+  const handleSearchChange = (value) => {
+    setSearchInput(value);
+  };
+
+  const handleSearchDebouncedChange = (value) => {
+    setSearch(value.toLowerCase());
+  };
+
+  const handleSearchClear = () => {
+    setSearch('');
   };
 
   const handleTagsChange = (tags) => {
@@ -208,6 +227,19 @@ function Home() {
     return filters.join(' · ');
   }, [search, selectedTags, selectedCategoryLabel]);
 
+  const resultsSummary = useMemo(() => {
+    if (state.loading) {
+      return 'Buscando resultados…';
+    }
+    if (state.count === 0) {
+      return 'Sin resultados';
+    }
+    if (state.count === 1) {
+      return '1 resultado';
+    }
+    return `${state.count} resultados`;
+  }, [state.count, state.loading]);
+
   const openCategoryDrawer = () => {
     setIsCategoryDrawerOpen(true);
   };
@@ -254,6 +286,28 @@ function Home() {
           </div>
         </div>
 
+        <div className="space-y-3 rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+          <form
+            role="search"
+            className="flex flex-col gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              handleSearchDebouncedChange(searchInput);
+            }}
+          >
+            <SearchBar
+              value={searchInput}
+              onChange={handleSearchChange}
+              onDebouncedChange={handleSearchDebouncedChange}
+              onClear={handleSearchClear}
+              placeholder="Buscar artículos por título o resumen"
+              label="Buscar publicaciones"
+              debounceDelay={300}
+            />
+          </form>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{resultsSummary}</p>
+        </div>
+
         <div className="space-y-3 rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
           <div className="flex flex-wrap items-center gap-3">
             <Button color="dark" onClick={openCategoryDrawer} disabled={categoriesState.loading}>
@@ -294,7 +348,7 @@ function Home() {
           </p>
         </div>
 
-        <TagFilter value={selectedTags} onChange={handleTagsChange} />
+        <TagFilters selected={selectedTags} onChange={handleTagsChange} />
 
         <MotionProvider>
           <PostList
