@@ -120,13 +120,12 @@ function TimelineItem({ post, position = 'left', prefersReducedMotion = false })
           ) : null}
           <div className="flex flex-1 flex-col gap-4 p-6">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge
-                color="info"
+              <span
                 className="inline-flex items-center gap-1 rounded-full border border-cyan-300/60 bg-cyan-100/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-700 shadow-sm transition-colors duration-200 group-hover:border-cyan-400 group-hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-900/40 dark:text-cyan-200 dark:group-hover:border-cyan-400"
               >
                 <CalendarDaysIcon className="h-4 w-4" aria-hidden="true" />
                 {primaryCategory}
-              </Badge>
+              </span>
             </div>
             <h3 className="text-2xl font-semibold leading-tight text-slate-900 transition-colors duration-300 group-hover:text-sky-700 dark:text-white dark:group-hover:text-sky-300">
               {title}
