@@ -23,3 +23,7 @@ La generación de datos de ejemplo es opcional y debe controlarse mediante varia
 4. Llamar explícitamente a `python manage.py seed_all --fast` si se requieren datos.
 
 Mantén deshabilitado `SEED_ON_MIGRATE` en producción para evitar cargas inesperadas tras despliegues o migraciones.
+
+## CORS y frontend
+
+El frontend oficial consulta la API desde `https://backendblog.yampi.eu/`. Incluye los orígenes públicos (GitHub Pages u otros dominios) dentro de `CORS_ALLOWED_ORIGINS` cuando prepares la infraestructura en Dokploy/Nginx para evitar bloqueos del navegador.

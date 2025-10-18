@@ -1,101 +1,116 @@
 # React Tailwind Blog
 
-Este módulo vive dentro de `/frontend` del monorepo y contiene el cliente React desplegado en GitHub Pages.
+Este módulo vive dentro de `/frontend` del monorepo y contiene el cliente React desplegado en GitHub Pages. Ahora consume la API pública disponible en `https://backendblog.yampi.eu/` para obtener posts y comentarios reales a través de Django REST Framework.
 
-Proyecto de blog clásico construido con **React**, **Vite**, **Tailwind CSS**, **Flowbite** y **React Router DOM**. Incluye una configuración de CI/CD con **GitHub Actions** para desplegar automáticamente en **GitHub Pages**.
+## Stack principal
 
-## Características principales
+- **Vite + React 18** para el renderizado SPA.
+- **Tailwind CSS** y **Flowbite React** para los estilos y componentes accesibles.
+- **React Router DOM v6** con rutas `/` (home), `/post/:slug` (detalle) y un fallback `404`.
+- **Zustand** para la gestión de tema, filtros, búsqueda y paginación con persistencia en `localStorage`.
+- **Fetch wrapper personalizado** en `src/lib/apiClient.js` con `AbortController`, timeout manual, normalización de errores y _retry_ explícito desde la UI.
 
-- Frontend moderno creado con Vite y React 18.
-- Estilos utilitarios con Tailwind CSS y componentes accesibles de Flowbite React.
-- Modo oscuro/claro con persistencia en `localStorage` y compatibilidad con Flowbite.
-- Heroicons integrados en la navegación, tarjetas y comentarios para reforzar la jerarquía visual.
-- Tarjetas de posts enriquecidas con imágenes responsivas y efectos de interacción.
-- Navegación dinámica mediante React Router DOM v6.
-- Datos estáticos almacenados en archivos JSON para posts y comentarios.
-- Flujo de despliegue automatizado hacia GitHub Pages desde la rama `main`.
+## Configuración de API
 
-## Requisitos previos
+La URL base actual se define como constante en `src/lib/apiClient.js`:
 
-- [Node.js](https://nodejs.org/) versión 18 o superior.
-- npm (se instala con Node.js).
+```js
+const API_BASE_URL = 'https://backendblog.yampi.eu';
+// TODO: parametrizar con window.__ENV__?.API_BASE_URL || import.meta.env.VITE_API_BASE_URL || '/api/'
+```
+
+> ⚠️ Próximo paso: reemplazar la constante por las variables de entorno mencionadas en el comentario para soportar despliegues multi-entorno.
+
+### Endpoints consumidos
+
+- `GET /api/posts/?page=&search=&ordering=&tags=`
+- `GET /api/posts/{slug}/`
+- `GET /api/posts/{slug}/comments/`
+- `POST /api/posts/{slug}/comments/`
+
+El wrapper `src/lib/api.js` centraliza las funciones de dominio (`listPosts`, `getPost`, `listComments`, `createComment`) y sanitiza la entrada del cliente.
+
+## Estado global y UX
+
+- `src/store/useUI.js` expone un store de Zustand con:
+  - `theme` (`light` | `dark`) persistente.
+  - `search`, `ordering`, `selectedTags`, `page` sincronizados con la UI.
+  - Acciones para cambiar filtros, reiniciarlos y paginar.
+- El tema se aplica sobre `document.documentElement` y se recuerda entre sesiones.
+- La búsqueda en la `Navbar` usa _debounce_ de 300 ms y se sincroniza con la home.
+- Tag filter con etiquetas disponibles en el backend (`ciencia`, `devops`, `django`, `docker`, `filosofia`, `react`, `tutorial`).
+- Toaster accesible para confirmar la publicación de comentarios o mostrar errores.
+- Estados de _loading_, _empty_ y _error_ con componentes dedicados (`Skeleton`, `PostList`, `CommentsSection`).
 
 ## Instalación
 
-Ejecuta los comandos desde la raíz del repositorio:
+Desde la raíz del monorepo:
 
 ```bash
 npm install
 ```
 
-## Ejecutar en modo desarrollo
+## Ejecutar en desarrollo
 
 ```bash
 npm run dev
 ```
 
-El comando anterior inicia Vite en modo desarrollo. Abre la URL indicada en la terminal (por defecto `http://localhost:5173/`).
+Vite levantará el proyecto en `http://localhost:5173/` (o el puerto disponible). El `BrowserRouter` usa `basename={import.meta.env.BASE_URL}` para mantener compatibilidad con GitHub Pages.
 
-## Generar build de producción
+## Compilar y previsualizar
 
 ```bash
 npm run build
-```
-
-Para revisar el build localmente puedes ejecutar:
-
-```bash
 npm run preview
 ```
 
-## Despliegue automático con GitHub Actions
+La salida de la build queda en `dist/` (en la raíz del repositorio) para ser publicada automáticamente por GitHub Actions.
 
-1. Asegúrate de que el repositorio en GitHub se llame **react-tailwind-blog**.
-2. Habilita GitHub Pages en la rama `gh-pages` desde la configuración del repositorio.
-3. Cada vez que hagas push a `main`, el workflow `deploy.yml`:
-   - Instalará dependencias con `npm ci`.
-   - Compilará el proyecto con `npm run build`.
-   - Publicará el contenido de `dist/` en la rama `gh-pages` mediante [JamesIves/github-pages-deploy-action@v4](https://github.com/JamesIves/github-pages-deploy-action).
+## Despliegue automático
 
-## Personalización
+El workflow `.github/workflows/deploy.yml` continúa desplegando en GitHub Pages cuando se hace push a `main`:
 
-- Actualiza los archivos en `src/data/` para modificar posts y comentarios.
-- Ajusta los componentes en `src/pages/` y `src/components/` para adaptar el contenido o estilo.
-- Si cambias el nombre del repositorio, actualiza la propiedad `base` en `vite.config.js` y el basename del `BrowserRouter` en `src/main.jsx`.
+1. Ejecuta `npm ci` desde la raíz.
+2. Compila con `npm run build` usando la configuración de Vite en `/frontend`.
+3. Publica `dist/` en la rama `gh-pages` mediante `JamesIves/github-pages-deploy-action@v4`.
 
-## Experiencia de usuario
+## Páginas y componentes clave
 
-- El botón de modo oscuro se encuentra en la barra de navegación y sincroniza la preferencia con el almacenamiento local.
-- Los íconos provienen de [@heroicons/react](https://github.com/tailwindlabs/heroicons) y se utilizan para comunicar acciones y metadatos de forma visual.
-- Cada tarjeta de post utiliza imágenes remotas generadas mediante seeds estables en Picsum Photos.
+| Ruta / Archivo | Descripción |
+| --- | --- |
+| `src/App.jsx` | Rutas y layout principal. |
+| `src/main.jsx` | Montaje de React + Flowbite e importación del store para aplicar el tema al cargar. |
+| `src/pages/Home.jsx` | Lista paginada de posts con filtros, ordenamientos y estados de red. |
+| `src/pages/PostDetail.jsx` | Detalle del post, renderizado del contenido, manejo de 404 y comentarios anidados. |
+| `src/components/PostList.jsx` | Renderiza tarjetas o estados de skeleton/error. |
+| `src/components/CommentsSection.jsx` | Lista y formulario de comentarios con toasts. |
+| `src/components/NavBar.jsx` | Búsqueda global, switch de tema y reinicio rápido de filtros. |
+| `src/lib/apiClient.js` | Cliente Fetch reutilizable con timeout y normalización de errores. |
 
-## Búsqueda, filtros y paginación
+## Pruebas manuales recomendadas
 
-- El listado de posts admite búsqueda instantánea con [Fuse.js](https://fusejs.io/) sobre el título, resumen, contenido y etiquetas.
-- Puedes combinar la búsqueda con un filtro multiselección por etiquetas; los cambios se reflejan en la URL (`?q=`, `&tags=` y `&page=`) y se recuerdan automáticamente en `localStorage` (`blog:list:state`).
-- Los atajos `/` (enfocar) y `Esc` (limpiar y desenfocar) permiten interactuar con el buscador sin usar el mouse.
-- La paginación muestra 6 entradas por página e incluye navegación anterior/siguiente con mantenimiento del estado entre recargas.
+1. **Búsqueda:** escribe “django” en el buscador de la `Navbar` y verifica que la home muestre resultados filtrados y reinicie la paginación.
+2. **Ordenamiento:** cambia a “Más antiguos” y confirma que la lista se reordena.
+3. **Etiquetas:** activa varias etiquetas y observa cómo se combinan con la búsqueda.
+4. **Paginación:** navega entre páginas y valida que se mantengan los filtros activos.
+5. **Detalle:** abre un post, revisa la carga del contenido y los estados de comentarios.
+6. **Comentarios:** publica un comentario válido y comprueba el toast de confirmación y la recarga automática de la lista.
+7. **Errores:** desconecta la red (o fuerza un error) para ver el bloque de error con botón “Reintentar”.
 
-### Pruebas manuales recomendadas
+## Accesibilidad básica
 
-1. Buscar por palabras específicas del contenido y validar que los resultados se actualizan al escribir.
-2. Seleccionar varias etiquetas, comprobar que solo se muestran los posts relacionados y que la URL incluye `tags=`.
-3. Recargar la página y verificar que se conserva la última búsqueda, filtros y página activa.
-4. Cambiar de página y usar los botones Atrás/Adelante del navegador para confirmar que el estado se sincroniza correctamente.
-5. Forzar una búsqueda sin resultados para visualizar el estado vacío y restablecer filtros desde el botón disponible.
+- Controles navegables con teclado (`focus-visible` y `aria-label` en inputs y botones).
+- Botones de paginación con `aria-current` y descripción contextual.
+- Imágenes con `alt` descriptivo.
+- Toast con botón de cierre y auto-ocultamiento.
 
-## Contenido de ejemplo
+## Próximos pasos sugeridos
 
-- Las imágenes de las tarjetas y cabeceras provienen de la API pública [Picsum Photos](https://picsum.photos).
-- Cada post utiliza una `seed` única basada en su `slug` para mantener la misma fotografía en cada build.
-- Puedes modificar la URL cambiando los parámetros `seed`, `width` y `height`. Por ejemplo, `https://picsum.photos/seed/nuevo-slug/800/600` generará otra variante manteniendo la relación con ese identificador.
-- Si deseas usar tus propios recursos, sustituye las URLs en `src/data/posts.json` por las rutas deseadas y ajusta los tamaños según tus necesidades.
+- Parametrizar `API_BASE_URL` mediante `window.__ENV__?.API_BASE_URL` o `import.meta.env.VITE_API_BASE_URL` con _fallback_ a `/api/`.
+- Añadir _retry_ automático opcional para errores de red en el cliente.
+- Integrar tests de contrato contra la API para validar cambios futuros.
 
-## Imágenes y licencias
+---
 
-- Picsum Photos entrega fotografías libres de uso para prototipos y demostraciones; revisa sus términos si planeas un uso comercial.
-- Mantener seeds estables asegura que el contenido visual no cambie inesperadamente entre deploys.
-
-## Licencia
-
-Este proyecto se distribuye bajo la licencia MIT. Siéntete libre de adaptarlo a tus necesidades.
+Licencia MIT. ¡Felices commits!
