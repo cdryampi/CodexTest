@@ -155,12 +155,6 @@ function AnimatedPostCard({ post }) {
     [prefersReducedMotion]
   );
 
-  const handleKeyDown = (event) => {
-    if (event.key === ' ') {
-      event.preventDefault();
-      event.currentTarget.click();
-    }
-  };
 
   return (
     <m.article
