@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, viewsets
 
@@ -37,9 +38,27 @@ class CommentViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.Ge
     ordering_fields = ["created_at"]
     ordering = ["-created_at"]
 
+    def _get_post(self) -> Post:
+        """Return the parent post identified by the slug in the URL."""
+
+        if hasattr(self, "_post_cache"):
+            return self._post_cache
+
+        slug = (
+            self.kwargs.get("slug_pk")
+            or self.kwargs.get("slug")
+            or self.kwargs.get("post_pk")
+            or self.kwargs.get("post_slug")
+        )
+
+        if not slug:
+            raise Http404("No se proporcionó el slug de la publicación.")
+
+        self._post_cache = get_object_or_404(Post.objects.all(), slug=slug)
+        return self._post_cache
+
     def get_queryset(self):  # type: ignore[override]
-        slug = self.kwargs.get("slug_pk")
-        post = get_object_or_404(Post.objects.all(), slug=slug)
+        post = self._get_post()
         return (
             Comment.objects.filter(post=post)
             .select_related("post")
@@ -47,6 +66,4 @@ class CommentViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.Ge
         )
 
     def perform_create(self, serializer):  # type: ignore[override]
-        slug = self.kwargs.get("slug_pk")
-        post = get_object_or_404(Post.objects.all(), slug=slug)
-        serializer.save(post=post)
+        serializer.save(post=self._get_post())
