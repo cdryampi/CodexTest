@@ -142,7 +142,19 @@ if SECURE_SSL_REDIRECT:
 
 CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(_env_csv("CSRF_TRUSTED_ORIGINS")))
 
+# Orígenes permitidos por defecto para servir el frontend público de CodexTest
+_default_cors_origins = [
+    "https://cdryampi.github.io",
+    "https://cdryampi.github.io/CodexTest/",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
 _raw_cors_origins = _env_csv("CORS_ALLOWED_ORIGINS")
+if _raw_cors_origins:
+    _raw_cors_origins.extend(_default_cors_origins)
+else:
+    _raw_cors_origins = list(_default_cors_origins)
 CORS_ALLOWED_ORIGINS: list[str] = []
 CORS_ALLOWED_ORIGIN_REGEXES: list[str] = []
 for origin in _raw_cors_origins:
