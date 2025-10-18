@@ -155,7 +155,6 @@ function AnimatedPostCard({ post }) {
     [prefersReducedMotion]
   );
 
-
   return (
     <m.article
       ref={cardRef}
@@ -170,7 +169,12 @@ function AnimatedPostCard({ post }) {
         to={detailPath}
         aria-label={`Abrir artículo: ${title}`}
         className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white/80 shadow-xl transition-all duration-300 hover:shadow-2xl hover:ring-1 hover:ring-cyan-400/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800/70 dark:bg-slate-900/50 dark:hover:ring-cyan-500/40 dark:focus-visible:ring-offset-slate-950"
-        onKeyDown={handleKeyDown}
+        onKeyDown={(event) => {
+          if (event.key === ' ') {
+            event.preventDefault();
+            event.currentTarget.click();
+          }
+        }}
       >
         <div className="relative overflow-hidden rounded-xl">
           <div className="aspect-[16/9] w-full">
