@@ -203,16 +203,29 @@ function PostDetail() {
             {post.title}
           </h1>
           <div className="flex flex-wrap gap-2">
-            {categories.map((category) => (
+            {categories.length > 0 ? (
+              categories.map((category, index) => {
+                const key = category.slug ?? category.name ?? `category-${index}`;
+                return (
+                  <Badge
+                    key={key}
+                    color="purple"
+                    className="flex items-center gap-1 bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/60 dark:text-fuchsia-200"
+                  >
+                    <Squares2X2Icon className="h-4 w-4" aria-hidden="true" />
+                    {category.name ?? category.slug ?? 'Categoría sin nombre'}
+                  </Badge>
+                );
+              })
+            ) : (
               <Badge
-                key={category.slug}
-                color="purple"
-                className="flex items-center gap-1 bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/60 dark:text-fuchsia-200"
+                color="gray"
+                className="flex items-center gap-1 bg-slate-200/80 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300"
               >
                 <Squares2X2Icon className="h-4 w-4" aria-hidden="true" />
-                {category.name ?? category.slug}
+                Esta publicación aún no tiene categorías asignadas
               </Badge>
-            ))}
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             {post.tags?.map((tag) => (

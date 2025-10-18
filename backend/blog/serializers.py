@@ -70,7 +70,24 @@ class UserPublicSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class PostListSerializer(serializers.ModelSerializer):
+class _PostCategoryRepresentationMixin:
+    """Mixin to ensure category arrays are always present in API payloads."""
+
+    category_fields = ("categories", "categories_detail")
+
+    def _ensure_category_lists(self, data: dict) -> dict:
+        for field in self.category_fields:
+            value = data.get(field)
+            if isinstance(value, list):
+                continue
+            if not value:
+                data[field] = []
+            elif isinstance(value, (set, tuple)):
+                data[field] = list(value)
+        return data
+
+
+class PostListSerializer(_PostCategoryRepresentationMixin, serializers.ModelSerializer):
     """Compact serializer for listing posts."""
 
     tags = serializers.SlugRelatedField(many=True, read_only=True, slug_field="name")
@@ -102,8 +119,12 @@ class PostListSerializer(serializers.ModelSerializer):
             "categories_detail",
         ]
 
+    def to_representation(self, instance):  # type: ignore[override]
+        data = super().to_representation(instance)
+        return self._ensure_category_lists(data)
 
-class PostDetailSerializer(serializers.ModelSerializer):
+
+class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSerializer):
     """Detailed serializer for retrieving and creating posts."""
 
     tags = TagNameField(many=True, slug_field="name", queryset=Tag.objects.all())
@@ -186,6 +207,10 @@ class PostDetailSerializer(serializers.ModelSerializer):
 
     def _set_categories(self, post: Post, categories: Iterable[Category]) -> None:
         post.categories.set(categories)
+
+    def to_representation(self, instance):  # type: ignore[override]
+        data = super().to_representation(instance)
+        return self._ensure_category_lists(data)
 
 
 class CommentSerializer(serializers.ModelSerializer):

@@ -119,10 +119,28 @@ class PostAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         payload = response.data
         self.assertIn("categories_detail", payload)
-        self.assertGreaterEqual(len(payload["categories_detail"]), 1)
-        detail = payload["categories_detail"][0]
-        self.assertEqual(detail["slug"], category.slug)
+        self.assertIsInstance(payload["categories_detail"], list)
+        detail = next(
+            (item for item in payload["categories_detail"] if item.get("slug") == category.slug),
+            None,
+        )
+        self.assertIsNotNone(detail)
         self.assertIn("post_count", detail)
+
+    def test_post_detail_without_categories_returns_empty_arrays(self) -> None:
+        """Posts without categories must expose empty lists in the payload."""
+
+        post = self._create_post("Sin categorías")
+        url = reverse("blog:posts-detail", kwargs={"slug": post.slug})
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = response.data
+        self.assertIn("categories", payload)
+        self.assertEqual(payload["categories"], [])
+        self.assertIn("categories_detail", payload)
+        self.assertEqual(payload["categories_detail"], [])
 
 
 class CommentAPITestCase(APITestCase):
