@@ -2,7 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import NavBar from './components/NavBar.jsx';
 import Footer from './components/Footer.jsx';
 import Home from './pages/Home.jsx';
-import PostDetail from './pages/PostDetail.jsx';
+import Post from './pages/Post.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 function App() {
@@ -12,7 +12,7 @@ function App() {
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-16 pt-10 sm:px-6 lg:px-8">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/post/:slug" element={<PostDetail />} />
+          <Route path="/post/:slug" element={<Post />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
