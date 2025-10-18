@@ -86,9 +86,7 @@ const SearchBar = forwardRef(
             aria-hidden="true"
           />
           <input
-            ref={(node) => {
-              inputRef.current = node;
-            }}
+            ref={inputRef}
             id={id}
             name={name}
             type="search"
