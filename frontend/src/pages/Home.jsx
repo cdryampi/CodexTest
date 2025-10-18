@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Button, Select } from 'flowbite-react';
+import { Helmet } from 'react-helmet-async';
 import { getCategories, listPosts } from '../api';
 import PostList from '../components/PostList';
 import MotionProvider from '../components/motion/MotionProvider';
@@ -18,6 +19,16 @@ import {
   selectSelectedCategory
 } from '../store/useUI';
 import chunk from '../utils/chunk';
+import {
+  buildPageTitle,
+  DEFAULT_OG_IMAGE,
+  DEFAULT_TWITTER_CARD,
+  sanitizeMetaText
+} from '../seo/config.js';
+
+const HOME_TITLE = 'Inicio';
+const HOME_DESCRIPTION =
+  'Explora guías prácticas, tutoriales y novedades de frontend moderno con React, Tailwind CSS y Flowbite.';
 
 const ORDER_OPTIONS = [
   { value: '-date', label: 'Más recientes' },
@@ -593,13 +604,29 @@ function Home() {
     !state.hasMore &&
     visibleItems.length > 0;
 
+  const metaTitle = buildPageTitle(HOME_TITLE);
+  const metaDescription = sanitizeMetaText(HOME_DESCRIPTION);
+  const shareImage = DEFAULT_OG_IMAGE;
+
   return (
-    <div className="space-y-10">
-      <header className="space-y-4">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Últimas publicaciones</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Explora artículos creados con cariño por la comunidad. Combina búsqueda, filtros y ordenamientos para encontrar la historia perfecta.
-        </p>
+    <>
+      <Helmet prioritizeSeoTags>
+        <title>{metaTitle}</title>
+        <meta name="description" content={metaDescription} />
+        <meta property="og:title" content={metaTitle} />
+        <meta property="og:description" content={metaDescription} />
+        <meta property="og:image" content={shareImage} />
+        <meta name="twitter:card" content={DEFAULT_TWITTER_CARD} />
+        <meta name="twitter:title" content={metaTitle} />
+        <meta name="twitter:description" content={metaDescription} />
+        <meta name="twitter:image" content={shareImage} />
+      </Helmet>
+      <div className="space-y-10">
+        <header className="space-y-4">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Últimas publicaciones</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Explora artículos creados con cariño por la comunidad. Combina búsqueda, filtros y ordenamientos para encontrar la historia perfecta.
+          </p>
         {activeFiltersLabel ? (
           <p className="text-xs uppercase tracking-wide text-sky-600 dark:text-sky-300">{activeFiltersLabel}</p>
         ) : null}
@@ -760,7 +787,8 @@ function Home() {
         onOnlyActiveChange={handleCategoryOnlyActiveChange}
         onResetFilters={handleCategoryFiltersReset}
       />
-    </div>
+      </div>
+    </>
   );
 }
 
