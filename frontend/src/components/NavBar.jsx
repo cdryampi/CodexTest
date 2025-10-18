@@ -76,6 +76,8 @@ function NavBar() {
           onClick={toggleTheme}
           aria-label={themeLabel}
           title={themeLabel}
+          aria-pressed={isDark}
+          type="button"
           className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 text-slate-600 transition duration-300 hover:-translate-y-0.5 hover:border-sky-500 hover:text-sky-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:border-sky-400 dark:hover:text-sky-300 dark:focus-visible:ring-offset-slate-900"
         >
           {isDark ? <MoonIcon className="h-5 w-5" aria-hidden="true" /> : <SunIcon className="h-5 w-5" aria-hidden="true" />}
