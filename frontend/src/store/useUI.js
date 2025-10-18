@@ -3,6 +3,8 @@ import { create } from 'zustand';
 const THEME_STORAGE_KEY = 'blog:ui:theme';
 const LEGACY_THEME_KEYS = ['blog-theme-preference'];
 const SEARCH_STORAGE_KEY = 'blog:ui:last-search';
+const FLOWBITE_THEME_STORAGE_KEY = 'flowbite-theme-mode';
+const FLOWBITE_THEME_SYNC_EVENT = 'flowbite-theme-mode-sync';
 
 const safeStorage = {
   get: (key) => {
@@ -78,6 +80,17 @@ const applyTheme = (theme) => {
   const isDark = theme === 'dark';
   document.documentElement.classList.toggle('dark', isDark);
   document.documentElement.setAttribute('data-theme', theme);
+
+  safeStorage.set(FLOWBITE_THEME_STORAGE_KEY, theme);
+
+  if (typeof window !== 'undefined' && typeof window.CustomEvent === 'function') {
+    try {
+      const event = new CustomEvent(FLOWBITE_THEME_SYNC_EVENT, { detail: theme });
+      document.dispatchEvent(event);
+    } catch (error) {
+      // Ignorar errores al sincronizar con Flowbite.
+    }
+  }
 };
 
 const sanitizeSearch = (value = '') => value.toString().trim().toLowerCase();
