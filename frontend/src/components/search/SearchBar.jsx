@@ -76,7 +76,7 @@ const SearchBar = forwardRef(
     };
 
     return (
-      <div className="w-full">
+      <div className="w-full" role="search" aria-label={label}>
         <label htmlFor={id} className="sr-only">
           {label}
         </label>
@@ -95,13 +95,14 @@ const SearchBar = forwardRef(
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             autoComplete="off"
-            className="w-full rounded-2xl border border-slate-200 bg-white/90 py-3 pl-11 pr-12 text-base text-slate-700 shadow-sm transition duration-300 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:ring-offset-slate-900"
+            enterKeyHint="search"
+            className="w-full rounded-2xl border border-slate-200 bg-white/90 py-3 pl-11 pr-12 text-base text-slate-700 shadow-sm motion-safe:transition-shadow motion-safe:duration-300 placeholder:text-slate-400 focus-visible:ring focus-visible:ring-sky-500 focus-visible:ring-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus-visible:outline-sky-300 dark:focus-visible:ring-offset-slate-900"
           />
           {internalValue ? (
             <button
               type="button"
               onClick={handleClear}
-              className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 transition duration-200 hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300 dark:focus-visible:ring-offset-slate-900"
+              className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 motion-safe:transition-colors motion-safe:duration-200 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300 dark:focus-visible:outline-sky-300"
               aria-label="Limpiar búsqueda"
             >
               <XMarkIcon className="h-5 w-5" aria-hidden="true" />
