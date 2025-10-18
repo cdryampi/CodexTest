@@ -32,6 +32,9 @@ else:
 PY
 
 python manage.py migrate --noinput
+if [ "${SEED_ON_STARTUP:-}" = "1" ]; then
+    python manage.py seed_categories
+fi
 python manage.py collectstatic --noinput
 
 WORKERS="${GUNICORN_WORKERS:-3}"

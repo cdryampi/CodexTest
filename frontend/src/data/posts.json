@@ -6,11 +6,33 @@
     "excerpt": "Revisa técnicas para identificar renders innecesarios y mantener tu UI veloz sin perder legibilidad.",
     "content": "Optimizar el renderizado en React es un proceso continuo que comienza midiendo los cuellos de botella. Herramientas como React Profiler y las DevTools del navegador ayudan a visualizar qué componentes se actualizan y con qué frecuencia, permitiéndote priorizar esfuerzos.\n\nAl analizar el árbol de componentes es común encontrar renders que provienen de props inmutables o de estados compartidos en exceso. Memorizar funciones con useCallback y memorizar componentes con memo reduce estas recalculaciones, siempre y cuando se utilicen con propósito y no de forma indiscriminada.\n\nTambién vale la pena revisar la granularidad de tus contextos. Contextos demasiado grandes disparan actualizaciones en cascada, mientras que dividirlos por responsabilidad y combinarlos con selectores personalizados mantiene los renders focalizados.\n\nPor último, utiliza técnicas de code splitting y suspense para cargar únicamente lo necesario. Al combinar rutas divididas, lazy loading y caché de datos obtienes experiencias fluidas que responden a la interacción del usuario sin esperas innecesarias.",
     "date": "2025-04-15",
-    "tags": ["react", "rendimiento", "frontend"],
+    "tags": [
+      "react",
+      "rendimiento",
+      "frontend"
+    ],
     "image": "https://picsum.photos/seed/optimizacion-render-react-hero/1200/630",
     "thumb": "https://picsum.photos/seed/optimizacion-render-react-thumb/600/400",
     "imageAlt": "Panel de métricas y gráficos que representan rendimiento en pantalla",
-    "author": "Laura Méndez"
+    "author": "Laura Méndez",
+    "categories": [
+      "frontend",
+      "calidad"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "calidad",
+        "name": "Calidad",
+        "description": "Pruebas, QA y estrategias para lanzar con confianza.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 2,
@@ -19,11 +41,41 @@
     "excerpt": "Descubre cómo crear catálogos de componentes basados en utilidades y mantenerlos coherentes.",
     "content": "Construir patrones reutilizables con Tailwind requiere definir convenciones claras desde el primer día. Documentar escalas de color, tipografía y espaciado evita que el equipo improvise clases que no encajan con el sistema visual.\n\nUna estrategia útil es encapsular combinaciones frecuentes en componentes pequeños o en clases con @apply. Esto mantiene el markup legible, reduce duplicidad y facilita migraciones, especialmente cuando se integran librerías como Flowbite.\n\nNo olvides complementar las utilidades con variantes responsivas y estados interactivos. Añadir prefijos como md:, focus: o data-[state=open]: garantiza que cada pieza responda adecuadamente a diferentes contextos de uso.\n\nFinalmente, registra tus patrones en Storybook o en una librería interna. Esta práctica unifica el lenguaje visual, permite detectar inconsistencias tempranas y se convierte en la referencia oficial para el equipo de producto.",
     "date": "2025-04-08",
-    "tags": ["tailwind", "ui", "design-system", "frontend"],
+    "tags": [
+      "tailwind",
+      "ui",
+      "design-system",
+      "frontend"
+    ],
     "image": "https://picsum.photos/seed/patrones-tailwind-componentes-hero/1200/630",
     "thumb": "https://picsum.photos/seed/patrones-tailwind-componentes-thumb/600/400",
     "imageAlt": "Tablero de componentes con tarjetas de colores y tipografías",
-    "author": "Diego Salinas"
+    "author": "Diego Salinas",
+    "categories": [
+      "frontend",
+      "ux",
+      "productividad"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "ux",
+        "name": "UX",
+        "description": "Investigación, accesibilidad y narrativa centrada en las personas.",
+        "is_active": true
+      },
+      {
+        "slug": "productividad",
+        "name": "Productividad",
+        "description": "Herramientas, rituales y hacks para flujos de trabajo sanos.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 3,
@@ -32,11 +84,41 @@
     "excerpt": "Integra microinteracciones suaves que respetan las preferencias del usuario y refuerzan el mensaje.",
     "content": "Las animaciones aportan claridad cuando refuerzan la jerarquía visual en lugar de distraer. Antes de implementarlas, consulta prefers-reduced-motion para detectar si la persona usuaria prefiere animaciones limitadas y prepara alternativas sin movimiento brusco.\n\nTrabajar con Tailwind facilita crear transiciones consistentes porque puedes extender la configuración para definir duraciones y curvas personalizadas. Mantener nombres semánticos como motion-snappy o motion-relaxed ayuda a reutilizar estilos sin depender de valores mágicos.\n\nEn React, combina estos estilos con componentes controlados que expongan props para habilitar o deshabilitar animaciones. Así, las microinteracciones pueden apagarse globalmente desde un contexto sin reescribir cada caso puntual.\n\nNo olvides validar la accesibilidad con lectores de pantalla y herramientas de contraste. Una animación bien diseñada no solo se ve bien: también comunica estado, confirma acciones y respeta la comodidad de cada persona.",
     "date": "2025-03-28",
-    "tags": ["accesibilidad", "ui", "tailwind", "react"],
+    "tags": [
+      "accesibilidad",
+      "ui",
+      "tailwind",
+      "react"
+    ],
     "image": "https://picsum.photos/seed/animaciones-accesibles-ui-hero/1200/630",
     "thumb": "https://picsum.photos/seed/animaciones-accesibles-ui-thumb/600/400",
     "imageAlt": "Interfaz con controles animados y un cursor resaltado",
-    "author": "Jimena Ortiz"
+    "author": "Jimena Ortiz",
+    "categories": [
+      "frontend",
+      "ux",
+      "calidad"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "ux",
+        "name": "UX",
+        "description": "Investigación, accesibilidad y narrativa centrada en las personas.",
+        "is_active": true
+      },
+      {
+        "slug": "calidad",
+        "name": "Calidad",
+        "description": "Pruebas, QA y estrategias para lanzar con confianza.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 4,
@@ -45,11 +127,41 @@
     "excerpt": "Organiza la biblioteca de componentes y los tokens de diseño para crecer sin fricción.",
     "content": "Un design system escalable parte de una arquitectura modular donde los tokens de diseño sirven como único punto de verdad. Centralizar colores, radios y sombras en archivos compartidos permite que el equipo adapte el estilo sin tocar cada componente manualmente.\n\nAl estructurar carpetas diferencia entre componentes base, patrones compuestos y plantillas de páginas. Esto clarifica qué piezas pueden reutilizarse ampliamente y cuáles dependen de contextos específicos.\n\nDocumentar reglas de versionado y adopción es igualmente importante. Define cómo se publican cambios mayores, menores y parches para que los consumidores actualicen sin sorpresas.\n\nComplementa la arquitectura con linters y pruebas visuales automatizadas. Así detectas divergencias antes de desplegar y garantizas que el sistema se mantenga confiable, incluso con múltiples equipos contribuyendo.",
     "date": "2025-03-20",
-    "tags": ["design-system", "arquitectura", "frontend", "documentacion"],
+    "tags": [
+      "design-system",
+      "arquitectura",
+      "frontend",
+      "documentacion"
+    ],
     "image": "https://picsum.photos/seed/arquitectura-design-systems-hero/1200/630",
     "thumb": "https://picsum.photos/seed/arquitectura-design-systems-thumb/600/400",
     "imageAlt": "Esquema modular con bloques conectados por líneas",
-    "author": "Ricardo Aguilar"
+    "author": "Ricardo Aguilar",
+    "categories": [
+      "frontend",
+      "documentacion",
+      "productividad"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "documentacion",
+        "name": "Documentación",
+        "description": "Guías claras, comunicación efectiva y transferencia de conocimiento.",
+        "is_active": true
+      },
+      {
+        "slug": "productividad",
+        "name": "Productividad",
+        "description": "Herramientas, rituales y hacks para flujos de trabajo sanos.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 5,
@@ -58,11 +170,34 @@
     "excerpt": "Construye flujos de datos claros, validados y adaptables a distintas pantallas.",
     "content": "Un formulario efectivo nace de entender la intención de la persona usuaria. Antes de escribir una sola línea de código, define qué datos son esenciales, cómo se validarán y cuál será la retroalimentación visual cuando algo falle.\n\nLas utilidades de Tailwind permiten crear layouts responsivos donde cada campo se alinea naturalmente, sin depender de hojas de estilo largas. Complementa esto con componentes de Flowbite para inputs, selectores y mensajes de error consistentes.\n\nEn React, aprovecha bibliotecas como React Hook Form para manejar el estado de los campos y sus validaciones con mínimo esfuerzo. Sus controladores se integran bien con componentes personalizados y reducen la cantidad de renders innecesarios.\n\nRecuerda acompañar cada campo con etiquetas claras, placeholders descriptivos y ayudas contextuales. Un formulario amable anticipa dudas, guía al usuario y reduce la tasa de abandono.",
     "date": "2025-03-12",
-    "tags": ["ux", "formularios", "react", "tailwind"],
+    "tags": [
+      "ux",
+      "formularios",
+      "react",
+      "tailwind"
+    ],
     "image": "https://picsum.photos/seed/formularios-ux-frontend-hero/1200/630",
     "thumb": "https://picsum.photos/seed/formularios-ux-frontend-thumb/600/400",
     "imageAlt": "Formulario web con campos resaltados y mensajes de validación",
-    "author": "Valeria Pineda"
+    "author": "Valeria Pineda",
+    "categories": [
+      "frontend",
+      "ux"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "ux",
+        "name": "UX",
+        "description": "Investigación, accesibilidad y narrativa centrada en las personas.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 6,
@@ -71,11 +206,34 @@
     "excerpt": "Aprende a aislar la lógica de tus hooks y validar casos límite con herramientas modernas.",
     "content": "Los hooks personalizados encapsulan lógica valiosa, por lo que merecen pruebas dedicadas que garanticen su estabilidad. Empieza identificando qué entradas y salidas ofrece cada hook para diseñar escenarios que cubran estados iniciales, eventos y efectos secundarios.\n\nReact Testing Library, combinada con @testing-library/react-hooks o renderHook, permite simular el ciclo de vida de un hook sin necesidad de componentes completos. Esto acelera el feedback y facilita enfocarse en la lógica en lugar de en la interfaz.\n\nPara hooks que dependen de contextos o APIs del navegador, crea envoltorios de prueba que provean mocks realistas. Así detectas rápidamente si un cambio en la configuración rompe integraciones críticas.\n\nNo olvides integrar las pruebas en tu pipeline de CI. Automatizar la ejecución asegura que cada commit respete la intención original del hook y evita regresiones en producción.",
     "date": "2025-03-05",
-    "tags": ["testing", "react", "calidad", "frontend"],
+    "tags": [
+      "testing",
+      "react",
+      "calidad",
+      "frontend"
+    ],
     "image": "https://picsum.photos/seed/testing-react-hooks-hero/1200/630",
     "thumb": "https://picsum.photos/seed/testing-react-hooks-thumb/600/400",
     "imageAlt": "Código con resaltado y resultados de pruebas en consola",
-    "author": "Marcelo Rivas"
+    "author": "Marcelo Rivas",
+    "categories": [
+      "frontend",
+      "calidad"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "calidad",
+        "name": "Calidad",
+        "description": "Pruebas, QA y estrategias para lanzar con confianza.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 7,
@@ -84,11 +242,34 @@
     "excerpt": "Combina prerenderizado y carga dinámica para obtener experiencias rápidas y escalables.",
     "content": "El ecosistema de Vite facilita generar sitios híbridos que mezclan renderizado del lado del servidor y del cliente. Gracias a su motor de bundling rápido puedes iterar prototipos con SSR o SSG sin tiempos de espera prolongados.\n\nUna práctica común es prerenderizar rutas de alto tráfico y dejar que la hidratación añada interactividad solo cuando el usuario lo necesita. De esta forma reduces el tiempo hasta el primer píxel sin sacrificar funcionalidades avanzadas.\n\nCuando trabajes con datos dinámicos, combina cacheo en el servidor y estrategias de revalidación en segundo plano. Así obtienes páginas frescas sin recargar continuamente al navegador.\n\nMonitorea el rendimiento con herramientas como Lighthouse o WebPageTest para asegurarte de que la estrategia híbrida realmente aporta mejoras medibles.",
     "date": "2025-02-24",
-    "tags": ["vite", "ssr", "react", "rendimiento"],
+    "tags": [
+      "vite",
+      "ssr",
+      "react",
+      "rendimiento"
+    ],
     "image": "https://picsum.photos/seed/renderizado-servidor-vite-hero/1200/630",
     "thumb": "https://picsum.photos/seed/renderizado-servidor-vite-thumb/600/400",
     "imageAlt": "Servidor y navegador conectados por flujos de datos",
-    "author": "Camila Fuentes"
+    "author": "Camila Fuentes",
+    "categories": [
+      "frontend",
+      "innovacion"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "innovacion",
+        "name": "Innovación",
+        "description": "Ideas disruptivas, prototipos y visión estratégica.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 8,
@@ -97,11 +278,41 @@
     "excerpt": "Implementa un pipeline que sincroniza tokens desde diseño hasta producción sin errores manuales.",
     "content": "Los design tokens se convierten en aliados poderosos cuando fluyen automáticamente desde la herramienta de diseño hasta el repositorio. Plugins como Figma Tokens o Style Dictionary permiten exportar variables en múltiples formatos listos para consumir.\n\nDefine un repositorio central de tokens que sirva como dependencia para tus proyectos. Así, cuando el equipo de diseño actualiza un color o espaciado, el cambio llega a las aplicaciones mediante una versión controlada.\n\nAutomatiza la validación de tokens con linters y pruebas que aseguren nomenclatura coherente y valores accesibles. Esto evita que se cuelen inconsistencias que luego serían difíciles de rastrear.\n\nFinalmente, comunica los flujos con documentación clara. Cuando todas las disciplinas comprenden cómo se propagan los tokens, la colaboración se vuelve natural y los lanzamientos son más predecibles.",
     "date": "2025-02-17",
-    "tags": ["design-tokens", "workflow", "frontend", "automatizacion"],
+    "tags": [
+      "design-tokens",
+      "workflow",
+      "frontend",
+      "automatizacion"
+    ],
     "image": "https://picsum.photos/seed/flujo-trabajo-design-tokens-hero/1200/630",
     "thumb": "https://picsum.photos/seed/flujo-trabajo-design-tokens-thumb/600/400",
     "imageAlt": "Ilustración de archivos sincronizados entre diseño y código",
-    "author": "Andrés Cordero"
+    "author": "Andrés Cordero",
+    "categories": [
+      "frontend",
+      "productividad",
+      "documentacion"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "productividad",
+        "name": "Productividad",
+        "description": "Herramientas, rituales y hacks para flujos de trabajo sanos.",
+        "is_active": true
+      },
+      {
+        "slug": "documentacion",
+        "name": "Documentación",
+        "description": "Guías claras, comunicación efectiva y transferencia de conocimiento.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 9,
@@ -110,11 +321,41 @@
     "excerpt": "Aprende a extender los componentes de Flowbite para alinearlos con tu marca y tu sistema de diseño.",
     "content": "Flowbite ofrece una base sólida de componentes accesibles que se integran con Tailwind sin esfuerzo. El reto está en adaptarlos a la personalidad visual de tu producto sin romper la consistencia.\n\nEmpieza configurando variables globales de colores, fuentes y radios desde tailwind.config.js para que los componentes adopten automáticamente tu estilo. Si necesitas cambios más específicos, aprovecha las clases adicionales y los slots que expone cada pieza.\n\nCuando un componente requiera funcionalidad extendida, crea un wrapper que inyecte props personalizadas. Así evitas duplicar código y mantienes las actualizaciones de Flowbite disponibles para futuras versiones.\n\nDocumenta las variantes permitidas y los casos de uso recomendados. Esta guía práctica ayudará a tu equipo a adoptar Flowbite con confianza y reducirá la fricción durante el diseño de nuevas pantallas.",
     "date": "2025-02-10",
-    "tags": ["flowbite", "tailwind", "ui", "branding"],
+    "tags": [
+      "flowbite",
+      "tailwind",
+      "ui",
+      "branding"
+    ],
     "image": "https://picsum.photos/seed/integracion-flowbite-componentes-hero/1200/630",
     "thumb": "https://picsum.photos/seed/integracion-flowbite-componentes-thumb/600/400",
     "imageAlt": "Componentes de interfaz con estilos personalizados",
-    "author": "Elena Navarro"
+    "author": "Elena Navarro",
+    "categories": [
+      "frontend",
+      "ux",
+      "innovacion"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "ux",
+        "name": "UX",
+        "description": "Investigación, accesibilidad y narrativa centrada en las personas.",
+        "is_active": true
+      },
+      {
+        "slug": "innovacion",
+        "name": "Innovación",
+        "description": "Ideas disruptivas, prototipos y visión estratégica.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 10,
@@ -123,11 +364,41 @@
     "excerpt": "Implementa patrones que mejoran la navegabilidad, el contraste y la lectura en tus vistas.",
     "content": "Tailwind facilita aplicar estándares de accesibilidad gracias a utilidades enfocadas en contraste, visibilidad y estados de interacción. Al definir tu paleta, verifica que cumpla con las ratios AA o AAA y documenta combinaciones aprobadas para evitar errores.\n\nLos estilos para focus visibles deben ser prioridad. Personaliza la clase focus:ring para que resalte con claridad sobre fondos claros u oscuros, y extiende variantes para interacciones con teclado y lector de pantalla.\n\nComplementa estos estilos con componentes que gestionen anuncios para tecnologías asistidas. Por ejemplo, utiliza aria-live en alertas y valida que tus botones tengan etiquetas descriptivas.\n\nEvalúa frecuentemente con auditorías automatizadas y pruebas manuales. La accesibilidad no es un hito único, sino una práctica continua que garantiza experiencias inclusivas.",
     "date": "2025-02-03",
-    "tags": ["accesibilidad", "tailwind", "inclusion", "frontend"],
+    "tags": [
+      "accesibilidad",
+      "tailwind",
+      "inclusion",
+      "frontend"
+    ],
     "image": "https://picsum.photos/seed/optimizar-accesibilidad-tailwind-hero/1200/630",
     "thumb": "https://picsum.photos/seed/optimizar-accesibilidad-tailwind-thumb/600/400",
     "imageAlt": "Persona navegando un sitio con teclado y lector de pantalla",
-    "author": "Pablo Villalobos"
+    "author": "Pablo Villalobos",
+    "categories": [
+      "frontend",
+      "ux",
+      "calidad"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "ux",
+        "name": "UX",
+        "description": "Investigación, accesibilidad y narrativa centrada en las personas.",
+        "is_active": true
+      },
+      {
+        "slug": "calidad",
+        "name": "Calidad",
+        "description": "Pruebas, QA y estrategias para lanzar con confianza.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 11,
@@ -136,11 +407,34 @@
     "excerpt": "Diseña respuestas visuales y sonoras que guían al usuario sin saturar la interfaz.",
     "content": "Las microinteracciones bien ejecutadas actúan como un lenguaje silencioso que confirma acciones y reduce la incertidumbre. En React, crea componentes que encapsulen animaciones breves y reutilizables, con propiedades para ajustar velocidad y dirección según el contexto.\n\nAnaliza el recorrido del usuario para detectar puntos donde una respuesta inmediata evita dudas. Confirmaciones, estados de carga y validaciones en línea son oportunidades para incorporar microinteracciones significativas.\n\nAdapta estas respuestas a distintos dispositivos. Un feedback háptico o sonoro puede complementar la experiencia en móviles, mientras que en escritorio bastará con cambios sutiles de color y movimiento.\n\nMide el impacto observando métricas de retención y tasa de error. Las microinteracciones deben aportar claridad, no simplemente decorar.",
     "date": "2025-01-25",
-    "tags": ["ux", "microinteracciones", "react", "product-design"],
+    "tags": [
+      "ux",
+      "microinteracciones",
+      "react",
+      "product-design"
+    ],
     "image": "https://picsum.photos/seed/microinteracciones-react-hero/1200/630",
     "thumb": "https://picsum.photos/seed/microinteracciones-react-thumb/600/400",
     "imageAlt": "Botón brillante con animación de confirmación",
-    "author": "Sofía Lozano"
+    "author": "Sofía Lozano",
+    "categories": [
+      "frontend",
+      "ux"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "ux",
+        "name": "UX",
+        "description": "Investigación, accesibilidad y narrativa centrada en las personas.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 12,
@@ -149,11 +443,41 @@
     "excerpt": "Define convenciones claras para compartir lógica de estado entre múltiples squads sin conflictos.",
     "content": "Cuando varios equipos trabajan sobre la misma base de código, la gestión del estado puede convertirse en un caos. Establecer un contrato de acciones, efectos y selectores evita que cada squad invente su propia forma de interactuar con los datos.\n\nOpta por soluciones escalables como Zustand, Redux Toolkit o Jotai, según el patrón de tu aplicación. Lo importante es definir reglas de contribución y revisión que aseguren consistencia en cada módulo compartido.\n\nIntegra documentación viva que describa flujos y dependencias. Diagramas de secuencia y tableros de arquitectura ayudan a que nuevas personas se integren rápidamente sin romper supuestos existentes.\n\nFinalmente, respalda el estado con pruebas de integración y entornos de previsualización. Así detectas conflictos antes de fusionar ramas y mantienes la cadencia de entrega del equipo.",
     "date": "2025-01-16",
-    "tags": ["estado", "colaboracion", "react", "arquitectura"],
+    "tags": [
+      "estado",
+      "colaboracion",
+      "react",
+      "arquitectura"
+    ],
     "image": "https://picsum.photos/seed/gestionar-estado-colaborativo-hero/1200/630",
     "thumb": "https://picsum.photos/seed/gestionar-estado-colaborativo-thumb/600/400",
     "imageAlt": "Personas colaborando alrededor de un tablero digital",
-    "author": "Héctor Ramírez"
+    "author": "Héctor Ramírez",
+    "categories": [
+      "frontend",
+      "productividad",
+      "comunidad"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "productividad",
+        "name": "Productividad",
+        "description": "Herramientas, rituales y hacks para flujos de trabajo sanos.",
+        "is_active": true
+      },
+      {
+        "slug": "comunidad",
+        "name": "Comunidad",
+        "description": "Historias, eventos y aprendizajes compartidos dentro del ecosistema.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 13,
@@ -162,11 +486,41 @@
     "excerpt": "Combina caches del navegador, service workers y revalidación para acelerar tus vistas.",
     "content": "El caché sigue siendo una de las mejores herramientas para mejorar la percepción de velocidad. Empieza analizando qué recursos son verdaderamente estáticos y qué datos requieren frescura. A partir de ahí define políticas de expiración y revalidación por recurso.\n\nUn service worker puede precachear rutas críticas y aplicar estrategias como stale-while-revalidate para contenido que se actualiza con frecuencia. Esto asegura que las personas obtengan respuesta inmediata mientras la aplicación sincroniza los últimos cambios.\n\nPara APIs dinámicas aprovecha Cache Storage junto con IndexedDB o bibliotecas como SWR y React Query. Ofrecen patrones listos para cachear peticiones y sincronizarlas cuando el usuario recupera la conexión.\n\nMonitorea los aciertos de caché y los tiempos de respuesta con herramientas de observabilidad. Solo así sabrás si tus estrategias se alinean con la realidad del uso.",
     "date": "2025-01-09",
-    "tags": ["cache", "frontend", "performance", "offline"],
+    "tags": [
+      "cache",
+      "frontend",
+      "performance",
+      "offline"
+    ],
     "image": "https://picsum.photos/seed/estrategias-cache-frontend-hero/1200/630",
     "thumb": "https://picsum.photos/seed/estrategias-cache-frontend-thumb/600/400",
     "imageAlt": "Iconos de nube y dispositivos sincronizados",
-    "author": "Luciana Torres"
+    "author": "Luciana Torres",
+    "categories": [
+      "frontend",
+      "backend",
+      "devops"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "backend",
+        "name": "Backend",
+        "description": "APIs, bases de datos y servicios que sustentan cada experiencia.",
+        "is_active": true
+      },
+      {
+        "slug": "devops",
+        "name": "DevOps",
+        "description": "Automatización, despliegues y observabilidad continua.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 14,
@@ -175,11 +529,34 @@
     "excerpt": "Configura pipelines que validan, construyen y despliegan tu proyecto con cada cambio en main.",
     "content": "GitHub Actions ofrece un ecosistema flexible para automatizar desde pruebas hasta despliegues. Al definir flujos con jobs y pasos bien aislados, obtienes pipelines legibles que facilitan el mantenimiento.\n\nComienza creando acciones reutilizables para tareas comunes como instalar dependencias, ejecutar linters o subir artefactos. Esto reduce la repetición y permite compartir lógica entre repositorios.\n\nPara proyectos de frontend, combina caches de npm con estrategias de build incremental. Así reduces el tiempo de ejecución y tienes feedback más veloz tras cada commit.\n\nIncluye notificaciones en Slack o correo para informar fallos críticos. Una comunicación inmediata acelera la respuesta del equipo y mantiene la estabilidad del proyecto.",
     "date": "2024-12-19",
-    "tags": ["ci", "github-actions", "automatizacion", "devops"],
+    "tags": [
+      "ci",
+      "github-actions",
+      "automatizacion",
+      "devops"
+    ],
     "image": "https://picsum.photos/seed/automatizacion-ci-github-actions-hero/1200/630",
     "thumb": "https://picsum.photos/seed/automatizacion-ci-github-actions-thumb/600/400",
     "imageAlt": "Flujo automatizado con engranajes y flechas",
-    "author": "Gabriel Serrano"
+    "author": "Gabriel Serrano",
+    "categories": [
+      "devops",
+      "productividad"
+    ],
+    "categories_detail": [
+      {
+        "slug": "devops",
+        "name": "DevOps",
+        "description": "Automatización, despliegues y observabilidad continua.",
+        "is_active": true
+      },
+      {
+        "slug": "productividad",
+        "name": "Productividad",
+        "description": "Herramientas, rituales y hacks para flujos de trabajo sanos.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 15,
@@ -188,11 +565,34 @@
     "excerpt": "Analiza métricas de carga, interactividad y estabilidad visual con acciones concretas.",
     "content": "Core Web Vitals resume la experiencia percibida por tus usuarios. Para mejorar LCP, prioriza recursos críticos usando preload y elimina render-blocking. También considera optimizar imágenes con formatos modernos y tamaños adaptativos.\n\nLa métrica FID se beneficia de dividir tu JavaScript en chunks más pequeños. Identifica tareas pesadas y aplázalas usando requestIdleCallback o Web Workers para liberar el hilo principal.\n\nPara CLS, asegura que cada componente reserve espacio antes de cargar contenido dinámico. Establece dimensiones fijas para imágenes, anuncios y banners, evitando saltos inesperados.\n\nIntegra estas optimizaciones en tu pipeline de desarrollo y monitorea con CrUX o Web Vitals Report. Solo con mediciones continuas sabrás si tus cambios mantienen una experiencia excelente.",
     "date": "2024-12-10",
-    "tags": ["core-web-vitals", "rendimiento", "frontend", "experiencia"],
+    "tags": [
+      "core-web-vitals",
+      "rendimiento",
+      "frontend",
+      "experiencia"
+    ],
     "image": "https://picsum.photos/seed/mejorar-core-web-vitals-hero/1200/630",
     "thumb": "https://picsum.photos/seed/mejorar-core-web-vitals-thumb/600/400",
     "imageAlt": "Gráfico comparando métricas de rendimiento web",
-    "author": "Noemí Duarte"
+    "author": "Noemí Duarte",
+    "categories": [
+      "frontend",
+      "calidad"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "calidad",
+        "name": "Calidad",
+        "description": "Pruebas, QA y estrategias para lanzar con confianza.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 16,
@@ -201,11 +601,34 @@
     "excerpt": "Combina ejemplos interactivos y notas técnicas para que tu equipo adopte los componentes sin fricción.",
     "content": "MDX permite mezclar Markdown con JSX, creando documentación rica y viva para tu biblioteca de componentes. Puedes incluir ejemplos interactivos, fragmentos de código y controles para personalizar props sin abandonar la página.\n\nAl estructurar la documentación, comienza con el propósito del componente, seguido de sus variantes y estados. Añade pautas de accesibilidad y recomendaciones de uso para alinear criterios entre diseño y desarrollo.\n\nIntegra la documentación en tu pipeline de CI para que se publique automáticamente al fusionar cambios. Esto garantiza que las guías siempre reflejen la versión más reciente del sistema.\n\nRecopila retroalimentación a través de comentarios o issues dedicados. La documentación evoluciona con el producto y debe responder a las necesidades reales del equipo.",
     "date": "2024-11-28",
-    "tags": ["mdx", "documentacion", "componentes", "frontend"],
+    "tags": [
+      "mdx",
+      "documentacion",
+      "componentes",
+      "frontend"
+    ],
     "image": "https://picsum.photos/seed/documentar-componentes-mdx-hero/1200/630",
     "thumb": "https://picsum.photos/seed/documentar-componentes-mdx-thumb/600/400",
     "imageAlt": "Página de documentación con vista previa interactiva",
-    "author": "Federico Landa"
+    "author": "Federico Landa",
+    "categories": [
+      "frontend",
+      "documentacion"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "documentacion",
+        "name": "Documentación",
+        "description": "Guías claras, comunicación efectiva y transferencia de conocimiento.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 17,
@@ -214,11 +637,34 @@
     "excerpt": "Aplica estrategias para migrar estilos heredados a una arquitectura escalable basada en utilidades.",
     "content": "Refactorizar CSS heredado puede parecer intimidante, pero dividir el trabajo en etapas controladas lo vuelve manejable. Comienza auditando las clases existentes para identificar duplicidad, dependencias globales y reglas conflictivas.\n\nIntroduce gradualmente utilidades de Tailwind o CSS Modules en áreas aisladas, evaluando el impacto en el rendimiento y en la mantenibilidad. Un enfoque progresivo evita rupturas masivas y permite medir mejoras reales.\n\nAprovecha herramientas como Stylelint para establecer reglas claras de nomenclatura y prevenir regresiones. Complementa con pruebas visuales automatizadas que alerten sobre diferencias inesperadas.\n\nComunica avances y aprendizajes en retrospectivas periódicas. Una refactorización exitosa depende tanto de la colaboración del equipo como de la calidad del código.",
     "date": "2024-11-14",
-    "tags": ["css", "refactorizacion", "tailwind", "mantenimiento"],
+    "tags": [
+      "css",
+      "refactorizacion",
+      "tailwind",
+      "mantenimiento"
+    ],
     "image": "https://picsum.photos/seed/refactorizacion-css-modular-hero/1200/630",
     "thumb": "https://picsum.photos/seed/refactorizacion-css-modular-thumb/600/400",
     "imageAlt": "Editor de código mostrando reorganización de estilos",
-    "author": "Isabel Quiroga"
+    "author": "Isabel Quiroga",
+    "categories": [
+      "frontend",
+      "productividad"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "productividad",
+        "name": "Productividad",
+        "description": "Herramientas, rituales y hacks para flujos de trabajo sanos.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 18,
@@ -227,11 +673,41 @@
     "excerpt": "Conecta maquetas interactivas con componentes reales para validar ideas en días, no semanas.",
     "content": "Validar hipótesis de diseño rápidamente evita invertir horas en soluciones que no resuelven el problema real. Usa Figma para construir prototipos navegables y con microinteracciones básicas que el equipo pueda revisar de inmediato.\n\nSincroniza estos prototipos con componentes reales exportando tokens y estilos. Herramientas como Figma Tokens o Storybook Connect facilitan mantener paridad entre lo diseñado y lo desarrollado.\n\nIncorpora feedback temprano mediante pruebas con usuarios o sesiones internas. Documenta hallazgos y alinea a las partes interesadas antes de comprometer recursos de desarrollo completos.\n\nCuando la solución esté madura, convierte los prototipos en componentes de React reutilizables, asegurándote de que cada pieza quede respaldada por pruebas y documentación.",
     "date": "2024-10-30",
-    "tags": ["figma", "prototipos", "react", "ux"],
+    "tags": [
+      "figma",
+      "prototipos",
+      "react",
+      "ux"
+    ],
     "image": "https://picsum.photos/seed/prototipos-rapidos-figma-hero/1200/630",
     "thumb": "https://picsum.photos/seed/prototipos-rapidos-figma-thumb/600/400",
     "imageAlt": "Pantallas de prototipo conectadas entre sí",
-    "author": "Mateo Zamora"
+    "author": "Mateo Zamora",
+    "categories": [
+      "frontend",
+      "ux",
+      "innovacion"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "ux",
+        "name": "UX",
+        "description": "Investigación, accesibilidad y narrativa centrada en las personas.",
+        "is_active": true
+      },
+      {
+        "slug": "innovacion",
+        "name": "Innovación",
+        "description": "Ideas disruptivas, prototipos y visión estratégica.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 19,
@@ -240,11 +716,34 @@
     "excerpt": "Estructura menús y rutas pensando primero en pantallas pequeñas y gestos táctiles.",
     "content": "Adoptar un enfoque mobile-first implica priorizar la claridad en espacios reducidos. Comienza identificando las tareas principales y ordénalas en un menú compacto que no requiera gestos complejos.\n\nUsa Tailwind para definir rejillas y espaciados que escalen gradualmente hacia pantallas grandes, manteniendo la jerarquía visual. Aplica componentes de navegación accesibles, con suficiente área táctil y estados activos visibles.\n\nPrueba tus flujos en dispositivos reales y simuladores. Ajusta tiempos de transición, tamaños de fuente y hitboxes según los resultados de usabilidad.\n\nCuando la navegación se siente natural en móvil, expandirla a escritorio es mucho más sencillo, ya que la jerarquía principal ya está resuelta.",
     "date": "2024-10-18",
-    "tags": ["mobile-first", "navegacion", "ux", "frontend"],
+    "tags": [
+      "mobile-first",
+      "navegacion",
+      "ux",
+      "frontend"
+    ],
     "image": "https://picsum.photos/seed/navegacion-mobile-primero-hero/1200/630",
     "thumb": "https://picsum.photos/seed/navegacion-mobile-primero-thumb/600/400",
     "imageAlt": "Mano sosteniendo un teléfono con un menú desplegado",
-    "author": "Daniela Páez"
+    "author": "Daniela Páez",
+    "categories": [
+      "frontend",
+      "ux"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "ux",
+        "name": "UX",
+        "description": "Investigación, accesibilidad y narrativa centrada en las personas.",
+        "is_active": true
+      }
+    ]
   },
   {
     "id": 20,
@@ -253,10 +752,33 @@
     "excerpt": "Aplica estrategias de formato, carga diferida y caché para mantener tu sitio ligero.",
     "content": "Las imágenes suelen representar la mayor parte del peso de una página web. Evalúa primero si cada recurso es necesario y si puede reemplazarse por SVG, CSS o ilustraciones generativas más livianas.\n\nPara el resto, genera variantes responsivas con tamaños adaptados a cada breakpoint. Formatos modernos como AVIF o WebP ofrecen compresión superior sin sacrificar calidad perceptible.\n\nImplementa carga diferida nativa con loading=\"lazy\" y combina esta técnica con placeholders o efectos de desenfoque para suavizar la transición visual.\n\nFinalmente, aprovecha CDNs y encabezados de caché para servir imágenes desde ubicaciones cercanas al usuario. Una estrategia integral reduce el tiempo de carga y mejora métricas críticas como LCP.",
     "date": "2024-10-05",
-    "tags": ["imagenes", "rendimiento", "frontend", "optimizacion"],
+    "tags": [
+      "imagenes",
+      "rendimiento",
+      "frontend",
+      "optimizacion"
+    ],
     "image": "https://picsum.photos/seed/optimizar-imagenes-frontend-hero/1200/630",
     "thumb": "https://picsum.photos/seed/optimizar-imagenes-frontend-thumb/600/400",
     "imageAlt": "Galería de imágenes cargándose progresivamente",
-    "author": "Rafael Núñez"
+    "author": "Rafael Núñez",
+    "categories": [
+      "frontend",
+      "devops"
+    ],
+    "categories_detail": [
+      {
+        "slug": "frontend",
+        "name": "Frontend",
+        "description": "Componentes UI, patrones de interacción y rendimiento en el navegador.",
+        "is_active": true
+      },
+      {
+        "slug": "devops",
+        "name": "DevOps",
+        "description": "Automatización, despliegues y observabilidad continua.",
+        "is_active": true
+      }
+    ]
   }
 ]

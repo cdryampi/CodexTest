@@ -1,0 +1,122 @@
+[
+  {
+    "model": "blog.category",
+    "pk": 1,
+    "fields": {
+      "name": "Frontend",
+      "slug": "frontend",
+      "description": "Componentes, rendimiento y experiencias en interfaces web.",
+      "is_active": true,
+      "created_at": "2025-01-01T10:00:00Z",
+      "updated_at": "2025-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "blog.category",
+    "pk": 2,
+    "fields": {
+      "name": "Backend",
+      "slug": "backend",
+      "description": "APIs robustas, bases de datos y arquitectura del lado del servidor.",
+      "is_active": true,
+      "created_at": "2025-01-01T10:05:00Z",
+      "updated_at": "2025-01-01T10:05:00Z"
+    }
+  },
+  {
+    "model": "blog.category",
+    "pk": 3,
+    "fields": {
+      "name": "DevOps",
+      "slug": "devops",
+      "description": "Automatización, despliegues y cultura de entrega continua.",
+      "is_active": true,
+      "created_at": "2025-01-01T10:10:00Z",
+      "updated_at": "2025-01-01T10:10:00Z"
+    }
+  },
+  {
+    "model": "blog.category",
+    "pk": 4,
+    "fields": {
+      "name": "UX",
+      "slug": "ux",
+      "description": "Investigación, accesibilidad y experiencias memorables.",
+      "is_active": true,
+      "created_at": "2025-01-01T10:15:00Z",
+      "updated_at": "2025-01-01T10:15:00Z"
+    }
+  },
+  {
+    "model": "blog.category",
+    "pk": 5,
+    "fields": {
+      "name": "Calidad",
+      "slug": "calidad",
+      "description": "Pruebas, observabilidad y confianza en cada release.",
+      "is_active": true,
+      "created_at": "2025-01-01T10:20:00Z",
+      "updated_at": "2025-01-01T10:20:00Z"
+    }
+  },
+  {
+    "model": "blog.category",
+    "pk": 6,
+    "fields": {
+      "name": "Productividad",
+      "slug": "productividad",
+      "description": "Flujos de trabajo, herramientas y organización del equipo.",
+      "is_active": true,
+      "created_at": "2025-01-01T10:25:00Z",
+      "updated_at": "2025-01-01T10:25:00Z"
+    }
+  },
+  {
+    "model": "blog.category",
+    "pk": 7,
+    "fields": {
+      "name": "Comunidad",
+      "slug": "comunidad",
+      "description": "Historias, eventos y aprendizaje compartido.",
+      "is_active": true,
+      "created_at": "2025-01-01T10:30:00Z",
+      "updated_at": "2025-01-01T10:30:00Z"
+    }
+  },
+  {
+    "model": "blog.category",
+    "pk": 8,
+    "fields": {
+      "name": "Investigación",
+      "slug": "investigacion",
+      "description": "Experimentos, descubrimientos y nuevas tendencias tecnológicas.",
+      "is_active": true,
+      "created_at": "2025-01-01T10:35:00Z",
+      "updated_at": "2025-01-01T10:35:00Z"
+    }
+  },
+  {
+    "model": "blog.category",
+    "pk": 9,
+    "fields": {
+      "name": "Documentación",
+      "slug": "documentacion",
+      "description": "Guías claras, conocimiento compartido y procesos transparentes.",
+      "is_active": true,
+      "created_at": "2025-01-01T10:40:00Z",
+      "updated_at": "2025-01-01T10:40:00Z"
+    }
+  },
+  {
+    "model": "blog.category",
+    "pk": 10,
+    "fields": {
+      "name": "Innovación",
+      "slug": "innovacion",
+      "description": "Ideas futuristas, prototipos y visión estratégica.",
+      "is_active": true,
+      "created_at": "2025-01-01T10:45:00Z",
+      "updated_at": "2025-01-01T10:45:00Z"
+    }
+  }
+]

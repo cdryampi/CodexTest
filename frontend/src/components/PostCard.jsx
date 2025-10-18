@@ -1,6 +1,6 @@
 import { Link, generatePath } from 'react-router-dom';
 import { Badge } from 'flowbite-react';
-import { ArrowRightIcon, CalendarIcon, TagIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, CalendarIcon, TagIcon, Squares2X2Icon } from '@heroicons/react/24/outline';
 
 const formatDate = (dateString) => {
   if (!dateString) {
@@ -46,6 +46,11 @@ function PostCard({ post }) {
   const readingMinutes = estimateReadingMinutes(excerpt || title);
   const displayExcerpt = truncateText(excerpt);
   const detailPath = slug ? generatePath('/post/:slug', { slug }) : '#';
+  const categories = Array.isArray(post.categories_detail) && post.categories_detail.length > 0
+    ? post.categories_detail
+    : Array.isArray(post.categories)
+      ? post.categories.map((category) => ({ slug: category, name: category }))
+      : [];
 
   return (
     <article className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-lg/40 ring-1 ring-transparent transition duration-300 hover:-translate-y-1 hover:border-sky-300 hover:shadow-xl hover:ring-sky-100 focus-within:-translate-y-1 focus-within:border-sky-300 focus-within:ring-sky-100 dark:border-slate-800 dark:bg-slate-900/70 dark:hover:border-sky-500/60 dark:hover:shadow-sky-900/40 dark:hover:ring-sky-500/20">
@@ -94,6 +99,20 @@ function PostCard({ post }) {
               {readingMinutes} min de lectura
             </span>
           </div>
+          {categories.length > 0 ? (
+            <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+              {categories.map((category) => (
+                <Badge
+                  key={category.slug}
+                  color="purple"
+                  className="inline-flex items-center gap-1 border border-fuchsia-200/60 bg-fuchsia-100/80 text-fuchsia-700 shadow-sm transition-colors duration-200 hover:border-fuchsia-400 hover:bg-fuchsia-50 hover:text-fuchsia-600 dark:border-fuchsia-500/40 dark:bg-fuchsia-900/40 dark:text-fuchsia-200 dark:hover:border-fuchsia-400/70 dark:hover:bg-fuchsia-900/60"
+                >
+                  <Squares2X2Icon className="h-4 w-4" aria-hidden="true" />
+                  {category.name ?? category.slug}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
           <h2 className="text-2xl font-semibold text-slate-900 transition-colors duration-300 group-hover:text-sky-600 dark:text-white dark:group-hover:text-sky-300">
             <Link
               to={detailPath}

@@ -6,7 +6,18 @@ from typing import Iterable
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Comment, Post, Tag
+from .models import Category, Comment, Post, Tag
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    """Public representation of a blog category."""
+
+    post_count = serializers.IntegerField(read_only=True, default=0)
+
+    class Meta:
+        model = Category
+        fields = ["name", "slug", "description", "is_active", "post_count"]
+        read_only_fields = ["slug", "post_count"]
 
 
 class TagNameField(serializers.SlugRelatedField):
@@ -35,6 +46,10 @@ class PostListSerializer(serializers.ModelSerializer):
     """Compact serializer for listing posts."""
 
     tags = serializers.SlugRelatedField(many=True, read_only=True, slug_field="name")
+    categories = serializers.SlugRelatedField(
+        many=True, read_only=True, slug_field="slug"
+    )
+    categories_detail = CategorySerializer(source="categories", many=True, read_only=True)
     created_at = serializers.DateField(source="date", read_only=True)
 
     class Meta:
@@ -45,16 +60,32 @@ class PostListSerializer(serializers.ModelSerializer):
             "slug",
             "excerpt",
             "tags",
+            "categories",
+            "categories_detail",
             "created_at",
             "image",
         ]
-        read_only_fields = ["id", "slug", "created_at", "image"]
+        read_only_fields = [
+            "id",
+            "slug",
+            "created_at",
+            "image",
+            "categories",
+            "categories_detail",
+        ]
 
 
 class PostDetailSerializer(serializers.ModelSerializer):
     """Detailed serializer for retrieving and creating posts."""
 
     tags = TagNameField(many=True, slug_field="name", queryset=Tag.objects.all())
+    categories = serializers.SlugRelatedField(
+        many=True,
+        slug_field="slug",
+        queryset=Category.objects.all(),
+        required=False,
+    )
+    categories_detail = CategorySerializer(source="categories", many=True, read_only=True)
     created_at = serializers.DateField(source="date", read_only=True)
     updated_at = serializers.SerializerMethodField()
     date = serializers.DateField(write_only=True, required=False)
@@ -68,6 +99,8 @@ class PostDetailSerializer(serializers.ModelSerializer):
             "excerpt",
             "content",
             "tags",
+            "categories",
+            "categories_detail",
             "created_at",
             "updated_at",
             "image",
@@ -76,7 +109,13 @@ class PostDetailSerializer(serializers.ModelSerializer):
             "author",
             "date",
         ]
-        read_only_fields = ["id", "slug", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "slug",
+            "created_at",
+            "updated_at",
+            "categories_detail",
+        ]
 
     def get_updated_at(self, obj: Post):
         # The current model only stores the publication date, reuse it for now.
@@ -96,21 +135,29 @@ class PostDetailSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         tags = validated_data.pop("tags", [])
+        categories = validated_data.pop("categories", [])
         post = Post.objects.create(**validated_data)
         self._set_tags(post, tags)
+        self._set_categories(post, categories)
         return post
 
     def update(self, instance, validated_data):
         tags = validated_data.pop("tags", None)
+        categories = validated_data.pop("categories", None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
         if tags is not None:
             self._set_tags(instance, tags)
+        if categories is not None:
+            self._set_categories(instance, categories)
         return instance
 
     def _set_tags(self, post: Post, tags: Iterable[Tag]) -> None:
         post.tags.set(tags)
+
+    def _set_categories(self, post: Post, categories: Iterable[Category]) -> None:
+        post.categories.set(categories)
 
 
 class CommentSerializer(serializers.ModelSerializer):

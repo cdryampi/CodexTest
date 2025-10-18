@@ -1,4 +1,4 @@
-"""API tests for the blog application."""
+"""API tests for the blog posts endpoints."""
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -7,7 +7,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import Comment, Post, Tag
+from blog.models import Comment, Post, Tag
 
 
 class PostAPITestCase(APITestCase):

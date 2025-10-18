@@ -2,32 +2,85 @@
 
 from __future__ import annotations
 
+from django.db.models import Count, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, viewsets
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
-from .models import Comment, Post
-from .serializers import CommentSerializer, PostDetailSerializer, PostListSerializer
+from .models import Category, Comment, Post
+from .serializers import (
+    CategorySerializer,
+    CommentSerializer,
+    PostDetailSerializer,
+    PostListSerializer,
+)
 
 
 class PostViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """Manage blog posts using viewsets."""
 
-    queryset = Post.objects.prefetch_related("tags").order_by("-date", "-id")
+    queryset = Post.objects.prefetch_related("tags", "categories").order_by("-date", "-id")
     lookup_field = "slug"
     lookup_url_kwarg = "slug"
-    filterset_fields = ["tags__name"]
-    search_fields = ["title", "content", "tags__name"]
+    filterset_fields = ["tags__name", "categories__slug", "categories__name"]
+    search_fields = ["title", "content", "tags__name", "categories__name"]
     ordering_fields = ["date", "title"]
     ordering = ["-date"]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
-        return super().get_queryset().distinct()
+        queryset = super().get_queryset().distinct()
+        category_slug = self.request.query_params.get("category")
+        if category_slug:
+            queryset = queryset.filter(categories__slug__iexact=category_slug)
+        return queryset
 
     def get_serializer_class(self):  # type: ignore[override]
         if self.action == "list":
             return PostListSerializer
         return PostDetailSerializer
+
+
+class CategoryViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Expose categories with read access for everyone."""
+
+    serializer_class = CategorySerializer
+    lookup_field = "slug"
+    lookup_url_kwarg = "slug"
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    ordering = ["name"]
+
+    def get_queryset(self):
+        queryset = Category.objects.all()
+        params = self.request.query_params
+        search_term = params.get("q")
+        if search_term:
+            search_term = search_term.strip()
+            queryset = queryset.filter(
+                Q(name__icontains=search_term)
+                | Q(description__icontains=search_term)
+            )
+
+        is_active = params.get("is_active")
+        if is_active is not None:
+            normalized = is_active.lower()
+            if normalized in {"true", "1", "yes"}:
+                queryset = queryset.filter(is_active=True)
+            elif normalized in {"false", "0", "no"}:
+                queryset = queryset.filter(is_active=False)
+
+        with_counts = params.get("with_counts")
+        if with_counts is not None and with_counts.lower() in {"1", "true", "yes"}:
+            queryset = queryset.annotate(post_count=Count("posts", distinct=True))
+
+        return queryset.order_by(*self.ordering).distinct()
 
 
 class CommentViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):

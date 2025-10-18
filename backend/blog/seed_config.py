@@ -25,6 +25,18 @@ TAGS_POOL = [
     "filosofia",
     "tutorial",
 ]
+CATEGORIES_POOL = [
+    {"name": "Frontend", "slug": "frontend"},
+    {"name": "Backend", "slug": "backend"},
+    {"name": "DevOps", "slug": "devops"},
+    {"name": "UX", "slug": "ux"},
+    {"name": "Calidad", "slug": "calidad"},
+    {"name": "Productividad", "slug": "productividad"},
+    {"name": "Comunidad", "slug": "comunidad"},
+    {"name": "Investigación", "slug": "investigacion"},
+    {"name": "Documentación", "slug": "documentacion"},
+    {"name": "Innovación", "slug": "innovacion"},
+]
 FAKER_LOCALE = "es_ES"
 DEFAULT_PASSWORD = "password123"
 BULK_BATCH_SIZE = 500

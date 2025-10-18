@@ -6,6 +6,45 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 
+class CategoryQuerySet(models.QuerySet):
+    """Custom queryset to expose helpers for categories."""
+
+    def active(self):
+        return self.filter(is_active=True)
+
+
+class Category(models.Model):
+    """Category grouping posts by topic."""
+
+    name = models.CharField("Nombre", max_length=150, unique=True)
+    slug = models.SlugField("Slug", max_length=160, unique=True, blank=True)
+    description = models.TextField("Descripción", blank=True)
+    is_active = models.BooleanField("Activa", default=True)
+    created_at = models.DateTimeField("Creada", auto_now_add=True)
+    updated_at = models.DateTimeField("Actualizada", auto_now=True)
+
+    objects = CategoryQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Categoría"
+        verbose_name_plural = "Categorías"
+
+    def __str__(self) -> str:  # pragma: no cover - human-readable only
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(self.name) or "categoria"
+            candidate = base_slug
+            suffix = 1
+            while Category.objects.filter(slug=candidate).exclude(pk=self.pk).exists():
+                suffix += 1
+                candidate = f"{base_slug}-{suffix}"
+            self.slug = candidate
+        super().save(*args, **kwargs)
+
+
 class Tag(models.Model):
     """Tag assigned to posts."""
 
@@ -33,6 +72,12 @@ class Post(models.Model):
     imageAlt = models.CharField("Texto alternativo", max_length=255)
     author = models.CharField("Autor", max_length=255)
     tags = models.ManyToManyField(Tag, related_name="posts", verbose_name="Etiquetas")
+    categories = models.ManyToManyField(
+        Category,
+        related_name="posts",
+        verbose_name="Categorías",
+        blank=True,
+    )
 
     class Meta:
         ordering = ["-date", "-id"]
