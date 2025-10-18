@@ -37,7 +37,7 @@ const SkeletonMedia = ({ className = '' }) => (
 const SkeletonText = ({ className = '', lines = 1 }) => {
   const safeLines = Math.max(1, Math.floor(lines));
   return (
-    <div aria-hidden="true" className={cx('space-y-2', className)}>
+    <div aria-hidden="true" role="presentation" className={cx('space-y-2', className)}>
       {Array.from({ length: safeLines }).map((_, index) => (
         <div
           key={index}
