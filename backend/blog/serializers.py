@@ -78,13 +78,20 @@ class _PostCategoryRepresentationMixin:
 
     @staticmethod
     def _serialize_date(value):
-        """Return an ISO formatted date string for ``value`` when possible."""
+        """
+        Return an ISO formatted date string for ``value`` when possible.
 
+        - If ``value`` is a datetime or date, return its ISO format string.
+        - If ``value`` is None, return None.
+        - For any other type, return None.
+        """
+        if value is None:
+            return None
         if isinstance(value, datetime):
             value = value.date()
         if isinstance(value, date_cls):
             return value.isoformat()
-        return value
+        return None
 
     def _ensure_category_lists(self, data: dict) -> dict:
         for field in self.category_fields:
