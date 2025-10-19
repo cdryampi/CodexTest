@@ -10,7 +10,10 @@ import {
   ClockIcon,
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
-  UserPlusIcon
+  UserPlusIcon,
+  DocumentTextIcon,
+  Squares2X2Icon,
+  TagIcon
 } from '@heroicons/react/24/outline';
 import { useUIStore, selectIsDark, selectSearch } from '../store/useUI';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -83,6 +86,15 @@ function Navbar() {
     >
       <Dropdown.Item as={Link} to="/dashboard" icon={BoltIcon}>
         Dashboard
+      </Dropdown.Item>
+      <Dropdown.Item as={Link} to="/dashboard/posts" icon={DocumentTextIcon}>
+        Publicaciones
+      </Dropdown.Item>
+      <Dropdown.Item as={Link} to="/dashboard/categories" icon={Squares2X2Icon}>
+        Categorías
+      </Dropdown.Item>
+      <Dropdown.Item as={Link} to="/dashboard/tags" icon={TagIcon}>
+        Etiquetas
       </Dropdown.Item>
       <Dropdown.Item as={Link} to="/profile" icon={UserCircleIcon}>
         Perfil
@@ -181,11 +193,44 @@ function Navbar() {
           <FlowbiteNavbar.Link
             as={Link}
             to="/dashboard"
-            active={location.pathname.startsWith('/dashboard')}
+            active={location.pathname === '/dashboard'}
             className="flex items-center gap-2 text-base text-slate-600 transition duration-300 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
           >
             <BoltIcon className="h-5 w-5" aria-hidden="true" />
             Dashboard
+          </FlowbiteNavbar.Link>
+        ) : null}
+        {isAuthenticated ? (
+          <FlowbiteNavbar.Link
+            as={Link}
+            to="/dashboard/posts"
+            active={location.pathname.startsWith('/dashboard/posts')}
+            className="flex items-center gap-2 text-base text-slate-600 transition duration-300 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
+          >
+            <DocumentTextIcon className="h-5 w-5" aria-hidden="true" />
+            Publicaciones
+          </FlowbiteNavbar.Link>
+        ) : null}
+        {isAuthenticated ? (
+          <FlowbiteNavbar.Link
+            as={Link}
+            to="/dashboard/categories"
+            active={location.pathname.startsWith('/dashboard/categories')}
+            className="flex items-center gap-2 text-base text-slate-600 transition duration-300 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
+          >
+            <Squares2X2Icon className="h-5 w-5" aria-hidden="true" />
+            Categorías
+          </FlowbiteNavbar.Link>
+        ) : null}
+        {isAuthenticated ? (
+          <FlowbiteNavbar.Link
+            as={Link}
+            to="/dashboard/tags"
+            active={location.pathname.startsWith('/dashboard/tags')}
+            className="flex items-center gap-2 text-base text-slate-600 transition duration-300 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
+          >
+            <TagIcon className="h-5 w-5" aria-hidden="true" />
+            Etiquetas
           </FlowbiteNavbar.Link>
         ) : null}
         <form
@@ -222,12 +267,48 @@ function Navbar() {
                 <FlowbiteNavbar.Link
                   as={Link}
                   to="/dashboard"
+                  active={location.pathname === '/dashboard'}
                   className="text-base text-slate-600 transition hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
                 >
                   Dashboard
                 </FlowbiteNavbar.Link>
               ) : null}
-              <FlowbiteNavbar.Link as={Link} to="/profile" className="text-base text-slate-600 transition hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300">
+              {isAuthenticated ? (
+                <FlowbiteNavbar.Link
+                  as={Link}
+                  to="/dashboard/posts"
+                  active={location.pathname.startsWith('/dashboard/posts')}
+                  className="text-base text-slate-600 transition hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
+                >
+                  Publicaciones
+                </FlowbiteNavbar.Link>
+              ) : null}
+              {isAuthenticated ? (
+                <FlowbiteNavbar.Link
+                  as={Link}
+                  to="/dashboard/categories"
+                  active={location.pathname.startsWith('/dashboard/categories')}
+                  className="text-base text-slate-600 transition hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
+                >
+                  Categorías
+                </FlowbiteNavbar.Link>
+              ) : null}
+              {isAuthenticated ? (
+                <FlowbiteNavbar.Link
+                  as={Link}
+                  to="/dashboard/tags"
+                  active={location.pathname.startsWith('/dashboard/tags')}
+                  className="text-base text-slate-600 transition hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
+                >
+                  Etiquetas
+                </FlowbiteNavbar.Link>
+              ) : null}
+              <FlowbiteNavbar.Link
+                as={Link}
+                to="/profile"
+                active={location.pathname.startsWith('/profile')}
+                className="text-base text-slate-600 transition hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
+              >
                 Perfil
               </FlowbiteNavbar.Link>
               <Button
