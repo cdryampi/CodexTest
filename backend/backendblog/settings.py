@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
+    "accounts.apps.AccountsConfig",
     "blog.apps.BlogConfig",
 ]
 
