@@ -185,6 +185,9 @@ Todas las rutas están bajo `/api/` según `backend/backendblog/urls.py`.
 
 - **Detalle** `GET /api/posts/{slug}/`
 - **Crear** `POST /api/posts/` (permiso actual `AllowAny`; pendiente endurecer). Cuerpo esperado:
+- **Actualizar** `PUT /api/posts/{slug}/` (requiere autenticación JWT). Acepta el mismo payload que la creación y reemplaza por completo el recurso.
+- **Actualizar parcialmente** `PATCH /api/posts/{slug}/` (requiere autenticación JWT). Permite enviar solo los campos a modificar.
+- **Eliminar** `DELETE /api/posts/{slug}/` (requiere autenticación JWT).
 
 ```json
 {
