@@ -1,4 +1,4 @@
-from backendblog.settings import *  # type: ignore F403,F401
+from backend.settings import *  # type: ignore F403,F401
 
 DATABASES = {
     'default': {
