@@ -12,12 +12,14 @@ Este módulo vive dentro de `/frontend` del monorepo y contiene el cliente React
 
 ## Configuración de API
 
-La URL base se resuelve dinámicamente en `src/lib/apiClient.js` siguiendo esta prioridad:
+La URL base se resuelve dinámicamente en `src/utils/apiBase.js` siguiendo esta prioridad:
 
-1. `window.__ENV__?.API_BASE_URL` inyectado en tiempo de ejecución.
-2. `import.meta.env.VITE_API_BASE_URL` definido por Vite.
-3. `/api` durante el desarrollo local (usa el proxy configurado en `vite.config.js`).
-4. `https://backendblog.yampi.eu` como valor por defecto para builds de producción.
+1. `import.meta.env.VITE_API_BASE_URL` definido por Vite.
+2. `window.__ENV__?.API_BASE_URL` inyectado en tiempo de ejecución.
+3. `/api/` durante el desarrollo local (proxy configurado en `vite.config.js`).
+4. `https://backendblog.yampi.eu/api/` como valor por defecto para builds de producción.
+
+> **Importante:** ninguna parte del código puede hardcodear dominios del backend. Importa siempre `API_BASE_URL` o `resolveApiBaseUrl()` desde `src/utils/apiBase.js`.
 
 ### Endpoints consumidos
 
