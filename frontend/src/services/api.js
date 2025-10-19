@@ -1,7 +1,5 @@
 import axios from 'axios';
-
-const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/';
-const API_BASE_URL = rawBaseUrl.endsWith('/') ? rawBaseUrl : `${rawBaseUrl}/`;
+import { API_BASE_URL } from '../utils/apiBase.js';
 
 export const ACCESS_TOKEN_KEY = 'codextest.accessToken';
 export const REFRESH_TOKEN_KEY = 'codextest.refreshToken';
