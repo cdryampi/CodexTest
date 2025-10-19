@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Outlet } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
@@ -10,22 +10,28 @@ import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Profile from './pages/Profile.jsx';
 import ProtectedRoute from './routes/ProtectedRoute.jsx';
-import Dashboard from './pages/dashboard/Dashboard.jsx';
-import PostsList from './pages/dashboard/PostsList.jsx';
-import PostForm from './pages/dashboard/PostForm.jsx';
-import CategoriesList from './pages/dashboard/CategoriesList.jsx';
-import CategoryForm from './pages/dashboard/CategoryForm.jsx';
-import TagsList from './pages/dashboard/TagsList.jsx';
-import TagForm from './pages/dashboard/TagForm.jsx';
-import {
-  SITE_NAME,
-  SITE_DESCRIPTION,
-  DEFAULT_OG_IMAGE,
-  DEFAULT_TWITTER_CARD
-} from './seo/config.js';
+import DashboardLayout from './layouts/DashboardLayout.jsx';
+import DashboardHome from './pages/dashboard/DashboardHome.jsx';
+import DashboardPosts from './pages/dashboard/DashboardPosts.jsx';
+import DashboardComments from './pages/dashboard/DashboardComments.jsx';
+import DashboardSettings from './pages/dashboard/DashboardSettings.jsx';
+import DashboardUsers from './pages/dashboard/DashboardUsers.jsx';
+import { SITE_NAME, SITE_DESCRIPTION, DEFAULT_OG_IMAGE, DEFAULT_TWITTER_CARD } from './seo/config.js';
 import { Toaster } from 'react-hot-toast';
 
 const TITLE_TEMPLATE = `%s | ${SITE_NAME}`;
+
+function SiteLayout() {
+  return (
+    <div className="flex min-h-screen flex-col bg-slate-100 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
+      <Navbar />
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-16 pt-10 sm:px-6 lg:px-8">
+        <Outlet />
+      </main>
+      <Footer />
+    </div>
+  );
+}
 
 function App() {
   return (
@@ -43,108 +49,39 @@ function App() {
         <meta name="twitter:image" content={DEFAULT_OG_IMAGE} />
       </Helmet>
       <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
-      <div className="flex min-h-screen flex-col bg-slate-100 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
-        <Navbar />
-        <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-16 pt-10 sm:px-6 lg:px-8">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/timeline" element={<Timeline />} />
-            <Route path="/post/:slug" element={<Post />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route
-              path="/profile"
-              element={(
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              )}
-            />
-            <Route
-              path="/dashboard"
-              element={(
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              )}
-            />
-            <Route
-              path="/dashboard/posts"
-              element={(
-                <ProtectedRoute>
-                  <PostsList />
-                </ProtectedRoute>
-              )}
-            />
-            <Route
-              path="/dashboard/posts/new"
-              element={(
-                <ProtectedRoute>
-                  <PostForm />
-                </ProtectedRoute>
-              )}
-            />
-            <Route
-              path="/dashboard/posts/:slug/edit"
-              element={(
-                <ProtectedRoute>
-                  <PostForm />
-                </ProtectedRoute>
-              )}
-            />
-            <Route
-              path="/dashboard/categories"
-              element={(
-                <ProtectedRoute>
-                  <CategoriesList />
-                </ProtectedRoute>
-              )}
-            />
-            <Route
-              path="/dashboard/categories/new"
-              element={(
-                <ProtectedRoute>
-                  <CategoryForm />
-                </ProtectedRoute>
-              )}
-            />
-            <Route
-              path="/dashboard/categories/:id/edit"
-              element={(
-                <ProtectedRoute>
-                  <CategoryForm />
-                </ProtectedRoute>
-              )}
-            />
-            <Route
-              path="/dashboard/tags"
-              element={(
-                <ProtectedRoute>
-                  <TagsList />
-                </ProtectedRoute>
-              )}
-            />
-            <Route
-              path="/dashboard/tags/new"
-              element={(
-                <ProtectedRoute>
-                  <TagForm />
-                </ProtectedRoute>
-              )}
-            />
-            <Route
-              path="/dashboard/tags/:id/edit"
-              element={(
-                <ProtectedRoute>
-                  <TagForm />
-                </ProtectedRoute>
-              )}
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
+      <Routes>
+        <Route element={<SiteLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/timeline" element={<Timeline />} />
+          <Route path="/post/:slug" element={<Post />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route
+            path="/profile"
+            element={(
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            )}
+          />
+          <Route path="*" element={<NotFound />} />
+        </Route>
+        <Route
+          path="/dashboard/*"
+          element={(
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          )}
+        >
+          <Route index element={<DashboardHome />} />
+          <Route path="posts" element={<DashboardPosts />} />
+          <Route path="comments" element={<DashboardComments />} />
+          <Route path="users" element={<DashboardUsers />} />
+          <Route path="settings" element={<DashboardSettings />} />
+          <Route path="*" element={<DashboardHome />} />
+        </Route>
+      </Routes>
     </>
   );
 }

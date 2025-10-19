@@ -11,7 +11,6 @@ import {
   LogIn,
   LogOut,
   NotebookPen,
-  PlusCircle,
   Search,
   Tags,
   User,
@@ -166,9 +165,9 @@ function Navbar() {
 
   const quickActions = isAuthenticated ? (
     <Button asChild className="hidden lg:inline-flex" size="sm">
-      <Link to="/dashboard/posts/new" className="flex items-center gap-2">
-        <PlusCircle className="h-4 w-4" aria-hidden="true" />
-        Nuevo post
+      <Link to="/dashboard/posts" className="flex items-center gap-2">
+        <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+        Panel
       </Link>
     </Button>
   ) : null;
