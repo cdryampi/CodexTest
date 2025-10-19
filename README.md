@@ -1,55 +1,105 @@
-# Monorepo React + Django
+# Codex Blog – Monorepo React + Django
 
-Este repositorio agrupa el frontend (React), el backend (Django REST Framework) y los artefactos de despliegue (Docker/Dokploy) necesarios para servir el blog de Codex.
+Monorepo que integra frontend (React + Vite), backend (Django REST Framework) y artefactos de despliegue (Docker + Dokploy) para el blog de Codex. Incluye un sistema de instrucciones multi-agente pensado para ejecutarse en Codex Cloud.
 
-## Estructura
+## Arquitectura
 
-- `frontend/`: aplicación React 18 con Vite. Consulta `frontend/README.md` para instrucciones específicas.
-- `backend/`: proyecto Django 5 con Jazzmin y DRF. Incluye fixtures de ejemplo y configuración lista para despliegue.
-- `deploy/`: Dockerfiles, entrypoints y `docker-compose` para levantar el backend junto a PostgreSQL en Dokploy u orquestadores compatibles.
-- `instructions/`: guías operativas para cada módulo (frontend, backend, deploy, UX).
-- `.github/workflows/deploy.yml`: pipeline que continúa publicando el frontend en GitHub Pages.
-
-## Backend: despliegue en contenedor
-
-El backend se ejecuta en un contenedor basado en `python:3.12-alpine` que:
-
-1. Instala las dependencias de `backend/requirements.txt` (incluidos Gunicorn y WhiteNoise).
-2. En el arranque ejecuta automáticamente:
-   - `python manage.py migrate --noinput`
-   - `python manage.py collectstatic --noinput`
-3. Lanza Gunicorn (`backendblog.wsgi:application`) exponiendo el puerto `8000`.
-4. Sirve los archivos estáticos con WhiteNoise y persiste los archivos subidos en `/app/media`.
-
-`deploy/backend/entrypoint.sh` implementa este flujo de arranque y `deploy/backend/Dockerfile` define la imagen del servicio.
-
-### Variables de entorno para Dokploy / producción
-
-- `SECRET_KEY`: clave secreta de Django (obligatoria).
-- `DEBUG`: `false` en producción.
-- `ALLOWED_HOSTS`: dominios separados por comas (ej. `tu-dominio.com,localhost`).
-- `CORS_ALLOWED_ORIGINS`: orígenes autorizados separados por comas (ej. `https://tu-frontend.com`).
-- `CSRF_TRUSTED_ORIGINS`: orígenes confiables para CSRF separados por comas.
-- `DATABASE_URL`: cadena completa de conexión (opcional). Si no se define, usar `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT`.
-- `SECURE_SSL_REDIRECT`: activa la redirección HTTPS (por defecto `true` cuando `DEBUG` es `false`).
-- `GUNICORN_WORKERS`, `GUNICORN_THREADS`, `GUNICORN_TIMEOUT`: parámetros opcionales para Gunicorn.
-- `DB_MAX_RETRIES`, `DB_RETRY_DELAY`: controlan el número de reintentos y la espera (en segundos) antes de lanzar error si la base de datos no está disponible.
-
-Los archivos estáticos se generan en `/app/staticfiles` y los medios en `/app/media`. Configura un volumen persistente para `media` cuando despliegues en Dokploy.
-
-### docker-compose de referencia
-
-`deploy/docker-compose.yml` incluye los servicios `postgres` y `backend` con healthcheck y volumen persistente para `/app/media`. Puedes usarlo como base en Dokploy o en entornos locales de pruebas.
-
-## Frontend: comandos principales
-
-Desde la raíz del repositorio puedes ejecutar los comandos de Vite:
-
-```bash
-npm install
-npm run dev
-npm run build
-npm run preview
+```
+.
+├── frontend/              # Aplicación React 18 + Vite + Tailwind + Flowbite
+├── backend/               # Proyecto Django 5 + DRF + autenticación JWT
+├── deploy/                # Dockerfiles, docker-compose, entrypoints y Nginx
+├── instructions/          # Sistema de agentes, tareas y contexto del proyecto
+├── docs/                  # ADRs y documentación adicional
+├── UX_NOTES.md            # Notas históricas de experiencia de usuario
+└── README.md              # Este documento
 ```
 
-Estos scripts operan sobre `frontend/` y generan `dist/` para el despliegue en GitHub Pages.
+### Frontend
+- React 18 con Vite (SWC) y Router configurado con `basename={import.meta.env.BASE_URL}`.
+- Tailwind CSS v4 (o fallback 3.4.x documentado) con Flowbite y Heroicons.
+- Gestión de estado ligera con stores o React Query según la tarea.
+- Formularios con `react-hook-form` + `zod` y notificaciones `react-hot-toast`.
+
+### Backend
+- Django 5 estructurado en múltiples apps (`users`, `blog`, `core`).
+- Django REST Framework con SimpleJWT, dj-rest-auth y django-allauth.
+- Modelos de `Post`, `Category`, `Tag`, `Comment` con seeds idempotentes.
+- Configuración de emails, almacenamiento de media y CORS listo para producción.
+
+### Deploy
+- Imágenes basadas en `python:3.12-alpine` (backend) y `node:20`/`alpine` (build frontend).
+- Publicación de frontend en GitHub Pages.
+- Backend empacado para Dokploy con migraciones y seeds automáticos.
+- Publicación de imágenes en GHCR vía GitHub Actions.
+
+## Sistema de agentes
+
+El flujo operativo se documenta en `instructions/agents/README.md` y sigue el orden:
+
+1. UX → 2. Frontend → 3. Backend → 4. QA → 5. DevOps → 6. Docs → 7. Security → 8. Data.
+
+Cada agente cuenta con un archivo dedicado en `instructions/agents/agent_*.md` que define objetivos, entregables y checklist.
+
+## Flujo de lectura recomendado
+
+1. `instructions/CONTEXT.md`
+2. `instructions/README.md`
+3. `instructions/agents/` (en el orden del flujo)
+4. `instructions/tasks/` y `instructions/tasks/TEMPLATE_TASK.md`
+
+## Variables de entorno clave
+
+### Backend
+- `DJANGO_SECRET_KEY` — clave secreta obligatoria.
+- `DJANGO_DEBUG` — `true/false`.
+- `DJANGO_ALLOWED_HOSTS` — lista separada por comas.
+- `DJANGO_CORS_ORIGINS` — orígenes para CORS.
+- `DATABASE_URL` o variables `POSTGRES_*`.
+- `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`.
+- `AWS_*` u otras variables de storage si aplica.
+
+### Frontend
+- `VITE_API_BASE_URL` — URL base del backend.
+- `VITE_AUTH_TOKEN_KEY` — clave de almacenamiento local para tokens JWT.
+- `VITE_ENABLE_MOCKS` — opcional para activar mocks.
+
+Documenta cualquier cambio adicional en `.env.example` y en `instructions/CHANGELOG.md`.
+
+## Scripts útiles
+
+### Frontend
+```bash
+npm install            # Instalar dependencias
+npm run dev            # Servidor de desarrollo Vite
+npm run build          # Generar build para Pages
+npm run preview        # Previsualizar build
+```
+
+### Backend
+```bash
+pip install -r requirements.txt      # Instalar dependencias
+python manage.py migrate             # Aplicar migraciones
+python manage.py seed_categories     # Ejecutar seeds base
+python manage.py runserver 0.0.0.0:8000
+```
+
+### Docker / Deploy
+```bash
+docker compose up --build            # Ambiente local completo
+./deploy/backend/entrypoint.sh       # Flujo de arranque del backend en contenedor
+dokploy deploy backend              # Despliegue (ejemplo, requiere CLI configurada)
+```
+
+## QA rápido
+
+- Frontend: `npm test`, `npx playwright test`
+- Backend: `pytest --ds=config.settings.test`
+- Lint: `npm run lint`, `ruff check`, `bandit -r backend`
+
+## Contribución
+
+1. Revisa tareas disponibles en `instructions/tasks/` o crea una nueva con la plantilla.
+2. Ejecuta agentes siguiendo el flujo oficial y respetando el formato de entrega (`ruta\ncontenido`).
+3. Actualiza documentación y variables cuando introduzcas cambios significativos.
+4. Asegura que las suites de QA pasen antes de abrir un PR.
