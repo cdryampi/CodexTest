@@ -50,21 +50,50 @@ Cada agente cuenta con un archivo dedicado en `instructions/agents/agent_*.md` q
 
 ## Variables de entorno clave
 
-### Backend
-- `DJANGO_SECRET_KEY` — clave secreta obligatoria.
-- `DJANGO_DEBUG` — `true/false`.
-- `DJANGO_ALLOWED_HOSTS` — lista separada por comas.
-- `DJANGO_CORS_ORIGINS` — orígenes para CORS.
-- `DATABASE_URL` o variables `POSTGRES_*`.
-- `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`.
-- `AWS_*` u otras variables de storage si aplica.
+### Backend (`backend/.env`)
+- `SECRET_KEY` — clave secreta obligatoria para Django.
+- `DEBUG` — activa/desactiva modo depuración.
+- `ALLOWED_HOSTS` — dominios permitidos separados por comas.
+- `CORS_ALLOWED_ORIGINS` — dominios adicionales autorizados para CORS.
+- `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, `EMAIL_USE_SSL`, `DEFAULT_FROM_EMAIL` — credenciales SMTP (en desarrollo se usa consola automáticamente).
+- `DATABASE_URL` o variables `POSTGRES_*` — conexión a base de datos.
 
-### Frontend
-- `VITE_API_BASE_URL` — URL base del backend.
-- `VITE_AUTH_TOKEN_KEY` — clave de almacenamiento local para tokens JWT.
-- `VITE_ENABLE_MOCKS` — opcional para activar mocks.
+### Frontend (`frontend/.env`)
+- `VITE_API_BASE_URL` — URL base del backend (termina en `/api/`).
 
-Documenta cualquier cambio adicional en `.env.example` y en `instructions/CHANGELOG.md`.
+Actualiza `.env.example` y `instructions/CHANGELOG.md` cuando agregues nuevas variables.
+
+## Autenticación de usuarios
+
+### Endpoints principales
+- `POST /api/auth/login/` — inicia sesión y devuelve `access` + `refresh` JWT.
+- `POST /api/auth/token/refresh/` — renueva el `access` token usando el `refresh`.
+- `POST /api/auth/registration/` — registra usuarios nuevos y envía correo de bienvenida.
+- `GET /api/auth/user/` — datos del usuario autenticado.
+
+### Flujo y consideraciones
+- El frontend guarda `access` y `refresh` en `localStorage` y añade el encabezado `Authorization: Bearer <token>` en cada petición.
+- Los interceptores de Axios refrescan automáticamente el token de acceso ante un `401`; si el refresh falla se fuerza el cierre de sesión.
+- El backend usa SimpleJWT con vigencia de 10 minutos para `access` y 14 días para `refresh`, rotando este último en cada renovación.
+- En desarrollo los correos de bienvenida se imprimen en consola; en producción se envían mediante SMTP configurado por variables de entorno.
+
+### Variables mínimas para autenticación
+- **Backend:** `SECRET_KEY`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS/EMAIL_USE_SSL`, `DEFAULT_FROM_EMAIL`.
+- **Frontend:** `VITE_API_BASE_URL` apuntando al dominio público del backend (`https://backendblog.yampi.eu/api/` o similar).
+
+### QA rápido de autenticación
+1. Levanta el backend localmente y observa el log tras registrar un usuario nuevo:
+   ```bash
+   python manage.py runserver
+   # POST /api/auth/registration/ …
+   # [console]
+   Content-Type: text/html; charset="utf-8"
+   Subject: =?utf-8?q?Bienvenido/a_a_CodexTest_Blog?=
+   From: CodexTest Blog <no-reply@example.com>
+   To: persona@example.com
+   ```
+2. Inicia sesión desde el frontend (`/login`), verifica que los tokens aparecen en `localStorage` y que la barra de navegación muestra "Perfil" y "Cerrar sesión".
+3. Accede a `/profile`; fuerza la expiración del `access` eliminándolo y realiza una navegación: el interceptor solicitará un token nuevo con `refresh`.
 
 ## Scripts útiles
 

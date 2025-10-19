@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import re
+from datetime import timedelta
 from pathlib import Path
 from typing import Dict
 from urllib.parse import parse_qs, urlparse
@@ -36,6 +37,8 @@ _default_allowed_hosts = ["backendblog.yampi.eu", "localhost", "127.0.0.1"]
 _extra_allowed_hosts = _env_csv("ALLOWED_HOSTS")
 ALLOWED_HOSTS = list(dict.fromkeys(_default_allowed_hosts + _extra_allowed_hosts))
 
+SITE_ID = 1
+
 INSTALLED_APPS = [
     "jazzmin",
     "corsheaders",
@@ -45,11 +48,26 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
     "rest_framework",
+    "rest_framework.authtoken",
     "django_filters",
     "drf_spectacular",
+    "dj_rest_auth",
+    "dj_rest_auth.registration",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
     "blog.apps.BlogConfig",
 ]
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+ACCOUNT_LOGIN_METHODS = {"email", "username"}
+ACCOUNT_EMAIL_VERIFICATION = "none"
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -59,6 +77,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -82,7 +101,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "backendblog.wsgi.application"
 
-_DATABASE_URL = _env("DATABASE_URL")
+_DATABASE_URL = os.getenv("DATABASE_URL")
 if _DATABASE_URL:
     parsed = urlparse(_DATABASE_URL)
     DATABASES: Dict[str, Dict[str, object]] = {
@@ -99,16 +118,25 @@ if _DATABASE_URL:
     if query:
         DATABASES["default"]["OPTIONS"] = {key: values[-1] for key, values in query.items() if values}
 else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": _env("POSTGRES_DB", "postgres"),
-            "USER": _env("POSTGRES_USER", "postgres"),
-            "PASSWORD": _env("POSTGRES_PASSWORD", "postgres"),
-            "HOST": _env("POSTGRES_HOST", "postgres"),
-            "PORT": str(_env("POSTGRES_PORT", "5432")),
+    _env_postgres_host = os.getenv("POSTGRES_HOST")
+    if _env_postgres_host:
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": _env("POSTGRES_DB", "postgres"),
+                "USER": _env("POSTGRES_USER", "postgres"),
+                "PASSWORD": _env("POSTGRES_PASSWORD", "postgres"),
+                "HOST": _env_postgres_host,
+                "PORT": str(_env("POSTGRES_PORT", "5432")),
+            }
         }
-    }
+    else:
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": BASE_DIR / "db.sqlite3",
+            }
+        }
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -182,7 +210,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = list(dict.fromkeys(CORS_ALLOWED_ORIGIN_REGEXES))
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
@@ -200,6 +228,51 @@ REST_FRAMEWORK = {
         "rest_framework.parsers.MultiPartParser",
     ],
 }
+
+REST_USE_JWT = True
+REST_AUTH_TOKEN_MODEL = None
+REST_AUTH = {
+    "USE_JWT": True,
+    "SESSION_LOGIN": False,
+    "TOKEN_MODEL": None,
+    "JWT_AUTH_COOKIE": None,
+    "JWT_AUTH_REFRESH_COOKIE": None,
+    "JWT_AUTH_HTTPONLY": False,
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=14),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": False,
+    "UPDATE_LAST_LOGIN": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+if DEBUG:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+else:
+    EMAIL_BACKEND = _env(
+        "EMAIL_BACKEND",
+        "django.core.mail.backends.smtp.EmailBackend",
+    )
+
+EMAIL_HOST = _env("EMAIL_HOST", "") or ""
+_email_port = _env("EMAIL_PORT", "587") or "587"
+try:
+    EMAIL_PORT = int(_email_port)
+except (TypeError, ValueError):
+    EMAIL_PORT = 587
+EMAIL_HOST_USER = _env("EMAIL_HOST_USER", "") or ""
+EMAIL_HOST_PASSWORD = _env("EMAIL_HOST_PASSWORD", "") or ""
+EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", True)
+EMAIL_USE_SSL = _env_bool("EMAIL_USE_SSL", False)
+if EMAIL_USE_SSL:
+    EMAIL_USE_TLS = False
+DEFAULT_FROM_EMAIL = _env(
+    "DEFAULT_FROM_EMAIL",
+    "CodexTest Blog <no-reply@codextest.local>",
+)
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "CodexTest Blog API",
