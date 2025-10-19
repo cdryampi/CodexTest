@@ -7,6 +7,7 @@ import App from './App.jsx';
 import './index.css';
 import './store/useUI';
 import { AuthProvider } from './context/AuthContext.jsx';
+import SonnerProvider from './components/ui/sonner-provider.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -14,7 +15,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <Flowbite>
         <AuthProvider>
           <BrowserRouter basename={import.meta.env.BASE_URL}>
-            <App />
+            <SonnerProvider>
+              <App />
+            </SonnerProvider>
           </BrowserRouter>
         </AuthProvider>
       </Flowbite>
