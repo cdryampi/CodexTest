@@ -188,10 +188,35 @@ class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSe
         ]
 
     def get_created_at(self, obj: Post):
+        """
+        Retrieve the creation date for the post.
+
+        Uses getattr with a default of None to gracefully handle cases where the
+        'date' attribute may not be present on the object (e.g., if the model changes
+        or the attribute is omitted in certain querysets). This replaces a direct
+        DateField mapping to allow for more flexible handling.
+
+        The value may be a date, datetime, or None. The _serialize_date helper
+        method is responsible for converting these types to the appropriate
+        serialized representation (e.g., ISO 8601 string or null).
+        """
         return self._serialize_date(getattr(obj, "date", None))
 
     def get_updated_at(self, obj: Post):
-        # The current model only stores the publication date, reuse it for now.
+        """
+        Retrieve the last updated date for the post.
+
+        Uses getattr with a default of None to gracefully handle cases where the
+        'date' attribute may not be present on the object (e.g., if the model changes
+        or the attribute is omitted in certain querysets). This replaces a direct
+        DateField mapping to allow for more flexible handling.
+
+        The value may be a date, datetime, or None. The _serialize_date helper
+        method is responsible for converting these types to the appropriate
+        serialized representation (e.g., ISO 8601 string or null).
+
+        Note: The current model only stores the publication date, so we reuse it here.
+        """
         return self._serialize_date(getattr(obj, "date", None))
 
     def validate_title(self, value: str) -> str:
