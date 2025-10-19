@@ -85,7 +85,7 @@ function App() {
               )}
             />
             <Route
-              path="/dashboard/posts/:id/edit"
+              path="/dashboard/posts/:slug/edit"
               element={(
                 <ProtectedRoute>
                   <PostForm />

@@ -13,8 +13,6 @@ import Input from '../../components/forms/Input.jsx';
 import Textarea from '../../components/forms/Textarea.jsx';
 import Select from '../../components/forms/Select.jsx';
 import MultiSelect from '../../components/forms/MultiSelect.jsx';
-import FileUpload from '../../components/forms/FileUpload.jsx';
-import Switch from '../../components/forms/Switch.jsx';
 import { listarCategorias } from '../../services/categories.js';
 import { listarTags } from '../../services/tags.js';
 import { actualizarPost, crearPost, obtenerPost } from '../../services/posts.js';
@@ -28,7 +26,7 @@ const normalizeCollection = (payload) => {
 };
 
 const tagOptionSchema = z.object({
-  value: z.union([z.string(), z.number()]),
+  value: z.string().trim().min(1, 'El tag no puede estar vacío.'),
   label: z.string()
 });
 
@@ -39,9 +37,15 @@ const postSchema = z
     excerpt: z.string().optional(),
     content: z.string(),
     category: z.string().min(1, 'Selecciona una categoría.'),
-    tags: z.array(tagOptionSchema).optional(),
-    image: z.any().nullable().optional(),
-    published: z.boolean().default(false)
+    tags: z.array(tagOptionSchema).default([]),
+    image: z.string().url('La URL de la imagen debe ser válida.'),
+    thumb: z.string().url('La URL de la miniatura debe ser válida.'),
+    imageAlt: z.string().trim().min(3, 'El texto alternativo debe tener al menos 3 caracteres.'),
+    author: z.string().trim().min(3, 'Indica el nombre de la persona autora.'),
+    date: z
+      .string()
+      .min(1, 'Selecciona una fecha para el post.')
+      .refine((value) => !Number.isNaN(Date.parse(value)), 'Selecciona una fecha válida.')
   })
   .superRefine((value, ctx) => {
     const plain = value.content
@@ -69,8 +73,10 @@ const quillModules = {
 
 function PostForm() {
   const navigate = useNavigate();
-  const { id } = useParams();
-  const isEditMode = Boolean(id);
+  const { slug: slugParam } = useParams();
+  const isEditMode = Boolean(slugParam);
+
+  const initialDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const {
     control,
@@ -89,22 +95,23 @@ function PostForm() {
       content: '',
       category: '',
       tags: [],
-      image: null,
-      published: false
+      image: '',
+      thumb: '',
+      imageAlt: '',
+      author: '',
+      date: initialDate
     }
   });
 
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [tagOptions, setTagOptions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [existingImage, setExistingImage] = useState(null);
   const [contentError, setContentError] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
 
   const titleValue = watch('title');
   const slugValue = watch('slug');
   const contentValue = watch('content');
-  const imageValue = watch('image');
+  const tagsValue = watch('tags');
   const autoSlugRef = useRef('');
 
   const validationContentError = errors?.content?.message;
@@ -117,18 +124,6 @@ function PostForm() {
       setValue('slug', newSlug, { shouldDirty: false, shouldValidate: false });
     }
   }, [titleValue, slugValue, setValue]);
-
-  useEffect(() => {
-    if (imageValue instanceof File) {
-      const objectUrl = URL.createObjectURL(imageValue);
-      setPreviewUrl(objectUrl);
-      return () => URL.revokeObjectURL(objectUrl);
-    }
-    if (!imageValue) {
-      setPreviewUrl(existingImage ?? null);
-    }
-    return undefined;
-  }, [imageValue, existingImage]);
 
   const fetchTaxonomies = async () => {
     try {
@@ -144,11 +139,15 @@ function PostForm() {
         }))
       );
 
+      const normalizedTags = Array.isArray(tagsResponse) ? tagsResponse : normalizeCollection(tagsResponse);
       setTagOptions(
-        normalizeCollection(tagsResponse).map((tag) => ({
-          value: tag.id ?? tag.slug,
-          label: tag.name ?? tag.title ?? 'Sin nombre'
-        }))
+        normalizedTags.map((tag) => {
+          const name = tag.name ?? tag.slug ?? tag;
+          return {
+            value: name,
+            label: tag.postsCount ? `${name} (${tag.postsCount})` : name
+          };
+        })
       );
     } catch (error) {
       toast.error('No fue posible cargar categorías y tags.');
@@ -161,37 +160,60 @@ function PostForm() {
     }
 
     try {
-      const post = await obtenerPost(id);
-      const tagsData = post.tags_detail ?? post.tags ?? [];
-      const categoryValue =
-        post.category ??
-        post.category_slug ??
-        post.category_detail?.slug ??
-        post.category_detail?.id ??
-        '';
+      const post = await obtenerPost(slugParam);
+      const tagsData = Array.isArray(post?.tags) ? post.tags : [];
+      const categorySlug = Array.isArray(post?.categories) ? post.categories[0] ?? '' : '';
+
+      const mappedTags = tagsData.map((tag) => ({
+        value: tag,
+        label: tag
+      }));
 
       reset({
         title: post.title ?? '',
         slug: post.slug ?? '',
         excerpt: post.excerpt ?? '',
         content: post.content ?? '',
-        category: categoryValue,
-        tags: tagsData.map((tag) => ({
-          value: tag.id ?? tag.slug,
-          label: tag.name ?? tag.title ?? tag
-        })),
-        image: null,
-        published: Boolean(post.published)
+        category: categorySlug,
+        tags: mappedTags,
+        image: post.image ?? '',
+        thumb: post.thumb ?? '',
+        imageAlt: post.imageAlt ?? '',
+        author: post.author ?? '',
+        date: post.created_at ?? post.date ?? initialDate
       });
 
-      if (post.image || post.featured_image) {
-        setExistingImage(post.image ?? post.featured_image);
-        setPreviewUrl(post.image ?? post.featured_image);
-      }
+      setTagOptions((previous) => {
+        const existing = new Map(previous.map((option) => [option.value.toLowerCase(), option]));
+        mappedTags.forEach((option) => {
+          if (!existing.has(option.value.toLowerCase())) {
+            existing.set(option.value.toLowerCase(), option);
+          }
+        });
+        return Array.from(existing.values());
+      });
     } catch (error) {
       toast.error('No se pudo cargar el post solicitado.');
       navigate('/dashboard/posts');
     }
+  };
+
+  const handleCreateTag = (inputValue) => {
+    const value = inputValue.trim();
+    if (!value) {
+      return;
+    }
+
+    const option = { value, label: value };
+
+    setTagOptions((previous) => {
+      if (previous.some((item) => item.value.toLowerCase() === value.toLowerCase())) {
+        return previous;
+      }
+      return [...previous, option];
+    });
+
+    setValue('tags', [...(tagsValue ?? []), option], { shouldDirty: true, shouldValidate: true });
   };
 
   useEffect(() => {
@@ -204,7 +226,7 @@ function PostForm() {
 
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [slugParam]);
 
   useEffect(() => {
     const plain = contentValue?.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim();
@@ -216,27 +238,26 @@ function PostForm() {
   const displayedContentError = validationContentError ?? contentError;
 
   const onSubmit = async (values) => {
-    const formData = new FormData();
-    formData.append('title', values.title.trim());
-    formData.append('slug', values.slug.trim());
-    formData.append('excerpt', values.excerpt ?? '');
-    formData.append('content', values.content);
-    formData.append('category', values.category);
-    (values.tags ?? []).forEach((tag) => {
-      formData.append('tags[]', tag.value);
-    });
-    formData.append('published', values.published ? 'true' : 'false');
-
-    if (values.image instanceof File) {
-      formData.append('image', values.image);
-    }
+    const payload = {
+      title: values.title.trim(),
+      slug: values.slug.trim(),
+      excerpt: values.excerpt?.trim() ?? '',
+      content: values.content,
+      categories: values.category ? [values.category] : [],
+      tags: (values.tags ?? []).map((tag) => tag.value),
+      image: values.image.trim(),
+      thumb: values.thumb.trim(),
+      imageAlt: values.imageAlt.trim(),
+      author: values.author.trim(),
+      date: values.date
+    };
 
     try {
       if (isEditMode) {
-        await actualizarPost(id, formData);
+        await actualizarPost(slugParam, payload);
         toast.success('Post actualizado correctamente.');
       } else {
-        await crearPost(formData);
+        await crearPost(payload);
         toast.success('Post creado correctamente.');
       }
       navigate('/dashboard/posts');
@@ -351,38 +372,49 @@ function PostForm() {
                 label="Tags"
                 options={tagSelectOptions}
                 placeholder="Selecciona tags relacionados"
-                helperText="Puedes elegir varias etiquetas para mejorar el filtrado."
+                helperText="Puedes elegir varias etiquetas o crear nuevas para organizar el contenido."
+                isCreatable
+                onCreateOption={handleCreateTag}
               />
             </div>
             <div className="grid gap-6 lg:grid-cols-2">
-              <FileUpload
+              <Input
                 control={control}
                 name="image"
-                label="Imagen destacada"
-                helperText="Formatos aceptados: JPG, PNG o WebP. Máximo 5MB."
-                accept="image/*"
-                onClear={() => {
-                  setExistingImage(null);
-                  setPreviewUrl(null);
-                }}
+                label="Imagen destacada (URL)"
+                placeholder="https://..."
+                helperText="Utiliza una URL pública accesible desde el backend."
               />
-              <div className="flex flex-col gap-3">
-                <Switch
-                  control={control}
-                  name="published"
-                  label="Publicar inmediatamente"
-                  helperText="Si está activado, el post será visible para la audiencia."
-                />
-                {previewUrl ? (
-                  <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60">
-                    <img src={previewUrl} alt="Vista previa de la imagen" className="h-40 w-full object-cover" />
-                  </div>
-                ) : (
-                  <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white text-sm text-slate-400 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-500">
-                    La vista previa de la imagen aparecerá aquí.
-                  </div>
-                )}
-              </div>
+              <Input
+                control={control}
+                name="thumb"
+                label="Miniatura (URL)"
+                placeholder="https://..."
+                helperText="Será usada para listados y tarjetas." 
+              />
+            </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Input
+                control={control}
+                name="imageAlt"
+                label="Texto alternativo de la imagen"
+                placeholder="Describe brevemente la imagen"
+              />
+              <Input
+                control={control}
+                name="author"
+                label="Autor o autora"
+                placeholder="Nombre visible en el post"
+              />
+            </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Input
+                control={control}
+                name="date"
+                type="date"
+                label="Fecha de publicación"
+                helperText="Define la fecha que mostrará la API."
+              />
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
               <Button

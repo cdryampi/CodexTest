@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, Spinner } from 'flowbite-react';
-import { NewspaperIcon, Squares2X2Icon, TagIcon } from '@heroicons/react/24/outline';
+import { ChartBarSquareIcon, Squares2X2Icon, TagIcon } from '@heroicons/react/24/outline';
 import DashboardLayout from './DashboardLayout.jsx';
 import { listarPosts } from '../../services/posts.js';
 import { listarCategorias } from '../../services/categories.js';
@@ -11,19 +11,19 @@ const metrics = [
   {
     key: 'posts',
     title: 'Posts publicados',
-    description: 'Total de entradas registradas en el blog.',
-    icon: NewspaperIcon
+    description: 'Entradas disponibles en la API del blog.',
+    icon: ChartBarSquareIcon
   },
   {
     key: 'categories',
     title: 'Categorías activas',
-    description: 'Agrupaciones disponibles para organizar posts.',
+    description: 'Agrupaciones registradas para clasificar contenido.',
     icon: Squares2X2Icon
   },
   {
     key: 'tags',
-    title: 'Tags disponibles',
-    description: 'Etiquetas para clasificar y filtrar contenido.',
+    title: 'Etiquetas detectadas',
+    description: 'Tags únicos presentes en los posts publicados.',
     icon: TagIcon
   }
 ];
@@ -57,7 +57,7 @@ function Dashboard() {
         setStats({
           posts: extractCount(postsResponse),
           categories: extractCount(categoriesResponse),
-          tags: extractCount(tagsResponse)
+          tags: Array.isArray(tagsResponse) ? tagsResponse.length : extractCount(tagsResponse)
         });
       } catch (error) {
         toast.error('No se pudieron obtener las métricas del dashboard.');

@@ -3,15 +3,7 @@ import api from './api.js';
 const buildQueryString = (filters = {}) => {
   const searchParams = new URLSearchParams();
 
-  const {
-    page,
-    pageSize,
-    search,
-    ordering,
-    category,
-    tags,
-    published
-  } = filters;
+  const { page, pageSize, search, ordering, category, tags } = filters;
 
   if (page) {
     searchParams.set('page', page);
@@ -41,58 +33,25 @@ const buildQueryString = (filters = {}) => {
       });
   }
 
-  if (typeof published === 'boolean') {
-    searchParams.set('published', published ? 'true' : 'false');
-  }
-
   const queryString = searchParams.toString();
   return queryString ? `?${queryString}` : '';
 };
 
-const ensureFormData = (payload) => {
-  if (payload instanceof FormData) {
-    return payload;
+const normalizePostPayload = (payload = {}) => {
+  const normalized = { ...payload };
+
+  if (Array.isArray(normalized.categories)) {
+    normalized.categories = normalized.categories.filter(Boolean);
   }
 
-  const formData = new FormData();
-  if (!payload || typeof payload !== 'object') {
-    return formData;
+  if (Array.isArray(normalized.tags)) {
+    normalized.tags = normalized.tags
+      .map((tag) => (typeof tag === 'string' ? tag.trim() : tag))
+      .filter((tag) => Boolean(tag));
   }
 
-  Object.entries(payload).forEach(([key, value]) => {
-    if (value === undefined || value === null) {
-      return;
-    }
-
-    if (key === 'tags' && Array.isArray(value)) {
-      value.forEach((tagId) => {
-        if (tagId !== undefined && tagId !== null && tagId !== '') {
-          formData.append('tags[]', tagId);
-        }
-      });
-      return;
-    }
-
-    if (Array.isArray(value)) {
-      value.forEach((item) => {
-        if (item !== undefined && item !== null) {
-          formData.append(`${key}[]`, item);
-        }
-      });
-      return;
-    }
-
-    formData.append(key, value);
-  });
-
-  return formData;
+  return normalized;
 };
-
-const createMultipartConfig = () => ({
-  headers: {
-    'Content-Type': 'multipart/form-data'
-  }
-});
 
 export async function listarPosts(filters = {}) {
   const query = buildQueryString(filters);
@@ -100,25 +59,20 @@ export async function listarPosts(filters = {}) {
   return response.data;
 }
 
-export async function obtenerPost(idOrSlug) {
-  const response = await api.get(`posts/${idOrSlug}/`);
+export async function obtenerPost(slug) {
+  const response = await api.get(`posts/${slug}/`);
   return response.data;
 }
 
 export async function crearPost(payload) {
-  const formData = ensureFormData(payload);
-  return api.post('posts/', formData, createMultipartConfig());
+  return api.post('posts/', normalizePostPayload(payload));
 }
 
-export async function actualizarPost(id, payload) {
-  const formData = ensureFormData(payload);
-  if (formData instanceof FormData && !formData.has('image')) {
-    formData.delete('image');
-  }
-  return api.put(`posts/${id}/`, formData, createMultipartConfig());
+export async function actualizarPost(slug, payload) {
+  return api.put(`posts/${slug}/`, normalizePostPayload(payload));
 }
 
-export async function eliminarPost(id) {
-  return api.delete(`posts/${id}/`);
+export async function eliminarPost(slug) {
+  return api.delete(`posts/${slug}/`);
 }
 
