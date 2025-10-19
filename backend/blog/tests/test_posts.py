@@ -3,9 +3,11 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from blog.models import Category, Comment, Post, Tag
 
@@ -30,6 +32,37 @@ class PostAPITestCase(APITestCase):
         )
         post.tags.add(tag)
         return post
+
+    def _authenticate(self) -> None:
+        """Authenticate the API client using a JWT token for a test user."""
+
+        user_model = get_user_model()
+        user = user_model.objects.create_user(
+            username="editor",
+            email="editor@example.com",
+            password="test-pass-123",
+        )
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
+
+    def _build_post_payload(self, **overrides) -> dict:
+        """Return a valid payload for creating or updating a post."""
+
+        base_payload = {
+            "title": "Post actualizado",
+            "excerpt": "Resumen actualizado",
+            "content": "Contenido actualizado " * 5,
+            "tags": ["python", "django"],
+            "categories": [],
+            "image": "https://example.com/new-image.png",
+            "thumb": "https://example.com/new-thumb.png",
+            "imageAlt": "Descripción alternativa",
+            "author": "Equipo Codex",
+            "date": date.today().isoformat(),
+        }
+        base_payload.update(overrides)
+        return base_payload
 
     def test_list_returns_paginated_posts(self) -> None:
         """The list endpoint must return the stored posts with pagination metadata."""
@@ -141,6 +174,47 @@ class PostAPITestCase(APITestCase):
         self.assertEqual(payload["categories"], [])
         self.assertIn("categories_detail", payload)
         self.assertEqual(payload["categories_detail"], [])
+
+    def test_update_post_requires_authentication(self) -> None:
+        """Updating a post without credentials should return 401."""
+
+        post = self._create_post("Privado")
+        url = reverse("blog:posts-detail", kwargs={"slug": post.slug})
+        payload = self._build_post_payload()
+
+        response = self.client.put(url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_authenticated_user_can_update_post(self) -> None:
+        """An authenticated user should be able to update post content."""
+
+        post = self._create_post("Editable")
+        category = Category.objects.create(name="Backend")
+        url = reverse("blog:posts-detail", kwargs={"slug": post.slug})
+        payload = self._build_post_payload(categories=[category.slug])
+        self._authenticate()
+
+        response = self.client.put(url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        post.refresh_from_db()
+        self.assertEqual(post.title, payload["title"])
+        self.assertEqual(post.excerpt, payload["excerpt"])
+        self.assertTrue(post.tags.filter(name="python").exists())
+        self.assertEqual(list(post.categories.values_list("slug", flat=True)), [category.slug])
+
+    def test_authenticated_user_can_delete_post(self) -> None:
+        """Authenticated users must be able to delete posts."""
+
+        post = self._create_post("Eliminable")
+        url = reverse("blog:posts-detail", kwargs={"slug": post.slug})
+        self._authenticate()
+
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Post.objects.filter(pk=post.pk).exists())
 
 
 class CommentAPITestCase(APITestCase):

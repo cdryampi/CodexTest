@@ -36,6 +36,9 @@ python manage.py runserver
 - `GET /api/posts/` — listado paginado (10 por página) ordenado por fecha descendente. Admite `?search=` para filtrar por título o tags.
 - `POST /api/posts/` — crea una nueva entrada (tags por nombre).
 - `GET /api/posts/<slug>/` — detalle del post.
+- `PUT /api/posts/<slug>/` — actualiza por completo un post existente (requiere autenticación mediante JWT).
+- `PATCH /api/posts/<slug>/` — permite actualizaciones parciales del post (requiere autenticación mediante JWT).
+- `DELETE /api/posts/<slug>/` — elimina un post existente (requiere autenticación mediante JWT).
 - `/admin/` — panel de administración con Jazzmin.
 
 > Nota: No crees ni commitees entornos virtuales dentro del repositorio. Si necesitas uno, créalo fuera de la carpeta del proyecto o agrega `.venv/` a tu configuración global de gitignore.
