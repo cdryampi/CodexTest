@@ -1,5 +1,6 @@
 import axios from 'axios';
 import slugify from 'slugify';
+import { API_BASE_URL } from '../utils/apiBase.js';
 import postsMock from '../data/posts.json';
 import commentsMock from '../data/comments.json';
 
@@ -7,12 +8,12 @@ export const ACCESS_TOKEN_KEY = 'codextest.accessToken';
 export const REFRESH_TOKEN_KEY = 'codextest.refreshToken';
 
 const api = axios.create({
-  baseURL: '/api/',
+  baseURL: API_BASE_URL,
   withCredentials: true
 });
 
 const refreshClient = axios.create({
-  baseURL: '/api/',
+  baseURL: API_BASE_URL,
   withCredentials: true
 });
 

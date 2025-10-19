@@ -13,6 +13,7 @@ Desarrolla el proyecto completo con todos sus archivos, carpetas y configuracion
 3. Instala y configura Flowbite y Flowbite React para los componentes UI.
 4. Usa npm como gestor de paquetes (los comandos se ejecutan desde la raíz del repositorio).
 5. Implementa React Router DOM versión 6 para la navegación.
+6. **Nunca hardcodees la URL del backend**: todas las llamadas deben apoyarse en `import.meta.env.VITE_API_BASE_URL` resuelta por `src/utils/apiBase.js`.
 
 ---
 
@@ -24,7 +25,7 @@ Desarrolla el proyecto completo con todos sus archivos, carpetas y configuracion
 - Los comentarios y posts deben estar en archivos JSON locales en la carpeta `/frontend/src/data`.
 - Implementa un componente Navbar con Flowbite React, responsivo y simple.
 - El diseño debe ser limpio, moderno y responsivo.
-- No hay backend ni base de datos, todo es estático.
+- El módulo consume la API REST mediante el helper `src/utils/apiBase.js`, que normaliza `VITE_API_BASE_URL` y define fallbacks controlados. Está prohibido reemplazarlo por strings directas.
 
 ---
 

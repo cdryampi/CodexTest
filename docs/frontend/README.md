@@ -89,6 +89,7 @@ Puedes añadir directorios específicos (`hooks`, `lib`, `layouts`, `assets`) si
 ### Gestión de estado y datos
 - Prefiere **estado local** con `useState` y **memoización** con `useMemo`/`useCallback`.
 - Usa **Context API** para cross-cutting concerns (tema, usuario, configuración).
+- La resolución de endpoints depende de `src/utils/apiBase.js`, que normaliza `import.meta.env.VITE_API_BASE_URL`. Está prohibido reemplazarlo por URLs hardcodeadas.
 - Si se requiere sincronizar datos remotos en el futuro, encapsula fetchers en `/frontend/src/lib/api.js` para facilitar pruebas.
 - Mantén los JSON de `data/` normalizados (IDs numéricos, slugs string, arrays de comentarios). Documenta el esquema en este archivo.
 
