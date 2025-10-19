@@ -1,35 +1,52 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Navbar as FlowbiteNavbar, TextInput, Button, Dropdown, Avatar } from 'flowbite-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ArrowRightOnRectangleIcon,
-  BoltIcon,
-  ClockIcon,
-  DocumentDuplicateIcon,
-  DocumentTextIcon,
-  HomeIcon,
-  MagnifyingGlassIcon,
-  MoonIcon,
-  PlusCircleIcon,
-  Squares2X2Icon,
-  SunIcon,
-  TagIcon,
-  UserCircleIcon,
-  UserPlusIcon
-} from '@heroicons/react/24/outline';
-import { useUIStore, selectIsDark, selectSearch } from '../store/useUI';
+  AlignJustify,
+  Bolt,
+  Clock3,
+  Home,
+  LayoutDashboard,
+  LayoutList,
+  LogIn,
+  LogOut,
+  NotebookPen,
+  PlusCircle,
+  Search,
+  Tags,
+  User,
+  UserCircle2,
+  UserPlus,
+  X
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useUIStore, selectIsDark, selectSearch } from '../store/useUI';
+import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList } from './ui/navigation-menu.jsx';
+import ThemeToggle from './ui/theme-toggle.jsx';
+import { Button } from './ui/button.jsx';
+import { Input } from './ui/input.jsx';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar.jsx';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from './ui/dropdown-menu.jsx';
+import { cn } from '../lib/utils';
 
 const mainLinks = [
   {
     to: '/',
     label: 'Inicio',
-    icon: HomeIcon
+    icon: Home
   },
   {
     to: '/timeline',
     label: 'Timeline',
-    icon: ClockIcon
+    icon: Clock3
   }
 ];
 
@@ -37,25 +54,25 @@ const dashboardLinks = [
   {
     to: '/dashboard',
     label: 'Panel',
-    icon: Squares2X2Icon,
+    icon: LayoutDashboard,
     match: (path) => path === '/dashboard'
   },
   {
     to: '/dashboard/posts',
     label: 'Posts',
-    icon: DocumentTextIcon,
+    icon: NotebookPen,
     match: (path) => path.startsWith('/dashboard/posts')
   },
   {
     to: '/dashboard/categories',
     label: 'Categorías',
-    icon: DocumentDuplicateIcon,
+    icon: LayoutList,
     match: (path) => path.startsWith('/dashboard/categories')
   },
   {
     to: '/dashboard/tags',
     label: 'Etiquetas',
-    icon: TagIcon,
+    icon: Tags,
     match: (path) => path.startsWith('/dashboard/tags')
   }
 ];
@@ -64,13 +81,13 @@ function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
-  const isDark = useUIStore(selectIsDark);
-  const toggleTheme = useUIStore((state) => state.toggleTheme);
   const globalSearch = useUIStore(selectSearch);
   const setSearch = useUIStore((state) => state.setSearch);
   const resetFilters = useUIStore((state) => state.resetFilters);
+  const isDark = useUIStore(selectIsDark);
 
   const [localSearch, setLocalSearch] = useState(globalSearch);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     setLocalSearch(globalSearch);
@@ -88,7 +105,24 @@ function Navbar() {
     };
   }, [localSearch, globalSearch, setSearch]);
 
-  const themeLabel = isDark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro';
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isMobileMenuOpen]);
 
   const displayName = useMemo(() => {
     if (!user) return '';
@@ -109,214 +143,291 @@ function Navbar() {
     navigate('/login');
   };
 
-  const renderNavLink = (link) => {
+  const handleLogoutSelect = async (event) => {
+    event?.preventDefault();
+    await handleLogout();
+  };
+
+  const renderMainLink = (link) => {
     const Icon = link.icon;
-    const isActive = link.match ? link.match(location.pathname) : location.pathname === link.to;
+    const isActive = location.pathname === link.to;
 
     return (
-      <FlowbiteNavbar.Link
-        key={link.to}
-        as={Link}
-        to={link.to}
-        active={isActive}
-        className="flex items-center gap-2 text-base font-medium text-slate-600 transition-colors duration-200 hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:text-slate-300 dark:hover:text-sky-300 dark:focus-visible:ring-offset-slate-900"
-      >
-        <Icon className="h-5 w-5" aria-hidden="true" />
-        {link.label}
-      </FlowbiteNavbar.Link>
+      <NavigationMenuItem key={link.to}>
+        <NavigationMenuLink asChild active={isActive} className="flex items-center gap-2">
+          <Link to={link.to}>
+            <Icon className="h-4 w-4" aria-hidden="true" />
+            <span>{link.label}</span>
+          </Link>
+        </NavigationMenuLink>
+      </NavigationMenuItem>
     );
   };
 
   const quickActions = isAuthenticated ? (
-    <Button
-      as={Link}
-      to="/dashboard/posts/new"
-      color="info"
-      size="sm"
-      className="hidden lg:flex items-center gap-2 shadow-sm"
-    >
-      <PlusCircleIcon className="h-5 w-5" aria-hidden="true" />
-      Nuevo post
+    <Button asChild className="hidden lg:inline-flex" size="sm">
+      <Link to="/dashboard/posts/new" className="flex items-center gap-2">
+        <PlusCircle className="h-4 w-4" aria-hidden="true" />
+        Nuevo post
+      </Link>
     </Button>
   ) : null;
 
-  const themeToggle = (
-    <Button
-      color="light"
-      onClick={toggleTheme}
-      aria-label={themeLabel}
-      title={themeLabel}
-      aria-pressed={isDark}
-      type="button"
-      className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 text-slate-600 transition duration-200 hover:-translate-y-0.5 hover:border-sky-500 hover:text-sky-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:border-sky-400 dark:hover:text-sky-300 dark:focus-visible:ring-offset-slate-900"
-    >
-      {isDark ? <MoonIcon className="h-5 w-5" aria-hidden="true" /> : <SunIcon className="h-5 w-5" aria-hidden="true" />}
-    </Button>
-  );
-
   const authContent = isAuthenticated ? (
-    <Dropdown
-      label={
-        <div className="flex items-center gap-2">
-          <Avatar
-            rounded
-            alt={displayName || 'Perfil de usuario'}
-            placeholderInitials={avatarInitials}
-          />
-          <span className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">
-            {displayName || user?.email}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          className="flex items-center gap-3 rounded-full px-2 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+        >
+          <Avatar className="h-9 w-9">
+            {user?.avatar ? (
+              <AvatarImage src={user.avatar} alt={displayName || 'Perfil de usuario'} />
+            ) : null}
+            <AvatarFallback>{avatarInitials}</AvatarFallback>
+          </Avatar>
+          <span className="hidden max-w-[10rem] truncate text-left text-sm lg:block">
+            {displayName || user?.email || 'Cuenta'}
           </span>
-        </div>
-      }
-      arrowIcon={false}
-      inline
-    >
-      {dashboardLinks.map((link) => (
-        <Dropdown.Item key={link.to} as={Link} to={link.to} icon={link.icon}>
-          {link.label}
-        </Dropdown.Item>
-      ))}
-      <Dropdown.Item as={Link} to="/profile" icon={UserCircleIcon}>
-        Perfil
-      </Dropdown.Item>
-      <Dropdown.Item icon={ArrowRightOnRectangleIcon} onClick={handleLogout}>
-        Cerrar sesión
-      </Dropdown.Item>
-    </Dropdown>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-60" align="end" sideOffset={12}>
+        <DropdownMenuLabel className="flex flex-col gap-0.5">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Sesión activa</span>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-100">{displayName || 'Usuario'}</span>
+          {user?.email ? <span className="text-xs text-slate-400 dark:text-slate-500">{user.email}</span> : null}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem asChild>
+            <Link to="/profile" className="flex w-full items-center gap-2">
+              <User className="h-4 w-4" aria-hidden="true" />
+              Perfil
+            </Link>
+          </DropdownMenuItem>
+          {dashboardLinks.map((link) => {
+            const Icon = link.icon;
+            return (
+              <DropdownMenuItem key={link.to} asChild>
+                <Link to={link.to} className="flex w-full items-center gap-2">
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  {link.label}
+                </Link>
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={handleLogoutSelect} className="text-red-600 focus-visible:bg-red-50 focus-visible:text-red-700 dark:text-red-400 dark:focus-visible:bg-red-500/10">
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          Cerrar sesión
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   ) : (
-    <div className="flex items-center gap-3">
-      <Button
-        as={Link}
-        to="/login"
-        color="light"
-        size="sm"
-        className="text-slate-700 transition hover:text-sky-600 dark:text-slate-200 dark:hover:text-sky-300"
-      >
-        <ArrowRightOnRectangleIcon className="mr-2 h-5 w-5" aria-hidden="true" />
-        Iniciar sesión
+    <div className="hidden items-center gap-2 lg:flex">
+      <Button variant="ghost" asChild size="sm">
+        <Link to="/login" className="flex items-center gap-2">
+          <LogIn className="h-4 w-4" aria-hidden="true" />
+          Iniciar sesión
+        </Link>
       </Button>
-      <Button
-        as={Link}
-        to="/register"
-        color="light"
-        size="sm"
-        className="bg-sky-600 text-white hover:bg-sky-700 focus-visible:ring-sky-500 dark:bg-sky-500 dark:hover:bg-sky-400"
-      >
-        <UserPlusIcon className="mr-2 h-5 w-5" aria-hidden="true" />
-        Registrarse
+      <Button variant="outline" asChild size="sm">
+        <Link to="/register" className="flex items-center gap-2">
+          <UserPlus className="h-4 w-4" aria-hidden="true" />
+          Crear cuenta
+        </Link>
       </Button>
     </div>
   );
 
+  const mobileLinks = [
+    ...mainLinks,
+    ...(isAuthenticated
+      ? [
+          { to: '/profile', label: 'Perfil', icon: UserCircle2 },
+          ...dashboardLinks,
+          { to: '/logout', label: 'Cerrar sesión', icon: LogOut, action: handleLogout }
+        ]
+      : [
+          { to: '/login', label: 'Iniciar sesión', icon: LogIn },
+          { to: '/register', label: 'Crear cuenta', icon: UserPlus }
+        ])
+  ];
+
   return (
-    <FlowbiteNavbar
-      fluid
-      rounded
-      className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 py-3 text-slate-700 shadow-sm backdrop-blur-lg transition-colors duration-300 dark:border-slate-800/60 dark:bg-slate-950/70 dark:text-slate-200"
-    >
-      <FlowbiteNavbar.Brand as={Link} to="/" className="group flex items-center gap-2">
-        <BoltIcon className="h-7 w-7 text-sky-600 transition-transform duration-300 group-hover:rotate-12 dark:text-sky-400" aria-hidden="true" />
-        <span className="self-center whitespace-nowrap text-xl font-semibold text-slate-900 dark:text-white">
-          React Tailwind Blog
-        </span>
-      </FlowbiteNavbar.Brand>
-      <div className="flex items-center gap-3">
-        <div className="hidden lg:block">
+    <header className="sticky top-0 z-40 border-b border-slate-200/60 bg-white/80 backdrop-blur-lg transition-colors duration-200 dark:border-slate-800/60 dark:bg-slate-950/70">
+      <div className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link to="/" className="flex items-center gap-3 text-slate-800 transition hover:opacity-90 dark:text-white">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-lg shadow-sky-500/40 dark:bg-sky-400">
+            <Bolt className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div className="flex flex-col">
+            <span className="text-lg font-bold">React Tailwind Blog</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">Historias, tutoriales y noticias</span>
+          </div>
+        </Link>
+        <div className="hidden flex-1 items-center justify-center gap-6 lg:flex">
+          <NavigationMenu>
+            <NavigationMenuList>
+              {mainLinks.map((link) => renderMainLink(link))}
+            </NavigationMenuList>
+          </NavigationMenu>
           <form
             role="search"
-            className="relative"
+            className="relative w-72"
             onSubmit={(event) => {
               event.preventDefault();
               setSearch(localSearch);
             }}
           >
-            <TextInput
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <Input
               type="search"
               value={localSearch}
               onChange={(event) => setLocalSearch(event.target.value)}
               placeholder="Buscar publicaciones"
-              icon={MagnifyingGlassIcon}
               aria-label="Buscar publicaciones"
-              className="w-72"
+              className="pl-10"
             />
           </form>
         </div>
-        {quickActions}
-        {themeToggle}
-        {isLoading ? null : authContent}
-        <FlowbiteNavbar.Toggle className="text-slate-600 hover:text-slate-900 focus:outline-none dark:text-slate-200 dark:hover:text-white" />
+        <div className="flex items-center gap-2">
+          {quickActions}
+          <ThemeToggle className="hidden lg:inline-flex" />
+          {isLoading ? null : authContent}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-navigation"
+            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+          >
+            {isMobileMenuOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <AlignJustify className="h-5 w-5" aria-hidden="true" />}
+          </Button>
+        </div>
       </div>
-      <FlowbiteNavbar.Collapse className="space-y-4 lg:space-y-2">
-        <div className="lg:hidden">
-          <form
-            role="search"
-            className="flex flex-col gap-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setSearch(localSearch);
-            }}
-          >
-            <TextInput
-              type="search"
-              value={localSearch}
-              onChange={(event) => setLocalSearch(event.target.value)}
-              placeholder="Buscar publicaciones"
-              icon={MagnifyingGlassIcon}
-              aria-label="Buscar publicaciones"
+      <AnimatePresence>
+        {isMobileMenuOpen ? (
+          <>
+            <motion.div
+              key="mobile-backdrop"
+              className="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-sm lg:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setIsMobileMenuOpen(false)}
             />
-            <Button
-              type="button"
-              color="light"
-              onClick={() => {
-                resetFilters();
-                setLocalSearch('');
-              }}
+            <motion.nav
+              key="mobile-menu"
+              id="mobile-navigation"
+              className="fixed inset-x-0 top-20 z-40 mx-auto w-full max-w-md origin-top rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-2xl shadow-slate-950/10 backdrop-blur-lg dark:border-slate-800 dark:bg-slate-950/95"
+              initial={{ opacity: 0, y: -16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
             >
-              Limpiar filtros
-            </Button>
-          </form>
-        </div>
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Explorar</p>
-          {mainLinks.map((link) => renderNavLink(link))}
-        </div>
-        {isAuthenticated ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Backoffice</p>
-            {dashboardLinks.map((link) => renderNavLink(link))}
-            <FlowbiteNavbar.Link
-              as={Link}
-              to="/profile"
-              active={location.pathname.startsWith('/profile')}
-              className="flex items-center gap-2 text-base font-medium text-slate-600 transition-colors duration-200 hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:text-slate-300 dark:hover:text-sky-300 dark:focus-visible:ring-offset-slate-900"
-            >
-              <UserCircleIcon className="h-5 w-5" aria-hidden="true" />
-              Perfil
-            </FlowbiteNavbar.Link>
-            <Button
-              color="light"
-              onClick={handleLogout}
-              className="mt-2 justify-start text-slate-600 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
-            >
-              <ArrowRightOnRectangleIcon className="mr-2 h-5 w-5" aria-hidden="true" />
-              Cerrar sesión
-            </Button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Tu cuenta</p>
-            <Button as={Link} to="/login" color="light" className="justify-start">
-              <ArrowRightOnRectangleIcon className="mr-2 h-5 w-5" aria-hidden="true" />
-              Iniciar sesión
-            </Button>
-            <Button as={Link} to="/register" color="info" className="justify-start">
-              <UserPlusIcon className="mr-2 h-5 w-5" aria-hidden="true" />
-              Crear cuenta
-            </Button>
-          </div>
-        )}
-      </FlowbiteNavbar.Collapse>
-    </FlowbiteNavbar>
+              <form
+                role="search"
+                className="mb-5 flex flex-col gap-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  setSearch(localSearch);
+                  setIsMobileMenuOpen(false);
+                }}
+              >
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+                  <Input
+                    type="search"
+                    value={localSearch}
+                    onChange={(event) => setLocalSearch(event.target.value)}
+                    placeholder="Buscar publicaciones"
+                    aria-label="Buscar publicaciones"
+                    className="pl-10"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button type="submit" className="flex-1">
+                    Buscar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="flex-1"
+                    onClick={() => {
+                      resetFilters();
+                      setLocalSearch('');
+                    }}
+                  >
+                    Limpiar
+                  </Button>
+                </div>
+              </form>
+              <div className="flex flex-col gap-2">
+                {mobileLinks.map((link) => {
+                  const Icon = link.icon;
+                  const isActive =
+                    link.action != null
+                      ? false
+                      : link.match
+                      ? link.match(location.pathname)
+                      : location.pathname === link.to;
+
+                  if (link.action) {
+                    return (
+                      <Button
+                        key={link.label}
+                        variant="ghost"
+                        className="justify-start rounded-2xl px-4 py-3 text-base"
+                        onClick={async () => {
+                          await link.action();
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        <Icon className="mr-3 h-5 w-5" aria-hidden="true" />
+                        {link.label}
+                      </Button>
+                    );
+                  }
+
+                  return (
+                    <Button
+                      key={link.to}
+                      variant={isActive ? 'secondary' : 'ghost'}
+                      className={cn(
+                        'justify-start rounded-2xl px-4 py-3 text-base',
+                        isActive
+                          ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300'
+                          : 'text-slate-600 dark:text-slate-200'
+                      )}
+                      asChild
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <Link to={link.to} className="flex w-full items-center gap-3">
+                        <Icon className="h-5 w-5" aria-hidden="true" />
+                        <span>{link.label}</span>
+                      </Link>
+                    </Button>
+                  );
+                })}
+              </div>
+              <div className="mt-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+                <div>
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-200">Tema</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">Actualmente en modo {isDark ? 'oscuro' : 'claro'}</p>
+                </div>
+                <ThemeToggle />
+              </div>
+            </motion.nav>
+          </>
+        ) : null}
+      </AnimatePresence>
+    </header>
   );
 }
 
