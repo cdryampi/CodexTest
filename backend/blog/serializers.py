@@ -1,6 +1,7 @@
 """Serializers for the blog API."""
 from __future__ import annotations
 
+from datetime import date as date_cls, datetime
 from typing import Iterable
 
 from django.contrib.auth import get_user_model
@@ -75,6 +76,16 @@ class _PostCategoryRepresentationMixin:
 
     category_fields = ("categories", "categories_detail")
 
+    @staticmethod
+    def _serialize_date(value):
+        """Return an ISO formatted date string for ``value`` when possible."""
+
+        if isinstance(value, datetime):
+            value = value.date()
+        if isinstance(value, date_cls):
+            return value.isoformat()
+        return value
+
     def _ensure_category_lists(self, data: dict) -> dict:
         for field in self.category_fields:
             value = data.get(field)
@@ -95,7 +106,7 @@ class PostListSerializer(_PostCategoryRepresentationMixin, serializers.ModelSeri
         many=True, read_only=True, slug_field="slug"
     )
     categories_detail = CategorySerializer(source="categories", many=True, read_only=True)
-    created_at = serializers.DateField(source="date", read_only=True)
+    created_at = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
@@ -123,6 +134,9 @@ class PostListSerializer(_PostCategoryRepresentationMixin, serializers.ModelSeri
         data = super().to_representation(instance)
         return self._ensure_category_lists(data)
 
+    def get_created_at(self, instance: Post):
+        return self._serialize_date(getattr(instance, "date", None))
+
 
 class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSerializer):
     """Detailed serializer for retrieving and creating posts."""
@@ -135,7 +149,7 @@ class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSe
         required=False,
     )
     categories_detail = CategorySerializer(source="categories", many=True, read_only=True)
-    created_at = serializers.DateField(source="date", read_only=True)
+    created_at = serializers.SerializerMethodField()
     updated_at = serializers.SerializerMethodField()
     date = serializers.DateField(write_only=True, required=False)
 
@@ -166,9 +180,12 @@ class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSe
             "categories_detail",
         ]
 
+    def get_created_at(self, obj: Post):
+        return self._serialize_date(getattr(obj, "date", None))
+
     def get_updated_at(self, obj: Post):
         # The current model only stores the publication date, reuse it for now.
-        return obj.date
+        return self._serialize_date(getattr(obj, "date", None))
 
     def validate_title(self, value: str) -> str:
         if len(value.strip()) < 5:
