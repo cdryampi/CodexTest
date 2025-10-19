@@ -226,3 +226,33 @@ class CommentAPITestCase(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Comment.objects.filter(post=self.post, author_name="Laura").exists())
+
+    def test_duplicate_title_creates_incremental_slug(self) -> None:
+        """Posts that share the same title must generate unique slugs."""
+
+        first_post = Post.objects.create(
+            title="Título duplicado",
+            excerpt="Resumen",
+            content="Contenido " * 2,
+            date=date.today(),
+            image="https://example.com/post.png",
+            thumb="https://example.com/post-thumb.png",
+            imageAlt="Alt",
+            author="Codex",
+        )
+        first_post.tags.add(Tag.objects.create(name="Duplicado base"))
+
+        duplicate_post = Post.objects.create(
+            title="Título duplicado",
+            excerpt="Resumen",
+            content="Contenido " * 2,
+            date=date.today(),
+            image="https://example.com/post-2.png",
+            thumb="https://example.com/post-thumb-2.png",
+            imageAlt="Alt",
+            author="Codex",
+        )
+        duplicate_post.tags.add(Tag.objects.create(name="Duplicado extra"))
+
+        self.assertEqual(first_post.slug, "titulo-duplicado")
+        self.assertEqual(duplicate_post.slug, "titulo-duplicado-2")
