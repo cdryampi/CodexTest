@@ -80,7 +80,7 @@ function CategoriesList() {
           <div className="flex items-center gap-2">
             <Button
               as={Link}
-              to={`/dashboard/categories/${row.original.id ?? row.original.slug}/edit`}
+              to={`/dashboard/categories/${row.original.slug ?? row.original.id}/edit`}
               color="light"
               size="sm"
               className="flex items-center gap-2"
@@ -110,7 +110,7 @@ function CategoriesList() {
   const handleDelete = async () => {
     if (!categoryToDelete) return;
     try {
-      await eliminarCategoria(categoryToDelete.id ?? categoryToDelete.slug);
+      await eliminarCategoria(categoryToDelete.slug ?? categoryToDelete.id);
       toast.success('Categoría eliminada correctamente.');
       setIsDeleting(false);
       setCategoryToDelete(null);

@@ -2,21 +2,63 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navbar as FlowbiteNavbar, TextInput, Button, Dropdown, Avatar } from 'flowbite-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
+  ArrowRightOnRectangleIcon,
   BoltIcon,
+  ClockIcon,
+  DocumentDuplicateIcon,
+  DocumentTextIcon,
+  HomeIcon,
   MagnifyingGlassIcon,
   MoonIcon,
-  SunIcon,
-  HomeIcon,
-  ClockIcon,
-  UserCircleIcon,
-  ArrowRightOnRectangleIcon,
-  UserPlusIcon,
-  DocumentTextIcon,
+  PlusCircleIcon,
   Squares2X2Icon,
-  TagIcon
+  SunIcon,
+  TagIcon,
+  UserCircleIcon,
+  UserPlusIcon
 } from '@heroicons/react/24/outline';
 import { useUIStore, selectIsDark, selectSearch } from '../store/useUI';
 import { useAuth } from '../context/AuthContext.jsx';
+
+const mainLinks = [
+  {
+    to: '/',
+    label: 'Inicio',
+    icon: HomeIcon
+  },
+  {
+    to: '/timeline',
+    label: 'Timeline',
+    icon: ClockIcon
+  }
+];
+
+const dashboardLinks = [
+  {
+    to: '/dashboard',
+    label: 'Panel',
+    icon: Squares2X2Icon,
+    match: (path) => path === '/dashboard'
+  },
+  {
+    to: '/dashboard/posts',
+    label: 'Posts',
+    icon: DocumentTextIcon,
+    match: (path) => path.startsWith('/dashboard/posts')
+  },
+  {
+    to: '/dashboard/categories',
+    label: 'Categorías',
+    icon: DocumentDuplicateIcon,
+    match: (path) => path.startsWith('/dashboard/categories')
+  },
+  {
+    to: '/dashboard/tags',
+    label: 'Etiquetas',
+    icon: TagIcon,
+    match: (path) => path.startsWith('/dashboard/tags')
+  }
+];
 
 function Navbar() {
   const location = useLocation();
@@ -39,7 +81,7 @@ function Navbar() {
       if (localSearch !== globalSearch) {
         setSearch(localSearch);
       }
-    }, 300);
+    }, 250);
 
     return () => {
       clearTimeout(handler);
@@ -67,7 +109,52 @@ function Navbar() {
     navigate('/login');
   };
 
-  const authLinks = isAuthenticated ? (
+  const renderNavLink = (link) => {
+    const Icon = link.icon;
+    const isActive = link.match ? link.match(location.pathname) : location.pathname === link.to;
+
+    return (
+      <FlowbiteNavbar.Link
+        key={link.to}
+        as={Link}
+        to={link.to}
+        active={isActive}
+        className="flex items-center gap-2 text-base font-medium text-slate-600 transition-colors duration-200 hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:text-slate-300 dark:hover:text-sky-300 dark:focus-visible:ring-offset-slate-900"
+      >
+        <Icon className="h-5 w-5" aria-hidden="true" />
+        {link.label}
+      </FlowbiteNavbar.Link>
+    );
+  };
+
+  const quickActions = isAuthenticated ? (
+    <Button
+      as={Link}
+      to="/dashboard/posts/new"
+      color="info"
+      size="sm"
+      className="hidden lg:flex items-center gap-2 shadow-sm"
+    >
+      <PlusCircleIcon className="h-5 w-5" aria-hidden="true" />
+      Nuevo post
+    </Button>
+  ) : null;
+
+  const themeToggle = (
+    <Button
+      color="light"
+      onClick={toggleTheme}
+      aria-label={themeLabel}
+      title={themeLabel}
+      aria-pressed={isDark}
+      type="button"
+      className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 text-slate-600 transition duration-200 hover:-translate-y-0.5 hover:border-sky-500 hover:text-sky-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:border-sky-400 dark:hover:text-sky-300 dark:focus-visible:ring-offset-slate-900"
+    >
+      {isDark ? <MoonIcon className="h-5 w-5" aria-hidden="true" /> : <SunIcon className="h-5 w-5" aria-hidden="true" />}
+    </Button>
+  );
+
+  const authContent = isAuthenticated ? (
     <Dropdown
       label={
         <div className="flex items-center gap-2">
@@ -84,18 +171,11 @@ function Navbar() {
       arrowIcon={false}
       inline
     >
-      <Dropdown.Item as={Link} to="/dashboard" icon={BoltIcon}>
-        Dashboard
-      </Dropdown.Item>
-      <Dropdown.Item as={Link} to="/dashboard/posts" icon={DocumentTextIcon}>
-        Publicaciones
-      </Dropdown.Item>
-      <Dropdown.Item as={Link} to="/dashboard/categories" icon={Squares2X2Icon}>
-        Categorías
-      </Dropdown.Item>
-      <Dropdown.Item as={Link} to="/dashboard/tags" icon={TagIcon}>
-        Etiquetas
-      </Dropdown.Item>
+      {dashboardLinks.map((link) => (
+        <Dropdown.Item key={link.to} as={Link} to={link.to} icon={link.icon}>
+          {link.label}
+        </Dropdown.Item>
+      ))}
       <Dropdown.Item as={Link} to="/profile" icon={UserCircleIcon}>
         Perfil
       </Dropdown.Item>
@@ -132,7 +212,7 @@ function Navbar() {
     <FlowbiteNavbar
       fluid
       rounded
-      className="border-b border-slate-200 bg-white/80 py-4 text-slate-700 shadow-sm backdrop-blur transition-colors duration-300 dark:border-slate-800/60 dark:bg-slate-900/60 dark:text-slate-200"
+      className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 py-3 text-slate-700 shadow-sm backdrop-blur-lg transition-colors duration-300 dark:border-slate-800/60 dark:bg-slate-950/70 dark:text-slate-200"
     >
       <FlowbiteNavbar.Brand as={Link} to="/" className="group flex items-center gap-2">
         <BoltIcon className="h-7 w-7 text-sky-600 transition-transform duration-300 group-hover:rotate-12 dark:text-sky-400" aria-hidden="true" />
@@ -141,7 +221,7 @@ function Navbar() {
         </span>
       </FlowbiteNavbar.Brand>
       <div className="flex items-center gap-3">
-        <div className="hidden md:flex">
+        <div className="hidden lg:block">
           <form
             role="search"
             className="relative"
@@ -153,183 +233,87 @@ function Navbar() {
             <TextInput
               type="search"
               value={localSearch}
-              onChange={(event) => setLocalSearch(event.target.value.toLowerCase())}
-              placeholder="Buscar artículos"
+              onChange={(event) => setLocalSearch(event.target.value)}
+              placeholder="Buscar publicaciones"
               icon={MagnifyingGlassIcon}
               aria-label="Buscar publicaciones"
-              className="w-64"
+              className="w-72"
             />
           </form>
         </div>
-        <Button
-          color="light"
-          onClick={toggleTheme}
-          aria-label={themeLabel}
-          title={themeLabel}
-          aria-pressed={isDark}
-          type="button"
-          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 text-slate-600 transition duration-300 hover:-translate-y-0.5 hover:border-sky-500 hover:text-sky-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:border-sky-400 dark:hover:text-sky-300 dark:focus-visible:ring-offset-slate-900"
-        >
-          {isDark ? <MoonIcon className="h-5 w-5" aria-hidden="true" /> : <SunIcon className="h-5 w-5" aria-hidden="true" />}
-        </Button>
-        {isLoading ? null : authLinks}
+        {quickActions}
+        {themeToggle}
+        {isLoading ? null : authContent}
         <FlowbiteNavbar.Toggle className="text-slate-600 hover:text-slate-900 focus:outline-none dark:text-slate-200 dark:hover:text-white" />
       </div>
-      <FlowbiteNavbar.Collapse className="space-y-4 md:space-y-0">
-        <FlowbiteNavbar.Link as={Link} to="/" active={location.pathname === '/'} className="flex items-center gap-2 text-base text-slate-600 transition duration-300 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300">
-          <HomeIcon className="h-5 w-5" aria-hidden="true" />
-          Inicio
-        </FlowbiteNavbar.Link>
-        <FlowbiteNavbar.Link
-          as={Link}
-          to="/timeline"
-          active={location.pathname.startsWith('/timeline')}
-          className="flex items-center gap-2 text-base text-slate-600 transition duration-300 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
-        >
-          <ClockIcon className="h-5 w-5" aria-hidden="true" />
-          Timeline
-        </FlowbiteNavbar.Link>
-        {isAuthenticated ? (
-          <FlowbiteNavbar.Link
-            as={Link}
-            to="/dashboard"
-            active={location.pathname === '/dashboard'}
-            className="flex items-center gap-2 text-base text-slate-600 transition duration-300 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
+      <FlowbiteNavbar.Collapse className="space-y-4 lg:space-y-2">
+        <div className="lg:hidden">
+          <form
+            role="search"
+            className="flex flex-col gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setSearch(localSearch);
+            }}
           >
-            <BoltIcon className="h-5 w-5" aria-hidden="true" />
-            Dashboard
-          </FlowbiteNavbar.Link>
-        ) : null}
+            <TextInput
+              type="search"
+              value={localSearch}
+              onChange={(event) => setLocalSearch(event.target.value)}
+              placeholder="Buscar publicaciones"
+              icon={MagnifyingGlassIcon}
+              aria-label="Buscar publicaciones"
+            />
+            <Button
+              type="button"
+              color="light"
+              onClick={() => {
+                resetFilters();
+                setLocalSearch('');
+              }}
+            >
+              Limpiar filtros
+            </Button>
+          </form>
+        </div>
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Explorar</p>
+          {mainLinks.map((link) => renderNavLink(link))}
+        </div>
         {isAuthenticated ? (
-          <FlowbiteNavbar.Link
-            as={Link}
-            to="/dashboard/posts"
-            active={location.pathname.startsWith('/dashboard/posts')}
-            className="flex items-center gap-2 text-base text-slate-600 transition duration-300 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
-          >
-            <DocumentTextIcon className="h-5 w-5" aria-hidden="true" />
-            Publicaciones
-          </FlowbiteNavbar.Link>
-        ) : null}
-        {isAuthenticated ? (
-          <FlowbiteNavbar.Link
-            as={Link}
-            to="/dashboard/categories"
-            active={location.pathname.startsWith('/dashboard/categories')}
-            className="flex items-center gap-2 text-base text-slate-600 transition duration-300 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
-          >
-            <Squares2X2Icon className="h-5 w-5" aria-hidden="true" />
-            Categorías
-          </FlowbiteNavbar.Link>
-        ) : null}
-        {isAuthenticated ? (
-          <FlowbiteNavbar.Link
-            as={Link}
-            to="/dashboard/tags"
-            active={location.pathname.startsWith('/dashboard/tags')}
-            className="flex items-center gap-2 text-base text-slate-600 transition duration-300 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
-          >
-            <TagIcon className="h-5 w-5" aria-hidden="true" />
-            Etiquetas
-          </FlowbiteNavbar.Link>
-        ) : null}
-        <form
-          role="search"
-          className="md:hidden"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setSearch(localSearch);
-          }}
-        >
-          <TextInput
-            type="search"
-            value={localSearch}
-            onChange={(event) => setLocalSearch(event.target.value.toLowerCase())}
-            placeholder="Buscar artículos"
-            icon={MagnifyingGlassIcon}
-            aria-label="Buscar publicaciones"
-          />
-        </form>
-        <button
-          type="button"
-          onClick={() => {
-            resetFilters();
-            setLocalSearch('');
-          }}
-          className="flex items-center gap-2 text-base text-slate-600 transition duration-300 hover:text-sky-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:text-slate-300 dark:hover:text-sky-300 dark:focus-visible:ring-offset-slate-900"
-        >
-          Reiniciar filtros
-        </button>
-        {isLoading ? null : (
-          isAuthenticated ? (
-            <div className="flex flex-col gap-2">
-              {isAuthenticated ? (
-                <FlowbiteNavbar.Link
-                  as={Link}
-                  to="/dashboard"
-                  active={location.pathname === '/dashboard'}
-                  className="text-base text-slate-600 transition hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
-                >
-                  Dashboard
-                </FlowbiteNavbar.Link>
-              ) : null}
-              {isAuthenticated ? (
-                <FlowbiteNavbar.Link
-                  as={Link}
-                  to="/dashboard/posts"
-                  active={location.pathname.startsWith('/dashboard/posts')}
-                  className="text-base text-slate-600 transition hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
-                >
-                  Publicaciones
-                </FlowbiteNavbar.Link>
-              ) : null}
-              {isAuthenticated ? (
-                <FlowbiteNavbar.Link
-                  as={Link}
-                  to="/dashboard/categories"
-                  active={location.pathname.startsWith('/dashboard/categories')}
-                  className="text-base text-slate-600 transition hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
-                >
-                  Categorías
-                </FlowbiteNavbar.Link>
-              ) : null}
-              {isAuthenticated ? (
-                <FlowbiteNavbar.Link
-                  as={Link}
-                  to="/dashboard/tags"
-                  active={location.pathname.startsWith('/dashboard/tags')}
-                  className="text-base text-slate-600 transition hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
-                >
-                  Etiquetas
-                </FlowbiteNavbar.Link>
-              ) : null}
-              <FlowbiteNavbar.Link
-                as={Link}
-                to="/profile"
-                active={location.pathname.startsWith('/profile')}
-                className="text-base text-slate-600 transition hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
-              >
-                Perfil
-              </FlowbiteNavbar.Link>
-              <Button
-                color="light"
-                onClick={handleLogout}
-                className="justify-start text-slate-600 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
-                aria-label="Cerrar sesión"
-              >
-                Cerrar sesión
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <FlowbiteNavbar.Link as={Link} to="/login" className="text-base text-slate-600 transition hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300">
-                Iniciar sesión
-              </FlowbiteNavbar.Link>
-              <FlowbiteNavbar.Link as={Link} to="/register" className="text-base text-slate-600 transition hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300">
-                Registrarse
-              </FlowbiteNavbar.Link>
-            </div>
-          )
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Backoffice</p>
+            {dashboardLinks.map((link) => renderNavLink(link))}
+            <FlowbiteNavbar.Link
+              as={Link}
+              to="/profile"
+              active={location.pathname.startsWith('/profile')}
+              className="flex items-center gap-2 text-base font-medium text-slate-600 transition-colors duration-200 hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:text-slate-300 dark:hover:text-sky-300 dark:focus-visible:ring-offset-slate-900"
+            >
+              <UserCircleIcon className="h-5 w-5" aria-hidden="true" />
+              Perfil
+            </FlowbiteNavbar.Link>
+            <Button
+              color="light"
+              onClick={handleLogout}
+              className="mt-2 justify-start text-slate-600 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
+            >
+              <ArrowRightOnRectangleIcon className="mr-2 h-5 w-5" aria-hidden="true" />
+              Cerrar sesión
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Tu cuenta</p>
+            <Button as={Link} to="/login" color="light" className="justify-start">
+              <ArrowRightOnRectangleIcon className="mr-2 h-5 w-5" aria-hidden="true" />
+              Iniciar sesión
+            </Button>
+            <Button as={Link} to="/register" color="info" className="justify-start">
+              <UserPlusIcon className="mr-2 h-5 w-5" aria-hidden="true" />
+              Crear cuenta
+            </Button>
+          </div>
         )}
       </FlowbiteNavbar.Collapse>
     </FlowbiteNavbar>

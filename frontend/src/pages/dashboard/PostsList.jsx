@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Badge, Modal, TextInput, ToggleSwitch } from 'flowbite-react';
+import { Button, Badge, Modal, TextInput } from 'flowbite-react';
 import { Link } from 'react-router-dom';
 import {
   PencilSquareIcon,
@@ -103,7 +103,6 @@ function PostsList() {
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [onlyPublished, setOnlyPublished] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -123,10 +122,13 @@ function PostsList() {
         }))
       );
 
+      const normalizedTags = Array.isArray(tagsResponse) ? tagsResponse : normalizeCollection(tagsResponse);
       setTagOptions(
-        normalizeCollection(tagsResponse).map((tag) => ({
-          value: tag.id ?? tag.slug,
-          label: tag.name ?? tag.title ?? 'Sin nombre'
+        normalizedTags.map((tag) => ({
+          value: tag.name ?? tag.slug ?? tag,
+          label: tag.postsCount
+            ? `${tag.name ?? tag.slug ?? tag} (${tag.postsCount})`
+            : tag.name ?? tag.slug ?? tag
         }))
       );
     } catch (error) {
@@ -143,7 +145,6 @@ function PostsList() {
         search: searchTerm || undefined,
         category: selectedCategory || undefined,
         tags: selectedTags.map((tag) => tag.value),
-        published: onlyPublished ? true : undefined,
         ordering: '-created_at'
       });
 
@@ -160,7 +161,7 @@ function PostsList() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, onlyPublished, searchTerm, selectedCategory, selectedTags]);
+  }, [currentPage, searchTerm, selectedCategory, selectedTags]);
 
   useEffect(() => {
     fetchTaxonomies();
@@ -183,31 +184,27 @@ function PostsList() {
         )
       },
       {
-        accessorKey: 'category',
-        header: 'Categoría',
+        accessorKey: 'categories',
+        header: 'Categorías',
         cell: ({ row }) => {
-          const category = row.original.category_detail ?? row.original.category ?? row.original.category_name;
-          if (!category) {
+          const categories = row.original.categories_detail ?? row.original.categories ?? [];
+          const normalized = Array.isArray(categories)
+            ? categories
+            : categories
+              ? [categories]
+              : [];
+          if (normalized.length === 0) {
             return <span className="text-sm text-slate-400">Sin categoría</span>;
-          }
-          const name = typeof category === 'string' ? category : category.name ?? category.title ?? 'Sin categoría';
-          return <span className="text-sm text-slate-600 dark:text-slate-300">{name}</span>;
-        }
-      },
-      {
-        accessorKey: 'tags',
-        header: 'Tags',
-        cell: ({ row }) => {
-          const tags = row.original.tags_detail ?? row.original.tags ?? [];
-          if (!tags || tags.length === 0) {
-            return <span className="text-sm text-slate-400">Sin tags</span>;
           }
           return (
             <div className="flex flex-wrap gap-1">
-              {tags.map((tag) => {
-                const label = tag.name ?? tag.title ?? tag;
+              {normalized.map((category) => {
+                const label =
+                  typeof category === 'string'
+                    ? category
+                    : category.name ?? category.title ?? 'Sin categoría';
                 return (
-                  <Badge key={tag.id ?? tag.slug ?? label} color="info">
+                  <Badge key={label} color="gray">
                     {label}
                   </Badge>
                 );
@@ -217,13 +214,23 @@ function PostsList() {
         }
       },
       {
-        accessorKey: 'published',
-        header: 'Publicado',
-        cell: ({ row }) => (
-          <Badge color={row.original.published ? 'success' : 'gray'}>
-            {row.original.published ? 'Publicado' : 'Borrador'}
-          </Badge>
-        )
+        accessorKey: 'tags',
+        header: 'Tags',
+        cell: ({ row }) => {
+          const tags = Array.isArray(row.original.tags) ? row.original.tags : [];
+          if (tags.length === 0) {
+            return <span className="text-sm text-slate-400">Sin etiquetas</span>;
+          }
+          return (
+            <div className="flex flex-wrap gap-1">
+              {tags.map((tag) => (
+                <Badge key={tag} color="info">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          );
+        }
       },
       {
         accessorKey: 'created_at',
@@ -241,7 +248,7 @@ function PostsList() {
           <div className="flex items-center gap-2">
             <Button
               as={Link}
-              to={`/dashboard/posts/${row.original.id ?? row.original.slug}/edit`}
+              to={`/dashboard/posts/${row.original.slug ?? row.original.id}/edit`}
               color="light"
               size="sm"
               className="flex items-center gap-2"
@@ -283,7 +290,7 @@ function PostsList() {
   const handleDelete = async () => {
     if (!postToDelete) return;
     try {
-      await eliminarPost(postToDelete.id ?? postToDelete.slug);
+      await eliminarPost(postToDelete.slug ?? postToDelete.id);
       toast.success('El post se eliminó correctamente.');
       setIsDeleting(false);
       setPostToDelete(null);
@@ -307,14 +314,6 @@ function PostsList() {
             icon={MagnifyingGlassIcon}
             aria-label="Buscar posts"
             className="w-full"
-          />
-          <ToggleSwitch
-            label="Solo publicados"
-            checked={onlyPublished}
-            onChange={(value) => {
-              setOnlyPublished(value);
-              setCurrentPage(0);
-            }}
           />
         </div>
         <div className="flex flex-1 flex-col gap-3 sm:flex-row">

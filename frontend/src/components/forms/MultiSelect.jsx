@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import { Controller } from 'react-hook-form';
 import Select from 'react-select';
+import CreatableSelect from 'react-select/creatable';
 import { Label, HelperText } from 'flowbite-react';
 import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
@@ -71,6 +72,8 @@ function MultiSelect({
   options,
   placeholder = 'Selecciona una opción',
   isClearable = false,
+  isCreatable = false,
+  onCreateOption,
   ...rest
 }) {
   const fieldId = rest.id ?? name;
@@ -78,6 +81,7 @@ function MultiSelect({
   const isDarkMode =
     typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
   const selectStyles = createSelectStyles(isDarkMode);
+  const SelectComponent = isCreatable ? CreatableSelect : Select;
 
   return (
     <Controller
@@ -96,7 +100,7 @@ function MultiSelect({
               {description}
             </p>
           ) : null}
-          <Select
+          <SelectComponent
             {...rest}
             {...field}
             inputId={fieldId}
@@ -112,6 +116,7 @@ function MultiSelect({
             aria-describedby={[helperId, description ? `${fieldId}-description` : null]
               .filter(Boolean)
               .join(' ')}
+            onCreateOption={isCreatable ? onCreateOption : undefined}
           />
           {fieldState.error ? (
             <HelperText id={helperId} color="failure" className="flex items-center gap-2 text-xs">
@@ -143,7 +148,9 @@ MultiSelect.propTypes = {
     })
   ).isRequired,
   placeholder: PropTypes.string,
-  isClearable: PropTypes.bool
+  isClearable: PropTypes.bool,
+  isCreatable: PropTypes.bool,
+  onCreateOption: PropTypes.func
 };
 
 export default MultiSelect;
