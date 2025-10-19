@@ -6,3 +6,5 @@ npm-debug.log*
 .env
 .venv/
 __pycache__/
+backend/tests/db/test.sqlite3
+backend/sql.json

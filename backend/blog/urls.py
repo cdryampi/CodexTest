@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from django.urls import include, path
-from rest_framework_nested.routers import NestedSimpleRouter, SimpleRouter
+from rest_framework.routers import SimpleRouter
 
 from .views import CategoryViewSet, CommentViewSet, PostViewSet
 
@@ -12,10 +12,12 @@ router = SimpleRouter()
 router.register("posts", PostViewSet, basename="posts")
 router.register("categories", CategoryViewSet, basename="categories")
 
-comments_router = NestedSimpleRouter(router, r"posts", lookup="slug")
-comments_router.register("comments", CommentViewSet, basename="post-comments")
+comment_list = CommentViewSet.as_view({
+    "get": "list",
+    "post": "create",
+})
 
 urlpatterns = [
     path("", include(router.urls)),
-    path("", include(comments_router.urls)),
+    path("posts/<slug:slug_pk>/comments/", comment_list, name="post-comments-list"),
 ]

@@ -1,6 +1,7 @@
 """Serializers for the blog API."""
 from __future__ import annotations
 
+from datetime import date as date_cls, datetime
 from typing import Iterable
 
 from django.contrib.auth import get_user_model
@@ -75,6 +76,23 @@ class _PostCategoryRepresentationMixin:
 
     category_fields = ("categories", "categories_detail")
 
+    @staticmethod
+    def _serialize_date(value):
+        """
+        Return an ISO formatted date string for ``value`` when possible.
+
+        - If ``value`` is a datetime or date, return its ISO format string.
+        - If ``value`` is None, return None.
+        - For any other type, return None.
+        """
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            value = value.date()
+        if isinstance(value, date_cls):
+            return value.isoformat()
+        return None
+
     def _ensure_category_lists(self, data: dict) -> dict:
         for field in self.category_fields:
             value = data.get(field)
@@ -95,7 +113,7 @@ class PostListSerializer(_PostCategoryRepresentationMixin, serializers.ModelSeri
         many=True, read_only=True, slug_field="slug"
     )
     categories_detail = CategorySerializer(source="categories", many=True, read_only=True)
-    created_at = serializers.DateField(source="date", read_only=True)
+    created_at = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
@@ -123,6 +141,21 @@ class PostListSerializer(_PostCategoryRepresentationMixin, serializers.ModelSeri
         data = super().to_representation(instance)
         return self._ensure_category_lists(data)
 
+    def get_created_at(self, instance: Post):
+        """
+        Retrieve the 'created_at' value for the post.
+
+        This method uses `getattr` with a default of None to safely access the `date`
+        attribute on the instance, which may not always be present. This approach
+        replaces a direct DateField mapping to allow for flexibility in how the date
+        is provided (e.g., as a `datetime`, `date`, or possibly missing).
+
+        The `_serialize_date` helper ensures that if the value is a `datetime` or `date`
+        object, it is returned as an ISO-formatted string. If the attribute is missing
+        or not a date type, `None` is returned.
+        """
+        return self._serialize_date(getattr(instance, "date", None))
+
 
 class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSerializer):
     """Detailed serializer for retrieving and creating posts."""
@@ -135,7 +168,7 @@ class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSe
         required=False,
     )
     categories_detail = CategorySerializer(source="categories", many=True, read_only=True)
-    created_at = serializers.DateField(source="date", read_only=True)
+    created_at = serializers.SerializerMethodField()
     updated_at = serializers.SerializerMethodField()
     date = serializers.DateField(write_only=True, required=False)
 
@@ -166,9 +199,26 @@ class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSe
             "categories_detail",
         ]
 
+    def get_created_at(self, obj: Post):
+        """
+        Retrieve the creation date for the post.
+
+        Uses getattr with a default of None to gracefully handle cases where the
+        'date' attribute may not be present on the object (e.g., if the model changes
+        or the attribute is omitted in certain querysets). This replaces a direct
+        DateField mapping to allow for more flexible handling.
+
+        The value may be a date, datetime, or None. The _serialize_date helper
+        method is responsible for converting these types to the appropriate
+        serialized representation (e.g., ISO 8601 string or null).
+        """
+        return self._serialize_date(getattr(obj, "date", None))
+
     def get_updated_at(self, obj: Post):
-        # The current model only stores the publication date, reuse it for now.
-        return obj.date
+        """
+        Return the last updated date. Currently uses the publication date as the model doesn't track separate update timestamps.
+        """
+        return self._serialize_date(getattr(obj, "date", None))
 
     def validate_title(self, value: str) -> str:
         if len(value.strip()) < 5:
