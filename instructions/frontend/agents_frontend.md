@@ -14,6 +14,7 @@ Desarrolla el proyecto completo con todos sus archivos, carpetas y configuracion
 4. Usa npm como gestor de paquetes (los comandos se ejecutan desde la raíz del repositorio).
 5. Implementa React Router DOM versión 6 para la navegación.
 6. **Nunca hardcodees la URL del backend**: todas las llamadas deben apoyarse en `import.meta.env.VITE_API_BASE_URL` resuelta por `src/utils/apiBase.js`.
+7. Mantén el cliente `fetch` de `src/lib/apiClient.js` con solicitudes CORS configuradas (`mode: 'cors'` y `credentials: 'include'` cuando aplique) para que el backend permita las peticiones autenticadas sin errores de origen cruzado.
 
 ---
 

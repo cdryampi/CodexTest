@@ -182,13 +182,21 @@ async function request(method, path, { params, body, headers, signal, timeout = 
 
   const { signal: timeoutSignal, cancel } = applyTimeout(timeout, signal);
 
+  const isBrowserEnvironment = typeof window !== 'undefined' && typeof window.location?.origin === 'string';
+  const isCrossOriginRequest = isBrowserEnvironment
+    ? url.origin !== window.location.origin
+    : isAbsoluteUrl(API_BASE_URL);
+  const requestMode = isCrossOriginRequest ? 'cors' : 'same-origin';
+  const credentialsMode = isCrossOriginRequest ? 'include' : 'same-origin';
+
   try {
     const response = await fetch(url, {
       method,
       headers: finalHeaders,
       body: body ? JSON.stringify(body) : undefined,
       signal: timeoutSignal,
-      credentials: 'omit'
+      mode: requestMode,
+      credentials: credentialsMode
     });
 
     const data = await parseResponseBody(response);
