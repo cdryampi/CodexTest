@@ -20,6 +20,9 @@ Monorepo que integra frontend (React + Vite), backend (Django REST Framework) y 
 - Tailwind CSS v4 (o fallback 3.4.x documentado) con Flowbite y Heroicons.
 - Gestión de estado ligera con stores o React Query según la tarea.
 - Formularios con `react-hook-form` + `zod` y notificaciones `react-hot-toast`.
+- Panel de backoffice protegido bajo `/dashboard` con CRUD completo de posts, categorías y tags.
+- Tablas responsivas con `@tanstack/react-table`, multiselect con `react-select`, editor enriquecido con `react-quill` y slugs generados con `slugify`.
+- Subida de imágenes a través de `multipart/form-data`; requiere que el backend exponga `/media/` y haya sesión iniciada para adjuntar tokens JWT.
 
 ### Backend
 - Django 5 estructurado en múltiples apps (`users`, `blog`, `core`).
