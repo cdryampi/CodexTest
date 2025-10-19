@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { Modal } from 'flowbite-react';
 import { AlertTriangle } from 'lucide-react';
@@ -7,6 +8,7 @@ function ConfirmModal({
   open,
   title,
   description,
+  body,
   confirmLabel,
   cancelLabel,
   onCancel,
@@ -14,25 +16,55 @@ function ConfirmModal({
   tone,
   loading
 }) {
+  const confirmButtonRef = useRef(null);
+
+  useEffect(() => {
+    if (open) {
+      const focusTimeout = window.setTimeout(() => {
+        confirmButtonRef.current?.focus();
+      }, 30);
+      return () => window.clearTimeout(focusTimeout);
+    }
+    return undefined;
+  }, [open]);
+
   return (
-    <Modal show={open} size="md" onClose={onCancel} dismissible aria-labelledby="confirm-modal-title">
+    <Modal
+      show={open}
+      size="md"
+      onClose={loading ? undefined : onCancel}
+      dismissible={!loading}
+      aria-labelledby="confirm-modal-title"
+    >
       <Modal.Header className="border-0 pb-2">
         <div className="flex items-center gap-3">
-          <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${tone === 'danger' ? 'bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400' : 'bg-sky-500/10 text-sky-600 dark:bg-sky-400/20 dark:text-sky-300'}`}>
+          <span
+            className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
+              tone === 'danger'
+                ? 'bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400'
+                : 'bg-sky-500/10 text-sky-600 dark:bg-sky-400/20 dark:text-sky-300'
+            }`}
+          >
             <AlertTriangle className="h-5 w-5" aria-hidden="true" />
           </span>
           <div>
             <h2 id="confirm-modal-title" className="text-lg font-semibold text-slate-900 dark:text-white">
               {title}
             </h2>
-            {description ? <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p> : null}
+            {description ? (
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p>
+            ) : null}
           </div>
         </div>
       </Modal.Header>
       <Modal.Body className="border-0 pt-0">
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Esta acción no se puede deshacer en el entorno actual. Se enviará al backend cuando la API esté disponible.
-        </p>
+        {body ? (
+          <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">{body}</div>
+        ) : (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Esta acción no se puede deshacer. Se enviará una petición al backend para completar el proceso.
+          </p>
+        )}
       </Modal.Body>
       <Modal.Footer className="border-0 pt-0">
         <div className="flex w-full justify-end gap-3">
@@ -40,6 +72,7 @@ function ConfirmModal({
             {cancelLabel}
           </Button>
           <Button
+            ref={confirmButtonRef}
             type="button"
             variant={tone === 'danger' ? 'destructive' : 'default'}
             onClick={onConfirm}
@@ -58,6 +91,7 @@ ConfirmModal.propTypes = {
   open: PropTypes.bool.isRequired,
   title: PropTypes.string.isRequired,
   description: PropTypes.node,
+  body: PropTypes.node,
   confirmLabel: PropTypes.string,
   cancelLabel: PropTypes.string,
   onCancel: PropTypes.func.isRequired,
@@ -68,6 +102,7 @@ ConfirmModal.propTypes = {
 
 ConfirmModal.defaultProps = {
   description: null,
+  body: null,
   confirmLabel: 'Confirmar',
   cancelLabel: 'Cancelar',
   tone: 'default',

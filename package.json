@@ -18,6 +18,7 @@
     "@tanstack/react-table": "^8.11.8",
     "axios": "^1.6.8",
     "class-variance-authority": "^0.7.0",
+    "dompurify": "^3.0.8",
     "flowbite": "^2.3.0",
     "flowbite-react": "^0.7.5",
     "framer-motion": "^11.0.0",

@@ -13,6 +13,11 @@ import ProtectedRoute from './routes/ProtectedRoute.jsx';
 import DashboardLayout from './layouts/DashboardLayout.jsx';
 import DashboardHome from './pages/dashboard/DashboardHome.jsx';
 import DashboardPosts from './pages/dashboard/DashboardPosts.jsx';
+import DashboardPostNew from './pages/dashboard/DashboardPostNew.jsx';
+import DashboardPostEdit from './pages/dashboard/DashboardPostEdit.jsx';
+import DashboardPostDetail from './pages/dashboard/DashboardPostDetail.jsx';
+import DashboardTags from './pages/dashboard/DashboardTags.jsx';
+import DashboardCategories from './pages/dashboard/DashboardCategories.jsx';
 import DashboardComments from './pages/dashboard/DashboardComments.jsx';
 import DashboardSettings from './pages/dashboard/DashboardSettings.jsx';
 import DashboardUsers from './pages/dashboard/DashboardUsers.jsx';
@@ -75,7 +80,16 @@ function App() {
           )}
         >
           <Route index element={<DashboardHome />} />
-          <Route path="posts" element={<DashboardPosts />} />
+          <Route path="posts">
+            <Route index element={<DashboardPosts />} />
+            <Route path="new" element={<DashboardPostNew />} />
+            <Route path=":slug">
+              <Route index element={<DashboardPostDetail />} />
+              <Route path="edit" element={<DashboardPostEdit />} />
+            </Route>
+          </Route>
+          <Route path="tags" element={<DashboardTags />} />
+          <Route path="categories" element={<DashboardCategories />} />
           <Route path="comments" element={<DashboardComments />} />
           <Route path="users" element={<DashboardUsers />} />
           <Route path="settings" element={<DashboardSettings />} />

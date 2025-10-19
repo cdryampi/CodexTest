@@ -1,10 +1,22 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { LayoutDashboard, FileText, MessageSquare, Users, Settings } from 'lucide-react';
+import {
+  LayoutDashboard,
+  FileText,
+  MessageSquare,
+  Settings,
+  Users,
+  Tags,
+  Layers
+} from 'lucide-react';
 import Sidebar from '../components/backoffice/Sidebar.jsx';
 import Topbar from '../components/backoffice/Topbar.jsx';
-import { useDashboardStore } from '../store/dashboard.js';
+import {
+  useDashboardStore,
+  selectDashboardSidebarCollapsed,
+  selectDashboardMobileSidebarOpen
+} from '../store/dashboard.js';
 
 const DashboardLayoutContext = createContext(null);
 
@@ -19,81 +31,120 @@ export function useDashboardLayout() {
 const NAVIGATION_ITEMS = [
   {
     key: 'overview',
+    section: null,
     label: 'Resumen',
     description: 'Una mirada rápida al desempeño del contenido.',
     to: '/dashboard',
     icon: LayoutDashboard,
     match: (pathname) => pathname === '/dashboard',
-    showSearch: false
+    showSearch: false,
+    searchPlaceholder: 'Buscar en el panel'
   },
   {
     key: 'posts',
+    section: 'posts',
     label: 'Posts',
     description: 'Gestiona publicaciones, estados y etiquetas.',
     to: '/dashboard/posts',
     icon: FileText,
     match: (pathname) => pathname.startsWith('/dashboard/posts'),
-    showSearch: true
+    showSearch: true,
+    searchPlaceholder: 'Buscar posts por título, tag o categoría'
+  },
+  {
+    key: 'tags',
+    section: 'tags',
+    label: 'Etiquetas',
+    description: 'Organiza etiquetas y evita duplicados.',
+    to: '/dashboard/tags',
+    icon: Tags,
+    match: (pathname) => pathname.startsWith('/dashboard/tags'),
+    showSearch: true,
+    searchPlaceholder: 'Buscar etiquetas por nombre'
+  },
+  {
+    key: 'categories',
+    section: 'categories',
+    label: 'Categorías',
+    description: 'Agrupa tus posts por temática.',
+    to: '/dashboard/categories',
+    icon: Layers,
+    match: (pathname) => pathname.startsWith('/dashboard/categories'),
+    showSearch: true,
+    searchPlaceholder: 'Buscar categorías por nombre'
   },
   {
     key: 'comments',
+    section: 'comments',
     label: 'Comentarios',
     description: 'Modera y responde a la comunidad.',
     to: '/dashboard/comments',
     icon: MessageSquare,
     match: (pathname) => pathname.startsWith('/dashboard/comments'),
-    showSearch: false
+    showSearch: true,
+    searchPlaceholder: 'Buscar comentarios por autor o contenido'
   },
   {
     key: 'users',
+    section: null,
     label: 'Usuarios',
     description: 'Controla roles y accesos del equipo.',
     to: '/dashboard/users',
     icon: Users,
     match: (pathname) => pathname.startsWith('/dashboard/users'),
-    showSearch: false
+    showSearch: false,
+    searchPlaceholder: 'Buscar en el panel'
   },
   {
     key: 'settings',
+    section: null,
     label: 'Ajustes',
     description: 'Preferencias del panel y personalización.',
     to: '/dashboard/settings',
     icon: Settings,
     match: (pathname) => pathname.startsWith('/dashboard/settings'),
-    showSearch: false
+    showSearch: false,
+    searchPlaceholder: 'Buscar en el panel'
   }
 ];
 
+const resolveActiveItem = (pathname) =>
+  NAVIGATION_ITEMS.find((item) => item.match(pathname)) ?? NAVIGATION_ITEMS[0];
+
 function DashboardLayout() {
   const location = useLocation();
-  const sidebarCollapsed = useDashboardStore((state) => state.sidebarCollapsed);
-  const setSidebarCollapsed = useDashboardStore((state) => state.setSidebarCollapsed);
+  const sidebarCollapsed = useDashboardStore(selectDashboardSidebarCollapsed);
   const toggleSidebarCollapsed = useDashboardStore((state) => state.toggleSidebarCollapsed);
-  const mobileSidebarOpen = useDashboardStore((state) => state.mobileSidebarOpen);
+  const mobileSidebarOpen = useDashboardStore(selectDashboardMobileSidebarOpen);
   const openMobileSidebar = useDashboardStore((state) => state.openMobileSidebar);
   const closeMobileSidebar = useDashboardStore((state) => state.closeMobileSidebar);
-  const searchValue = useDashboardStore((state) => state.search);
-  const setSearch = useDashboardStore((state) => state.setSearch);
+  const setSectionSearch = useDashboardStore((state) => state.setSectionSearch);
+
+  const activeItem = useMemo(() => resolveActiveItem(location.pathname), [location.pathname]);
+  const sectionKey = activeItem.section;
+
+  const sectionSearch = useDashboardStore(
+    useCallback(
+      (state) => (sectionKey ? state.sections?.[sectionKey]?.search ?? '' : ''),
+      [sectionKey]
+    )
+  );
 
   const [header, setHeader] = useState(() => ({
-    title: 'Resumen',
-    description: 'Una mirada rápida al desempeño del contenido.',
+    title: activeItem.label,
+    description: activeItem.description,
     actions: null,
-    showSearch: false
+    showSearch: Boolean(activeItem.showSearch),
+    searchPlaceholder: activeItem.searchPlaceholder ?? 'Buscar en el panel'
   }));
-
-  const activeItem = useMemo(() => {
-    return (
-      NAVIGATION_ITEMS.find((item) => item.match(location.pathname)) ?? NAVIGATION_ITEMS[0]
-    );
-  }, [location.pathname]);
 
   useEffect(() => {
     setHeader({
       title: activeItem.label,
       description: activeItem.description,
       actions: null,
-      showSearch: Boolean(activeItem.showSearch)
+      showSearch: Boolean(activeItem.showSearch),
+      searchPlaceholder: activeItem.searchPlaceholder ?? 'Buscar en el panel'
     });
   }, [activeItem]);
 
@@ -112,26 +163,33 @@ function DashboardLayout() {
 
   const handleSearchChange = useCallback(
     (value) => {
-      setSearch(value);
+      if (!sectionKey) {
+        return;
+      }
+      setSectionSearch(sectionKey, value);
     },
-    [setSearch]
+    [sectionKey, setSectionSearch]
   );
 
   const contextValue = useMemo(
     () => ({
       setHeader: (values) => {
-        setHeader((prev) => ({ ...prev, ...values }));
+        setHeader((prev) => ({
+          ...prev,
+          ...values,
+          searchPlaceholder: values?.searchPlaceholder ?? prev.searchPlaceholder
+        }));
       },
       header,
       sidebarCollapsed,
-      setSidebarCollapsed,
       toggleSidebarCollapsed,
       openMobileSidebar,
       closeMobileSidebar,
-      searchValue,
-      setSearch: handleSearchChange
+      searchValue: sectionSearch,
+      onSearchChange: handleSearchChange,
+      sectionKey
     }),
-    [closeMobileSidebar, handleSearchChange, header, openMobileSidebar, setSidebarCollapsed, sidebarCollapsed, toggleSidebarCollapsed, searchValue]
+    [closeMobileSidebar, handleSearchChange, header, openMobileSidebar, sectionKey, sectionSearch, sidebarCollapsed, toggleSidebarCollapsed]
   );
 
   return (
@@ -153,9 +211,10 @@ function DashboardLayout() {
             collapsed={sidebarCollapsed}
             onToggleCollapse={toggleSidebarCollapsed}
             onOpenMobile={openMobileSidebar}
-            showSearch={header.showSearch}
-            searchValue={searchValue}
+            showSearch={header.showSearch && Boolean(sectionKey)}
+            searchValue={sectionSearch}
             onSearchChange={handleSearchChange}
+            searchPlaceholder={header.searchPlaceholder}
           />
           <main className="relative flex-1 overflow-y-auto px-4 pb-12 pt-6 sm:px-6 lg:px-10">
             <AnimatePresence mode="wait">
