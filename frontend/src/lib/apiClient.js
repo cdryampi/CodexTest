@@ -172,7 +172,19 @@ const normalizeError = (error, response, data) => {
   };
 };
 
-async function request(method, path, { params, body, headers, signal, timeout = DEFAULT_TIMEOUT } = {}) {
+async function request(
+  method,
+  path,
+  {
+    params,
+    body,
+    headers,
+    signal,
+    timeout = DEFAULT_TIMEOUT,
+    credentials,
+    withCredentials
+  } = {}
+) {
   const url = buildUrl(path, params);
   const finalHeaders = {
     Accept: 'application/json',
@@ -182,13 +194,32 @@ async function request(method, path, { params, body, headers, signal, timeout = 
 
   const { signal: timeoutSignal, cancel } = applyTimeout(timeout, signal);
 
+  const isBrowserEnvironment = typeof window !== 'undefined' && typeof window.location?.origin === 'string';
+  const isCrossOriginRequest = isBrowserEnvironment
+    ? url.origin !== window.location.origin
+    : isAbsoluteUrl(API_BASE_URL);
+  const requestMode = isCrossOriginRequest ? 'cors' : 'same-origin';
+  let credentialsMode;
+  if (typeof credentials === 'string') {
+    credentialsMode = credentials;
+  } else if (typeof credentials === 'boolean') {
+    credentialsMode = credentials ? 'include' : isCrossOriginRequest ? 'omit' : 'same-origin';
+  } else if (typeof withCredentials === 'boolean') {
+    credentialsMode = withCredentials ? 'include' : isCrossOriginRequest ? 'omit' : 'same-origin';
+  } else if (isCrossOriginRequest) {
+    credentialsMode = 'omit';
+  } else {
+    credentialsMode = 'same-origin';
+  }
+
   try {
     const response = await fetch(url, {
       method,
       headers: finalHeaders,
       body: body ? JSON.stringify(body) : undefined,
       signal: timeoutSignal,
-      credentials: 'omit'
+      mode: requestMode,
+      credentials: credentialsMode
     });
 
     const data = await parseResponseBody(response);
