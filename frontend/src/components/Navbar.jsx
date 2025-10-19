@@ -8,6 +8,7 @@ import {
   Home,
   LayoutDashboard,
   LayoutList,
+  MessageSquare,
   LogIn,
   LogOut,
   NotebookPen,
@@ -73,6 +74,12 @@ const dashboardLinks = [
     label: 'Etiquetas',
     icon: Tags,
     match: (path) => path.startsWith('/dashboard/tags')
+  },
+  {
+    to: '/dashboard/comments',
+    label: 'Comentarios',
+    icon: MessageSquare,
+    match: (path) => path.startsWith('/dashboard/comments')
   }
 ];
 

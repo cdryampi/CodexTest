@@ -26,7 +26,8 @@ function Topbar({
   onOpenMobile,
   showSearch,
   searchValue,
-  onSearchChange
+  onSearchChange,
+  searchPlaceholder
 }) {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -161,8 +162,8 @@ function Topbar({
                 type="search"
                 value={searchValue}
                 onChange={handleSearchInput}
-                placeholder="Buscar posts por título o etiqueta"
-                aria-label="Buscar posts"
+                placeholder={searchPlaceholder}
+                aria-label={searchPlaceholder}
                 className="w-full rounded-full border-slate-200 bg-white pl-10 pr-4 text-sm dark:border-slate-800 dark:bg-slate-900"
               />
               <span className="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500 sm:inline-flex">
@@ -186,14 +187,16 @@ Topbar.propTypes = {
   onOpenMobile: PropTypes.func.isRequired,
   showSearch: PropTypes.bool,
   searchValue: PropTypes.string,
-  onSearchChange: PropTypes.func.isRequired
+  onSearchChange: PropTypes.func.isRequired,
+  searchPlaceholder: PropTypes.string
 };
 
 Topbar.defaultProps = {
   description: null,
   actions: null,
   showSearch: false,
-  searchValue: ''
+  searchValue: '',
+  searchPlaceholder: 'Buscar en el panel'
 };
 
 export default Topbar;
