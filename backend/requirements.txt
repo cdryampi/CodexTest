@@ -5,6 +5,10 @@ django-filter
 drf-nested-routers
 drf-spectacular
 django-jazzmin
+dj-rest-auth
+django-allauth
+djangorestframework-simplejwt
+requests
 gunicorn
 psycopg2-binary
 python-decouple
