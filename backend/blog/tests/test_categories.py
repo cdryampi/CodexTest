@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -116,3 +117,16 @@ class CategoryAPITestCase(APITestCase):
             set(post.categories.values_list("slug", flat=True)),
             {content_category.slug, testing_category.slug},
         )
+
+
+class CategoryModelTestCase(TestCase):
+    """Validate category slug generation without hitting the API."""
+
+    def test_slug_autoincrements_for_similar_names(self) -> None:
+        """Categories sharing a slug base should get incremental suffixes."""
+
+        first = Category.objects.create(name="Data Science")
+        second = Category.objects.create(name="Data Science!!")
+
+        self.assertEqual(first.slug, "data-science")
+        self.assertEqual(second.slug, "data-science-2")
