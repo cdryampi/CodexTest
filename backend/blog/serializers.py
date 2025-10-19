@@ -152,7 +152,7 @@ class PostListSerializer(_PostCategoryRepresentationMixin, serializers.ModelSeri
 
         The `_serialize_date` helper ensures that if the value is a `datetime` or `date`
         object, it is returned as an ISO-formatted string. If the attribute is missing
-        or not a date type, the value is returned as-is (typically None).
+        or not a date type, `None` is returned.
         """
         return self._serialize_date(getattr(instance, "date", None))
 
