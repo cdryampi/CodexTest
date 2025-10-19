@@ -10,6 +10,13 @@ import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Profile from './pages/Profile.jsx';
 import ProtectedRoute from './routes/ProtectedRoute.jsx';
+import Dashboard from './pages/dashboard/Dashboard.jsx';
+import PostsList from './pages/dashboard/PostsList.jsx';
+import PostForm from './pages/dashboard/PostForm.jsx';
+import CategoriesList from './pages/dashboard/CategoriesList.jsx';
+import CategoryForm from './pages/dashboard/CategoryForm.jsx';
+import TagsList from './pages/dashboard/TagsList.jsx';
+import TagForm from './pages/dashboard/TagForm.jsx';
 import {
   SITE_NAME,
   SITE_DESCRIPTION,
@@ -50,6 +57,86 @@ function App() {
               element={(
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="/dashboard"
+              element={(
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="/dashboard/posts"
+              element={(
+                <ProtectedRoute>
+                  <PostsList />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="/dashboard/posts/new"
+              element={(
+                <ProtectedRoute>
+                  <PostForm />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="/dashboard/posts/:id/edit"
+              element={(
+                <ProtectedRoute>
+                  <PostForm />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="/dashboard/categories"
+              element={(
+                <ProtectedRoute>
+                  <CategoriesList />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="/dashboard/categories/new"
+              element={(
+                <ProtectedRoute>
+                  <CategoryForm />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="/dashboard/categories/:id/edit"
+              element={(
+                <ProtectedRoute>
+                  <CategoryForm />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="/dashboard/tags"
+              element={(
+                <ProtectedRoute>
+                  <TagsList />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="/dashboard/tags/new"
+              element={(
+                <ProtectedRoute>
+                  <TagForm />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="/dashboard/tags/:id/edit"
+              element={(
+                <ProtectedRoute>
+                  <TagForm />
                 </ProtectedRoute>
               )}
             />

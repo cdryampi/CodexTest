@@ -81,6 +81,9 @@ function Navbar() {
       arrowIcon={false}
       inline
     >
+      <Dropdown.Item as={Link} to="/dashboard" icon={BoltIcon}>
+        Dashboard
+      </Dropdown.Item>
       <Dropdown.Item as={Link} to="/profile" icon={UserCircleIcon}>
         Perfil
       </Dropdown.Item>
@@ -174,6 +177,17 @@ function Navbar() {
           <ClockIcon className="h-5 w-5" aria-hidden="true" />
           Timeline
         </FlowbiteNavbar.Link>
+        {isAuthenticated ? (
+          <FlowbiteNavbar.Link
+            as={Link}
+            to="/dashboard"
+            active={location.pathname.startsWith('/dashboard')}
+            className="flex items-center gap-2 text-base text-slate-600 transition duration-300 hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
+          >
+            <BoltIcon className="h-5 w-5" aria-hidden="true" />
+            Dashboard
+          </FlowbiteNavbar.Link>
+        ) : null}
         <form
           role="search"
           className="md:hidden"
@@ -204,6 +218,15 @@ function Navbar() {
         {isLoading ? null : (
           isAuthenticated ? (
             <div className="flex flex-col gap-2">
+              {isAuthenticated ? (
+                <FlowbiteNavbar.Link
+                  as={Link}
+                  to="/dashboard"
+                  className="text-base text-slate-600 transition hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300"
+                >
+                  Dashboard
+                </FlowbiteNavbar.Link>
+              ) : null}
               <FlowbiteNavbar.Link as={Link} to="/profile" className="text-base text-slate-600 transition hover:text-sky-600 dark:text-slate-300 dark:hover:text-sky-300">
                 Perfil
               </FlowbiteNavbar.Link>
