@@ -142,6 +142,18 @@ class PostListSerializer(_PostCategoryRepresentationMixin, serializers.ModelSeri
         return self._ensure_category_lists(data)
 
     def get_created_at(self, instance: Post):
+        """
+        Retrieve the 'created_at' value for the post.
+
+        This method uses `getattr` with a default of None to safely access the `date`
+        attribute on the instance, which may not always be present. This approach
+        replaces a direct DateField mapping to allow for flexibility in how the date
+        is provided (e.g., as a `datetime`, `date`, or possibly missing).
+
+        The `_serialize_date` helper ensures that if the value is a `datetime` or `date`
+        object, it is returned as an ISO-formatted string. If the attribute is missing
+        or not a date type, the value is returned as-is (typically None).
+        """
         return self._serialize_date(getattr(instance, "date", None))
 
 
