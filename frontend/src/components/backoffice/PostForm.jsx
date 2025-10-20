@@ -149,6 +149,11 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
   const contentValue = watch('content');
   const statusValue = watch('status');
   const autoSlugRef = useRef('');
+  const onCancelRef = useRef(onCancel);
+
+  useEffect(() => {
+    onCancelRef.current = onCancel;
+  }, [onCancel]);
 
   useEffect(() => {
     const newSlug = slugify(titleValue ?? '', { lower: true, strict: true });
@@ -230,12 +235,12 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
         });
       } catch (error) {
         toast.error('No se pudo cargar el post solicitado.');
-        if (onCancel) {
-          onCancel();
+        if (onCancelRef.current) {
+          onCancelRef.current();
         }
       }
     },
-    [mode, onCancel, reset]
+    [mode, reset]
   );
 
   useEffect(() => {
