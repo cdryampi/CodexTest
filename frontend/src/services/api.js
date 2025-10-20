@@ -8,14 +8,20 @@ export const ACCESS_TOKEN_KEY = 'codextest.accessToken';
 export const REFRESH_TOKEN_KEY = 'codextest.refreshToken';
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true
+  baseURL: API_BASE_URL
 });
 
 const refreshClient = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true
+  baseURL: API_BASE_URL
 });
+
+const enforceExplicitCredentials = (config) => {
+  if (typeof config.withCredentials === 'boolean') {
+    return config.withCredentials;
+  }
+
+  return false;
+};
 
 let refreshPromise = null;
 
@@ -78,9 +84,15 @@ api.interceptors.request.use((config) => {
   if (!config.headers) {
     config.headers = {};
   }
+  config.withCredentials = enforceExplicitCredentials(config);
   if (tokens.access && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${tokens.access}`;
   }
+  return config;
+});
+
+refreshClient.interceptors.request.use((config) => {
+  config.withCredentials = enforceExplicitCredentials(config);
   return config;
 });
 
