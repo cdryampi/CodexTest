@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, ToggleSwitch } from 'flowbite-react';
 import slugify from 'slugify';
 import { toast } from 'sonner';
@@ -12,9 +12,12 @@ import {
   listCategories,
   createCategory,
   updateCategory,
-  deleteCategory
+  deleteCategory,
+  updateCategoryTranslation
 } from '../../services/api.js';
 import { Button } from '../../components/ui/button.jsx';
+import TranslateButton from '../../components/ai-translate/TranslateButton.jsx';
+import TranslateModal from '../../components/ai-translate/TranslateModal.jsx';
 import { Input } from '../../components/ui/input.jsx';
 import { Textarea } from '../../components/ui/textarea.jsx';
 import ConfirmModal from '../../components/backoffice/ConfirmModal.jsx';
@@ -57,12 +60,14 @@ function DashboardCategories() {
   const [modalState, setModalState] = useState({
     open: false,
     mode: 'create',
+    id: null,
     slug: null,
     name: '',
     description: '',
     isActive: true
   });
   const [deleteState, setDeleteState] = useState({ open: false, slug: null, name: '', loading: false });
+  const [translateModalState, setTranslateModalState] = useState({ open: false, identifier: null });
 
   useEffect(() => {
     setHeader({
@@ -73,7 +78,7 @@ function DashboardCategories() {
         <Button
           type="button"
           size="sm"
-          onClick={() => setModalState({ open: true, mode: 'create', slug: null, name: '', description: '', isActive: true })}
+          onClick={() => setModalState({ open: true, mode: 'create', id: null, slug: null, name: '', description: '', isActive: true })}
         >
           <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
           Nueva categoría
@@ -99,6 +104,12 @@ function DashboardCategories() {
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    if (!modalState.open) {
+      setTranslateModalState({ open: false, identifier: null });
+    }
+  }, [modalState.open]);
+
   const filteredCategories = useMemo(() => {
     const searchTerm = categoriesState.search.trim().toLowerCase();
     if (!searchTerm) {
@@ -111,6 +122,7 @@ function DashboardCategories() {
     setModalState({
       open: true,
       mode: 'edit',
+      id: category.id ?? category.slug,
       slug: category.slug,
       name: category.name ?? '',
       description: category.description ?? '',
@@ -119,8 +131,41 @@ function DashboardCategories() {
   };
 
   const closeModal = () => {
-    setModalState({ open: false, mode: 'create', slug: null, name: '', description: '', isActive: true });
+    setModalState({ open: false, mode: 'create', id: null, slug: null, name: '', description: '', isActive: true });
   };
+
+  const openTranslateAssistant = useCallback(() => {
+    if (modalState.mode !== 'edit') {
+      toast.info('Guarda la categoría antes de traducirla.');
+      return;
+    }
+    const identifier = modalState.id ?? modalState.slug;
+    if (!identifier) {
+      toast.info('Selecciona una categoría válida para traducir.');
+      return;
+    }
+    setTranslateModalState({ open: true, identifier });
+  }, [modalState.id, modalState.mode, modalState.slug, toast]);
+
+  const handleApplyTranslation = useCallback((lang, translatedFields) => {
+    if (!translatedFields || typeof translatedFields !== 'object') {
+      return;
+    }
+    setModalState((prev) => ({
+      ...prev,
+      name: translatedFields.name ?? prev.name,
+      description: translatedFields.description ?? prev.description,
+      slug: translatedFields.slug ?? prev.slug
+    }));
+  }, []);
+
+  const handleSaveTranslation = useCallback(async (lang, translatedFields) => {
+    const identifier = translateModalState.identifier ?? modalState.id ?? modalState.slug;
+    if (!identifier) {
+      throw new Error('Selecciona una categoría existente antes de guardar la traducción.');
+    }
+    await updateCategoryTranslation(identifier, lang, translatedFields);
+  }, [modalState.id, modalState.slug, translateModalState.identifier]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -202,6 +247,15 @@ function DashboardCategories() {
     }
     return slugify(modalState.name || '', { lower: true, strict: true });
   }, [modalState.mode, modalState.name, modalState.slug]);
+
+  const categoryTranslationFields = useMemo(
+    () => ({
+      name: modalState.name ?? '',
+      description: modalState.description ?? '',
+      slug: modalState.slug ?? computedSlug ?? ''
+    }),
+    [modalState.name, modalState.description, modalState.slug, computedSlug]
+  );
 
   return (
     <div className="space-y-6">
@@ -306,10 +360,20 @@ function DashboardCategories() {
         onClose={closeModal}
         aria-labelledby="category-modal-title"
       >
-        <Modal.Header>
+        <Modal.Header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 id="category-modal-title" className="text-lg font-semibold text-slate-900 dark:text-white">
             {modalState.mode === 'edit' ? 'Editar categoría' : 'Nueva categoría'}
           </h2>
+          {modalState.mode === 'edit' ? (
+            <TranslateButton
+              size="sm"
+              onClick={openTranslateAssistant}
+              disabled={!modalState.name?.trim()}
+              tooltip={!modalState.name?.trim() ? 'Completa el nombre antes de traducir.' : 'Abrir asistente de traducción.'}
+            >
+              Traducir
+            </TranslateButton>
+          ) : null}
         </Modal.Header>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Modal.Body className="space-y-4">
@@ -356,6 +420,17 @@ function DashboardCategories() {
         </form>
       </Modal>
 
+      <TranslateModal
+        open={translateModalState.open}
+        onOpenChange={(open) => setTranslateModalState((prev) => ({ ...prev, open }))}
+        entityType="category"
+        idOrSlug={translateModalState.identifier}
+        fields={categoryTranslationFields}
+        currentLang="es"
+        allowSave={Boolean(translateModalState.identifier)}
+        onApply={handleApplyTranslation}
+        onSave={handleSaveTranslation}
+      />
       <ConfirmModal
         open={deleteState.open}
         title="¿Eliminar categoría?"
