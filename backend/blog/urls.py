@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 from django.urls import include, path
-from rest_framework.routers import SimpleRouter
+from rest_framework.routers import DefaultRouter
 
 from .views import CategoryViewSet, CommentViewSet, PostViewSet
 
 app_name = "blog"
 
-router = SimpleRouter()
+router = DefaultRouter()
 router.register("posts", PostViewSet, basename="posts")
 router.register("categories", CategoryViewSet, basename="categories")
 

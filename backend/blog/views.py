@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count, F, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
-from rest_framework.throttling import SimpleRateThrottle
+from rest_framework.throttling import ScopedRateThrottle
 
 from .models import Category, Comment, Post, Reaction
 from .serializers import (
@@ -21,23 +21,6 @@ from .serializers import (
     ReactionSummarySerializer,
     ReactionToggleSerializer,
 )
-
-
-class ReactionsRateThrottle(SimpleRateThrottle):
-    """Scoped throttle limiting reaction toggles."""
-
-    scope = "reactions"
-
-    def get_cache_key(self, request, view):  # type: ignore[override]
-        if request.method.lower() != "post":
-            return None
-        if request.user and request.user.is_authenticated:
-            ident = request.user.pk
-        else:
-            ident = self.get_ident(request)
-        return self.cache_format % {"scope": self.scope, "ident": ident}
-
-
 class PostViewSet(
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
@@ -61,6 +44,13 @@ class PostViewSet(
     ordering = ["-date"]
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    def get_throttles(self):  # type: ignore[override]
+        if getattr(self, "action", None) in {"reactions", "react"}:
+            self.throttle_scope = "reactions"
+        else:
+            self.throttle_scope = None
+        return super().get_throttles()
+
     def get_queryset(self):
         queryset = super().get_queryset().distinct()
         category_slug = self.request.query_params.get("category")
@@ -74,14 +64,13 @@ class PostViewSet(
         return PostDetailSerializer
 
     def _get_reaction_queryset(self, post: Post):
-        content_type = ContentType.objects.get_for_model(post, for_concrete_model=False)
-        return Reaction.objects.filter(content_type=content_type, object_id=post.pk)
+        return Reaction.objects.for_instance(post)
 
     def _build_reaction_summary(self, post: Post, user):
         reaction_qs = self._get_reaction_queryset(post)
         counts = {choice: 0 for choice, _ in Reaction.Types.choices}
         for row in reaction_qs.values("type").annotate(total=Count("id")):
-            counts[row["type"]] = row["total"]
+            counts[row["type"]] = int(row["total"])
 
         my_reaction = None
         if getattr(user, "is_authenticated", False):
@@ -100,23 +89,88 @@ class PostViewSet(
         serializer = ReactionSummarySerializer(payload)
         return serializer.data
 
+    @extend_schema(
+        description="Devuelve el resumen de reacciones registradas para la entrada.",
+        responses={
+            200: ReactionSummarySerializer,
+        },
+        examples=[
+            OpenApiExample(
+                "Resumen de ejemplo",
+                value={
+                    "counts": {
+                        "like": 3,
+                        "love": 1,
+                        "clap": 0,
+                        "wow": 2,
+                        "laugh": 0,
+                        "insight": 0,
+                    },
+                    "total": 6,
+                    "my_reaction": "wow",
+                },
+                response_only=True,
+            ),
+        ],
+    )
     @action(
         detail=True,
-        methods=["get", "post"],
+        methods=["get"],
         url_path="reactions",
         url_name="reactions",
-        throttle_classes=[ReactionsRateThrottle],
+        throttle_classes=[ScopedRateThrottle],
     )
     def reactions(self, request, slug=None):
         post = self.get_object()
+        summary = self._build_reaction_summary(post, request.user)
+        return Response(summary)
 
-        if request.method.lower() == "get":
-            summary = self._build_reaction_summary(post, request.user)
-            return Response(summary)
+    @extend_schema(
+        description=(
+            "Registra o elimina la reacción del usuario autenticado siguiendo la lógica"
+            " de alternancia."
+        ),
+        request=ReactionToggleSerializer,
+        responses={
+            200: ReactionSummarySerializer,
+            401: OpenApiResponse(description="Autenticación requerida"),
+        },
+        examples=[
+            OpenApiExample(
+                "Solicitud",
+                value={"type": "like"},
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Respuesta",
+                value={
+                    "counts": {
+                        "like": 1,
+                        "love": 0,
+                        "clap": 0,
+                        "wow": 0,
+                        "laugh": 0,
+                        "insight": 0,
+                    },
+                    "total": 1,
+                    "my_reaction": "like",
+                },
+                response_only=True,
+            ),
+        ],
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="react",
+        url_name="react",
+        throttle_classes=[ScopedRateThrottle],
+    )
+    def react(self, request, slug=None):
+        post = self.get_object()
 
         serializer = ReactionToggleSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        reaction_type = serializer.validated_data["type"]
 
         if not request.user or not request.user.is_authenticated:
             return Response(
@@ -124,20 +178,26 @@ class PostViewSet(
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        reaction_qs = self._get_reaction_queryset(post).filter(user=request.user)
-        existing = reaction_qs.first()
+        reaction_type = serializer.validated_data["type"]
+        reaction_qs = self._get_reaction_queryset(post)
+        user_reactions = reaction_qs.filter(user=request.user)
+        same_reaction = user_reactions.filter(type=reaction_type).first()
 
-        if existing and existing.type == reaction_type:
-            existing.delete()
-        elif existing:
-            existing.type = reaction_type
-            existing.save(update_fields=["type"])
+        if same_reaction:
+            user_reactions.exclude(pk=same_reaction.pk).delete()
+            same_reaction.delete()
         else:
-            Reaction.objects.create(
-                user=request.user,
-                content_object=post,
-                type=reaction_type,
-            )
+            existing = user_reactions.first()
+            if existing:
+                user_reactions.exclude(pk=existing.pk).delete()
+                existing.type = reaction_type
+                existing.save(update_fields=["type"])
+            else:
+                Reaction.objects.create(
+                    user=request.user,
+                    content_object=post,
+                    type=reaction_type,
+                )
 
         summary = self._build_reaction_summary(post, request.user)
         return Response(summary)

@@ -42,8 +42,8 @@ class PostAdmin(admin.ModelAdmin):
 
 @admin.register(Reaction)
 class ReactionAdmin(admin.ModelAdmin):
-    list_display = ["content_type", "object_id", "user", "type", "created_at"]
-    list_filter = ["content_type", "type", "user"]
-    search_fields = ["user__username", "user__email", "content_type__model"]
-    autocomplete_fields = ["user"]
+    list_display = ["id", "user", "content_type", "object_id", "type", "created_at"]
+    list_filter = ["type", "content_type", "created_at"]
+    search_fields = ["user__username"]
+    raw_id_fields = ["user"]
     readonly_fields = ["created_at"]
