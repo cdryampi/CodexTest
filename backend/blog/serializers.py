@@ -4,10 +4,13 @@ from __future__ import annotations
 from datetime import date as date_cls, datetime
 from typing import Iterable
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from .models import Category, Comment, Post, Reaction, Tag
+from .utils.i18n import set_parler_language, slugify_localized
+from parler.utils.context import switch_language
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -58,8 +61,27 @@ class TagNameField(serializers.SlugRelatedField):
         except serializers.ValidationError:
             if not isinstance(data, str):
                 raise
-            tag, _ = Tag.objects.get_or_create(name=data)
-            return tag
+
+        value = data.strip()
+        if not value:
+            raise serializers.ValidationError("Este campo no puede estar vacío.")
+
+        language_code = settings.LANGUAGE_CODE
+        existing = (
+            Tag.objects.language(language_code)
+            .filter(name__iexact=value)
+            .first()
+        )
+        if existing:
+            return existing
+
+        tag = Tag()
+        with switch_language(tag, language_code):
+            tag.name = value
+            tag.slug = slugify_localized(value, language_code)
+        tag.full_clean()
+        tag.save()
+        return tag
 
 
 class UserPublicSerializer(serializers.ModelSerializer):
@@ -160,6 +182,9 @@ class PostListSerializer(_PostCategoryRepresentationMixin, serializers.ModelSeri
 class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSerializer):
     """Detailed serializer for retrieving and creating posts."""
 
+    title = serializers.CharField()
+    excerpt = serializers.CharField()
+    content = serializers.CharField()
     tags = TagNameField(many=True, slug_field="name", queryset=Tag.objects.all())
     categories = serializers.SlugRelatedField(
         many=True,
@@ -235,7 +260,9 @@ class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSe
     def create(self, validated_data):
         tags = validated_data.pop("tags", [])
         categories = validated_data.pop("categories", [])
-        post = Post.objects.create(**validated_data)
+        with set_parler_language(settings.LANGUAGE_CODE):
+            post = Post.objects.create(**validated_data)
+            post.set_current_language(settings.LANGUAGE_CODE)
         self._set_tags(post, tags)
         self._set_categories(post, categories)
         return post
@@ -243,9 +270,12 @@ class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSe
     def update(self, instance, validated_data):
         tags = validated_data.pop("tags", None)
         categories = validated_data.pop("categories", None)
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+        with set_parler_language(settings.LANGUAGE_CODE):
+            if hasattr(instance, "set_current_language"):
+                instance.set_current_language(settings.LANGUAGE_CODE)
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
         if tags is not None:
             self._set_tags(instance, tags)
         if categories is not None:

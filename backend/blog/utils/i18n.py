@@ -63,4 +63,4 @@ def slugify_localized(text: str, language_code: Optional[str] = None) -> str:
     if not text:
         return ""
     active_code = _clean_language_code(language_code)
-    return slugify(text, language=active_code, lowercase=True)
+    return slugify(text, lowercase=True)

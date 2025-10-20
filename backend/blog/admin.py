@@ -2,41 +2,40 @@
 from __future__ import annotations
 
 from django.contrib import admin
+from parler.admin import TranslatableAdmin
 
 from .models import Category, Post, Reaction, Tag
 
 
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(TranslatableAdmin):
     list_display = ["name", "slug", "is_active", "created_at"]
     list_filter = ["is_active", "created_at"]
-    search_fields = ["name", "description"]
-    prepopulated_fields = {"slug": ("name",)}
-    ordering = ["name"]
+    search_fields = ["translations__name", "translations__description"]
+    ordering = ["translations__name"]
     readonly_fields = ["created_at", "updated_at"]
 
 
 @admin.register(Tag)
-class TagAdmin(admin.ModelAdmin):
-    search_fields = ["name"]
-    ordering = ["name"]
+class TagAdmin(TranslatableAdmin):
+    search_fields = ["translations__name", "translations__slug"]
+    ordering = ["translations__name"]
 
 
 @admin.register(Post)
-class PostAdmin(admin.ModelAdmin):
+class PostAdmin(TranslatableAdmin):
     list_display = ["title", "date", "author"]
     list_filter = ["date", "tags", "categories"]
     search_fields = [
-        "title",
-        "excerpt",
-        "content",
-        "tags__name",
-        "categories__name",
+        "translations__title",
+        "translations__excerpt",
+        "translations__content",
+        "tags__translations__name",
+        "categories__translations__name",
         "author",
     ]
     filter_horizontal = ["tags", "categories"]
     ordering = ["-date"]
-    prepopulated_fields = {"slug": ("title",)}
     date_hierarchy = "date"
 
 
