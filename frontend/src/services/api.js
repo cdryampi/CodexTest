@@ -839,7 +839,7 @@ export async function togglePostReaction(slug, type) {
   }
 
   try {
-    const response = await api.post(`posts/${slug}/reactions/`, { type });
+    const response = await api.post(`posts/${slug}/react/`, { type });
     return normalizeReactionSummary(response.data ?? {});
   } catch (error) {
     throw toApiError(error);

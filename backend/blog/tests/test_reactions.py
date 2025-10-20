@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from django.core.cache import cache
-from rest_framework.settings import api_settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.settings import api_settings
 from rest_framework.test import APITestCase
 
 from blog.models import Post, Reaction
-from blog.views import ReactionsRateThrottle
 
 
 class ReactionAPITestCase(APITestCase):
@@ -35,20 +34,21 @@ class ReactionAPITestCase(APITestCase):
             imageAlt="Texto alternativo",
             author="Codex",
         )
-        self.url = reverse("blog:posts-reactions", kwargs={"slug": self.post.slug})
+        self.reactions_url = reverse("blog:posts-reactions", kwargs={"slug": self.post.slug})
+        self.react_url = reverse("blog:posts-react", kwargs={"slug": self.post.slug})
 
     def test_user_can_create_and_remove_reaction(self):
         """Toggling the same reaction twice removes it and updates the summary."""
 
         self.client.force_authenticate(self.user)
 
-        create_response = self.client.post(self.url, {"type": Reaction.Types.LIKE}, format="json")
+        create_response = self.client.post(self.react_url, {"type": Reaction.Types.LIKE}, format="json")
         self.assertEqual(create_response.status_code, status.HTTP_200_OK)
         self.assertEqual(create_response.data["my_reaction"], Reaction.Types.LIKE)
         self.assertEqual(create_response.data["counts"][Reaction.Types.LIKE], 1)
         self.assertEqual(create_response.data["total"], 1)
 
-        remove_response = self.client.post(self.url, {"type": Reaction.Types.LIKE}, format="json")
+        remove_response = self.client.post(self.react_url, {"type": Reaction.Types.LIKE}, format="json")
         self.assertEqual(remove_response.status_code, status.HTTP_200_OK)
         self.assertIsNone(remove_response.data["my_reaction"])
         self.assertEqual(remove_response.data["counts"][Reaction.Types.LIKE], 0)
@@ -58,9 +58,9 @@ class ReactionAPITestCase(APITestCase):
         """Posting a different type replaces the previous reaction for the user."""
 
         self.client.force_authenticate(self.user)
-        self.client.post(self.url, {"type": Reaction.Types.LIKE}, format="json")
+        self.client.post(self.react_url, {"type": Reaction.Types.LIKE}, format="json")
 
-        replace_response = self.client.post(self.url, {"type": Reaction.Types.LOVE}, format="json")
+        replace_response = self.client.post(self.react_url, {"type": Reaction.Types.LOVE}, format="json")
         self.assertEqual(replace_response.status_code, status.HTTP_200_OK)
         self.assertEqual(replace_response.data["my_reaction"], Reaction.Types.LOVE)
         self.assertEqual(replace_response.data["counts"][Reaction.Types.LOVE], 1)
@@ -73,9 +73,9 @@ class ReactionAPITestCase(APITestCase):
         Reaction.objects.create(user=self.other, content_object=self.post, type=Reaction.Types.CLAP)
 
         self.client.force_authenticate(self.user)
-        self.client.post(self.url, {"type": Reaction.Types.WOW}, format="json")
+        self.client.post(self.react_url, {"type": Reaction.Types.WOW}, format="json")
 
-        response = self.client.get(self.url)
+        response = self.client.get(self.reactions_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["counts"][Reaction.Types.CLAP], 1)
         self.assertEqual(response.data["counts"][Reaction.Types.WOW], 1)
@@ -83,14 +83,14 @@ class ReactionAPITestCase(APITestCase):
         self.assertEqual(response.data["my_reaction"], Reaction.Types.WOW)
 
         self.client.logout()
-        anonymous_response = self.client.get(self.url)
+        anonymous_response = self.client.get(self.reactions_url)
         self.assertEqual(anonymous_response.status_code, status.HTTP_200_OK)
         self.assertIsNone(anonymous_response.data.get("my_reaction"))
 
     def test_toggle_requires_authentication(self):
         """Unauthenticated users cannot toggle reactions."""
 
-        response = self.client.post(self.url, {"type": Reaction.Types.LIKE}, format="json")
+        response = self.client.post(self.react_url, {"type": Reaction.Types.LIKE}, format="json")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(Reaction.objects.count(), 0)
 
@@ -103,16 +103,12 @@ class ReactionAPITestCase(APITestCase):
         cache.clear()
 
         try:
-            self.assertEqual(
-                ReactionsRateThrottle().get_rate(),
-                "2/min",
-            )
             self.client.force_authenticate(self.user)
-            first = self.client.post(self.url, {"type": Reaction.Types.LIKE}, format="json")
+            first = self.client.post(self.react_url, {"type": Reaction.Types.LIKE}, format="json")
             self.assertEqual(first.status_code, status.HTTP_200_OK)
-            second = self.client.post(self.url, {"type": Reaction.Types.LOVE}, format="json")
+            second = self.client.post(self.react_url, {"type": Reaction.Types.LOVE}, format="json")
             self.assertEqual(second.status_code, status.HTTP_200_OK)
-            third = self.client.post(self.url, {"type": Reaction.Types.CLAP}, format="json")
+            third = self.client.post(self.react_url, {"type": Reaction.Types.CLAP}, format="json")
             self.assertEqual(third.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
         finally:
             if original_rate is None:
@@ -120,3 +116,4 @@ class ReactionAPITestCase(APITestCase):
             else:
                 api_settings.DEFAULT_THROTTLE_RATES["reactions"] = original_rate
             api_settings.reload()
+            cache.clear()
