@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Menu, LogOut, Settings2, Search } from 'lucide-react';
+import { Home, Menu, LogOut, Settings2, Search } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import ThemeToggle from '../ui/theme-toggle.jsx';
 import { Button } from '../ui/button.jsx';
@@ -108,6 +108,25 @@ function Topbar({
             </motion.div>
           </div>
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="hidden sm:inline-flex"
+              onClick={() => navigate('/')}
+            >
+              Ir al inicio
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="inline-flex sm:hidden"
+              onClick={() => navigate('/')}
+              aria-label="Ir al inicio"
+            >
+              <Home className="h-4 w-4" aria-hidden="true" />
+            </Button>
             {actions}
             <ThemeToggle className="hidden lg:inline-flex" />
             {isAuthenticated ? (
