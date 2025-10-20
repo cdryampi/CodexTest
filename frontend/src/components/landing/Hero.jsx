@@ -4,11 +4,21 @@ import Balancer from 'react-wrap-balancer';
 import { Link } from 'react-router-dom';
 import { Button } from '../ui/button.jsx';
 import { getHeroImage } from '../../lib/img.js';
+import HeroSkeleton from '../skeleton/HeroSkeleton.jsx';
 
 const MotionButton = motion(Button);
 
-function Hero() {
-  const heroImage = useMemo(() => getHeroImage('landing', 1280, 720), []);
+function Hero({ isLoading = false }) {
+  const heroImage = useMemo(() => {
+    if (isLoading) {
+      return null;
+    }
+    return getHeroImage('landing', 1280, 720);
+  }, [isLoading]);
+
+  if (isLoading) {
+    return <HeroSkeleton />;
+  }
 
   return (
     <section
@@ -32,8 +42,7 @@ function Hero() {
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-slate-600 dark:text-slate-300">
             <Balancer>
-              Aprende a construir interfaces modernas, anima tus componentes con Framer Motion y aplica patrones productivos sin
-              perder la accesibilidad. Cada artículo llega con ejemplos listos para producción.
+              Aprende a construir interfaces modernas, anima tus componentes con Framer Motion y aplica patrones productivos sin perder la accesibilidad. Cada artículo llega con ejemplos listos para producción.
             </Balancer>
           </p>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center lg:justify-start">
