@@ -533,6 +533,43 @@ export async function listPosts(params = {}) {
   }
 }
 
+
+export async function listLatestPosts(params = {}) {
+  const { limit = 6 } = params ?? {};
+  const parsedLimit = Number.parseInt(limit, 10);
+  const pageSize = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 12) : 6;
+
+  const requestParams = {
+    page: 1,
+    page_size: pageSize,
+    ordering: '-date'
+  };
+
+  try {
+    const response = await api.get('posts/', {
+      params: requestParams,
+      paramsSerializer
+    });
+    const payload = response.data ?? {};
+    const results = Array.isArray(payload.results) ? payload.results.map(normalizePostResult) : [];
+    return results.slice(0, pageSize);
+  } catch (error) {
+    if (import.meta.env?.DEV) {
+      console.info('Fallo al listar posts recientes desde la API, usando datos mock.', error);
+    }
+    const fallback = buildMockPostsResponse({
+      page: 1,
+      pageSize,
+      search: '',
+      ordering: '-date',
+      category: undefined,
+      tags: [],
+      status: 'all'
+    });
+    return Array.isArray(fallback.results) ? fallback.results.slice(0, pageSize) : [];
+  }
+}
+
 export async function getPost(slug) {
   if (!slug) {
     throw new Error('Debes indicar el slug del post.');

@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
 import Home from './pages/Home.jsx';
+import Landing from './pages/Landing.jsx';
 import Post from './pages/Post.jsx';
 import NotFound from './pages/NotFound.jsx';
 import Timeline from './pages/Timeline.jsx';
@@ -56,7 +57,8 @@ function App() {
       <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
       <Routes>
         <Route element={<SiteLayout />}>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Landing />} />
+          <Route path="/blog" element={<Home />} />
           <Route path="/timeline" element={<Timeline />} />
           <Route path="/post/:slug" element={<Post />} />
           <Route path="/login" element={<Login />} />
