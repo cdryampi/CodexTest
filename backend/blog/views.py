@@ -12,6 +12,7 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
+from .filters import PostFilterSet
 from .models import Category, Comment, Post, Reaction
 from .serializers import (
     CategorySerializer,
@@ -38,8 +39,13 @@ class PostViewSet(
     )
     lookup_field = "slug"
     lookup_url_kwarg = "slug"
-    filterset_fields = ["tags__name", "categories__slug", "categories__name"]
-    search_fields = ["title", "content", "tags__name", "categories__name"]
+    filterset_class = PostFilterSet
+    search_fields = [
+        "translations__title",
+        "translations__content",
+        "tags__translations__name",
+        "categories__translations__name",
+    ]
     ordering_fields = ["date", "created_at", "title"]
     ordering = ["-date"]
     permission_classes = [IsAuthenticatedOrReadOnly]

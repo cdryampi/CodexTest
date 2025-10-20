@@ -9,3 +9,4 @@ class BlogConfig(AppConfig):
         super().ready()
         # Import signal handlers to enable post-migrate seeding when configured.
         from . import signals  # noqa: F401
+
