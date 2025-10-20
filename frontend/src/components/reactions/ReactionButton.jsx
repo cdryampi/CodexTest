@@ -52,7 +52,6 @@ const ReactionButton = forwardRef(function ReactionButton(
     >
       <span aria-hidden="true" className="text-lg leading-none">
         {emoji}
-      }
       </span>
       <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
         {count}
