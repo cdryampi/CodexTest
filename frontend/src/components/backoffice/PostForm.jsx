@@ -12,12 +12,15 @@ import TextareaField from '../forms/Textarea.jsx';
 import SelectField from '../forms/Select.jsx';
 import MultiSelectField from '../forms/MultiSelect.jsx';
 import { Button } from '../ui/button.jsx';
+import TranslateButton from '../ai-translate/TranslateButton.jsx';
+import TranslateModal from '../ai-translate/TranslateModal.jsx';
 import {
   listCategories,
   listTags,
   getPost,
   createPost,
-  updatePost
+  updatePost,
+  updatePostTranslation
 } from '../../services/api.js';
 
 const tagOptionSchema = z.object({
@@ -143,8 +146,10 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
   const [tagOptions, setTagOptions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [contentError, setContentError] = useState(null);
+  const [translateModalOpen, setTranslateModalOpen] = useState(false);
 
   const titleValue = watch('title');
+  const excerptValue = watch('excerpt');
   const slugValue = watch('slug');
   const contentValue = watch('content');
   const statusValue = watch('status');
@@ -263,6 +268,43 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
     }
   }, [contentValue]);
 
+  const handleApplyTranslation = useCallback((lang, translatedFields) => {
+    if (!translatedFields || typeof translatedFields !== 'object') {
+      return;
+    }
+    Object.entries(translatedFields).forEach(([key, value]) => {
+      if (typeof value !== 'string') {
+        return;
+      }
+      if (['title', 'excerpt', 'content', 'slug'].includes(key)) {
+        setValue(key, value, { shouldDirty: true, shouldValidate: true });
+        if (key === 'content') {
+          setContentError(null);
+        }
+      }
+    });
+  }, [setValue]);
+
+  const handleSaveTranslation = useCallback(async (lang, translatedFields) => {
+    if (mode !== 'edit') {
+      throw new Error('Debes guardar el post antes de enviar traducciones al backend.');
+    }
+    const postSlug = (slug ?? slugValue ?? '').trim();
+    if (!postSlug) {
+      throw new Error('Necesitas un slug válido para guardar la traducción.');
+    }
+    const payload = {};
+    ['title', 'excerpt', 'content', 'slug'].forEach((key) => {
+      if (translatedFields && Object.prototype.hasOwnProperty.call(translatedFields, key)) {
+        const value = translatedFields[key];
+        if (value !== undefined) {
+          payload[key] = value;
+        }
+      }
+    });
+    await updatePostTranslation(postSlug, lang, payload);
+  }, [mode, slug, slugValue]);
+
   const handleCreateTag = (inputValue) => {
     const value = inputValue.trim();
     if (!value) {
@@ -327,6 +369,13 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
   };
 
   const displayedContentError = errors?.content?.message ?? contentError;
+  const translationFields = {
+    title: titleValue ?? '',
+    excerpt: excerptValue ?? '',
+    content: contentValue ?? '',
+    slug: slugValue ?? ''
+  };
+  const postIdentifier = slug ?? slugValue ?? '';
 
   if (isLoading) {
     return (
@@ -337,8 +386,22 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+    <>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
       <div className="space-y-6 rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/70">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Contenido principal</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Genera traducciones a inglés o catalán sin salir del formulario.</p>
+          </div>
+          <TranslateButton
+            onClick={() => setTranslateModalOpen(true)}
+            disabled={!titleValue?.trim()}
+            tooltip={!titleValue?.trim() ? 'Completa el título antes de traducir.' : 'Abrir asistente de traducción.'}
+          >
+            Asistente IA
+          </TranslateButton>
+        </div>
         <div className="grid gap-6 lg:grid-cols-2">
           <InputField
             control={control}
@@ -470,6 +533,18 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
         </Button>
       </div>
     </form>
+      <TranslateModal
+        open={translateModalOpen}
+        onOpenChange={setTranslateModalOpen}
+        entityType="post"
+        idOrSlug={postIdentifier || null}
+        fields={translationFields}
+        currentLang="es"
+        allowSave={mode === 'edit' && Boolean(postIdentifier)}
+        onApply={handleApplyTranslation}
+        onSave={mode === 'edit' ? handleSaveTranslation : undefined}
+      />
+    </>
   );
 }
 

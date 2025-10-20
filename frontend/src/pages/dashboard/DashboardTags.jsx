@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal } from 'flowbite-react';
 import slugify from 'slugify';
 import { toast } from 'sonner';
@@ -8,8 +8,10 @@ import {
   useDashboardStore,
   selectTagsState
 } from '../../store/dashboard.js';
-import { listTags, createTag, updateTag, deleteTag } from '../../services/api.js';
+import { listTags, createTag, updateTag, deleteTag, updateTagTranslation } from '../../services/api.js';
 import { Button } from '../../components/ui/button.jsx';
+import TranslateButton from '../../components/ai-translate/TranslateButton.jsx';
+import TranslateModal from '../../components/ai-translate/TranslateModal.jsx';
 import { Input } from '../../components/ui/input.jsx';
 import ConfirmModal from '../../components/backoffice/ConfirmModal.jsx';
 
@@ -43,8 +45,9 @@ function DashboardTags() {
 
   const [tags, setTags] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [modalState, setModalState] = useState({ open: false, mode: 'create', id: null, value: '' });
+  const [modalState, setModalState] = useState({ open: false, mode: 'create', id: null, slug: null, value: '' });
   const [deleteState, setDeleteState] = useState({ open: false, id: null, name: '', loading: false });
+  const [translateModalState, setTranslateModalState] = useState({ open: false, identifier: null });
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -80,6 +83,12 @@ function DashboardTags() {
     fetchTags();
   }, []);
 
+  useEffect(() => {
+    if (!modalState.open) {
+      setTranslateModalState({ open: false, identifier: null });
+    }
+  }, [modalState.open]);
+
   const filteredTags = useMemo(() => {
     const searchTerm = tagsState.search.trim().toLowerCase();
     if (!searchTerm) {
@@ -89,12 +98,44 @@ function DashboardTags() {
   }, [tags, tagsState.search]);
 
   const openEditModal = (tag) => {
-    setModalState({ open: true, mode: 'edit', id: tag.id ?? tag.slug ?? tag.name, value: tag.name ?? '' });
+    setModalState({ open: true, mode: 'edit', id: tag.id ?? tag.slug ?? tag.name, slug: tag.slug ?? tag.id ?? tag.name, value: tag.name ?? '' });
   };
 
   const closeModal = () => {
-    setModalState({ open: false, mode: 'create', id: null, value: '' });
+    setModalState({ open: false, mode: 'create', id: null, slug: null, value: '' });
   };
+
+  const openTranslateAssistant = useCallback(() => {
+    if (modalState.mode !== 'edit') {
+      toast.info('Guarda la etiqueta antes de traducirla.');
+      return;
+    }
+    const identifier = modalState.id ?? modalState.slug ?? modalState.value;
+    if (!identifier) {
+      toast.info('Selecciona una etiqueta válida para traducir.');
+      return;
+    }
+    setTranslateModalState({ open: true, identifier });
+  }, [modalState.id, modalState.mode, modalState.slug, modalState.value, toast]);
+
+  const handleApplyTranslation = useCallback((lang, translatedFields) => {
+    if (!translatedFields || typeof translatedFields !== 'object') {
+      return;
+    }
+    setModalState((prev) => ({
+      ...prev,
+      value: translatedFields.name ?? prev.value,
+      slug: translatedFields.slug ?? prev.slug
+    }));
+  }, []);
+
+  const handleSaveTranslation = useCallback(async (lang, translatedFields) => {
+    const identifier = translateModalState.identifier ?? modalState.id ?? modalState.slug ?? modalState.value;
+    if (!identifier) {
+      throw new Error('Selecciona una etiqueta existente antes de guardar la traducción.');
+    }
+    await updateTagTranslation(identifier, lang, translatedFields);
+  }, [modalState.id, modalState.slug, modalState.value, translateModalState.identifier]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -163,6 +204,14 @@ function DashboardTags() {
   const computedSlug = useMemo(
     () => slugify(modalState.value || '', { lower: true, strict: true }),
     [modalState.value]
+  );
+
+  const tagTranslationFields = useMemo(
+    () => ({
+      name: modalState.value ?? '',
+      slug: modalState.slug ?? computedSlug ?? ''
+    }),
+    [modalState.slug, modalState.value, computedSlug]
   );
 
   return (
@@ -255,10 +304,20 @@ function DashboardTags() {
         initialFocus={inputRef.current ?? undefined}
         aria-labelledby="tag-modal-title"
       >
-        <Modal.Header>
+        <Modal.Header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 id="tag-modal-title" className="text-lg font-semibold text-slate-900 dark:text-white">
             {modalState.mode === 'edit' ? 'Editar etiqueta' : 'Nueva etiqueta'}
           </h2>
+          {modalState.mode === 'edit' ? (
+            <TranslateButton
+              size="sm"
+              onClick={openTranslateAssistant}
+              disabled={!modalState.value?.trim()}
+              tooltip={!modalState.value?.trim() ? 'Completa el nombre antes de traducir.' : 'Abrir asistente de traducción.'}
+            >
+              Traducir
+            </TranslateButton>
+          ) : null}
         </Modal.Header>
         <form onSubmit={handleSubmit}>
           <Modal.Body className="space-y-3">
@@ -289,6 +348,17 @@ function DashboardTags() {
         </form>
       </Modal>
 
+      <TranslateModal
+        open={translateModalState.open}
+        onOpenChange={(open) => setTranslateModalState((prev) => ({ ...prev, open }))}
+        entityType="tag"
+        idOrSlug={translateModalState.identifier}
+        fields={tagTranslationFields}
+        currentLang="es"
+        allowSave={Boolean(translateModalState.identifier)}
+        onApply={handleApplyTranslation}
+        onSave={handleSaveTranslation}
+      />
       <ConfirmModal
         open={deleteState.open}
         title="¿Eliminar etiqueta?"

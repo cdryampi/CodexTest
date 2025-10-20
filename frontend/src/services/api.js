@@ -1071,4 +1071,91 @@ export async function getDashboardStats() {
   }
 }
 
+
+export const generateLocalizedSlug = (title, options = {}) => {
+  const base = typeof title === 'string' ? title : '';
+  return slugify(base, {
+    lower: true,
+    strict: true,
+    trim: true,
+    ...options
+  });
+};
+
+const normalizeLangParam = (lang) => (lang ?? '').toString().trim().toLowerCase();
+
+const filterTranslatablePayload = (payload, allowedKeys) => {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  return allowedKeys.reduce((accumulator, key) => {
+    if (Object.prototype.hasOwnProperty.call(source, key)) {
+      const value = source[key];
+      if (value !== undefined) {
+        accumulator[key] = value;
+      }
+    }
+    return accumulator;
+  }, {});
+};
+
+export async function updatePostTranslation(slug, lang, payload = {}) {
+  const normalizedSlug = (slug ?? '').toString().trim();
+  if (!normalizedSlug) {
+    throw new Error('Debes indicar el slug del post a traducir.');
+  }
+  const normalizedLang = normalizeLangParam(lang);
+  if (!normalizedLang) {
+    throw new Error('Selecciona un idioma válido para la traducción.');
+  }
+  const body = filterTranslatablePayload(payload, ['title', 'excerpt', 'content', 'slug']);
+  try {
+    const response = await api.put(`posts/${normalizedSlug}/`, body, {
+      params: { lang: normalizedLang }
+    });
+    return response.data;
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
+export async function updateCategoryTranslation(id, lang, payload = {}) {
+  const normalizedId = (id ?? '').toString().trim();
+  if (!normalizedId) {
+    throw new Error('Debes indicar la categoría a traducir.');
+  }
+  const normalizedLang = normalizeLangParam(lang);
+  if (!normalizedLang) {
+    throw new Error('Selecciona un idioma válido para la traducción.');
+  }
+  const body = filterTranslatablePayload(payload, ['name', 'description', 'slug']);
+  try {
+    const response = await api.put(`categories/${normalizedId}/`, body, {
+      params: { lang: normalizedLang }
+    });
+    return response.data;
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
+export async function updateTagTranslation(id, lang, payload = {}) {
+  const normalizedId = (id ?? '').toString().trim();
+  if (!normalizedId) {
+    throw new Error('Debes indicar la etiqueta a traducir.');
+  }
+  const normalizedLang = normalizeLangParam(lang);
+  if (!normalizedLang) {
+    throw new Error('Selecciona un idioma válido para la traducción.');
+  }
+  const body = filterTranslatablePayload(payload, ['name', 'slug']);
+  try {
+    const response = await api.put(`tags/${normalizedId}/`, body, {
+      params: { lang: normalizedLang }
+    });
+    return response.data;
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
+
 export default api;
