@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from django.contrib import admin
 
-from .models import Category, Post, Tag
+from .models import Category, Post, Reaction, Tag
 
 
 @admin.register(Category)
@@ -38,3 +38,12 @@ class PostAdmin(admin.ModelAdmin):
     ordering = ["-date"]
     prepopulated_fields = {"slug": ("title",)}
     date_hierarchy = "date"
+
+
+@admin.register(Reaction)
+class ReactionAdmin(admin.ModelAdmin):
+    list_display = ["content_type", "object_id", "user", "type", "created_at"]
+    list_filter = ["content_type", "type", "user"]
+    search_fields = ["user__username", "user__email", "content_type__model"]
+    autocomplete_fields = ["user"]
+    readonly_fields = ["created_at"]

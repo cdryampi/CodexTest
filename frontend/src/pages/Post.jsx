@@ -12,6 +12,7 @@ import { getPost, listComments } from '../api';
 import CommentsSection from '../components/CommentsSection';
 import Skeleton from '../components/common/Skeleton';
 import ReadingProgress from '../components/post/ReadingProgress';
+import ReactionBar from '../components/reactions/ReactionBar.jsx';
 import {
   buildPageTitle,
   DEFAULT_OG_IMAGE,
@@ -317,6 +318,8 @@ function Post() {
             ))}
           </div>
         ) : null}
+
+        <ReactionBar slug={slug} className="mt-4" />
   
         <section className="space-y-6 text-lg leading-relaxed text-slate-700 dark:text-slate-300">
           {paragraphs.map((paragraph, index) => (

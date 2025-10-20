@@ -7,7 +7,7 @@ from typing import Iterable
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Category, Comment, Post, Tag
+from .models import Category, Comment, Post, Reaction, Tag
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -285,4 +285,33 @@ class CommentSerializer(serializers.ModelSerializer):
         if len(cleaned) < 5:
             raise serializers.ValidationError("El comentario debe tener al menos 5 caracteres.")
         return cleaned
+
+
+class ReactionSerializer(serializers.ModelSerializer):
+    """Public representation of a reaction."""
+
+    user = UserPublicSerializer(read_only=True)
+
+    class Meta:
+        model = Reaction
+        fields = ["id", "user", "type", "created_at"]
+        read_only_fields = ["id", "user", "created_at", "type"]
+
+
+class ReactionToggleSerializer(serializers.Serializer):
+    """Serializer validating the incoming reaction type for toggling."""
+
+    type = serializers.ChoiceField(choices=Reaction.Types.choices)
+
+
+class ReactionSummarySerializer(serializers.Serializer):
+    """Aggregate representation of reactions for a content object."""
+
+    counts = serializers.DictField(child=serializers.IntegerField(min_value=0), default=dict)
+    total = serializers.IntegerField(min_value=0)
+    my_reaction = serializers.ChoiceField(
+        choices=Reaction.Types.choices,
+        allow_null=True,
+        required=False,
+    )
 
