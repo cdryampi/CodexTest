@@ -1,11 +1,13 @@
 """Serializers for the blog API."""
 from __future__ import annotations
 
+from collections import OrderedDict
 from datetime import date as date_cls, datetime
 from typing import Iterable
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
 
 from .models import Category, Comment, Post, Reaction, Tag
@@ -13,15 +15,88 @@ from .utils.i18n import set_parler_language, slugify_localized
 from parler.utils.context import switch_language
 
 
-class CategorySerializer(serializers.ModelSerializer):
+class _TranslationAwareSerializer(TranslatableModelSerializer):
+    """Base serializer that exposes parler translations when requested."""
+
+    translations = serializers.SerializerMethodField()
+
+    def _language_code(self) -> str:
+        request = self.context.get("request")
+        if request is not None and hasattr(request, "LANGUAGE_CODE"):
+            return request.LANGUAGE_CODE
+        return self.context.get("language_code", settings.LANGUAGE_CODE)
+
+    def _should_expand_translations(self) -> bool:
+        request = self.context.get("request")
+        if request is None:
+            return bool(self.context.get("expand_translations"))
+
+        params = getattr(request, "query_params", None) or getattr(request, "GET", None)
+        if not params:
+            return False
+
+        values: list[str] = []
+        if hasattr(params, "getlist"):
+            values.extend(params.getlist("expand"))
+        else:  # pragma: no cover - legacy mapping fallback
+            expand_value = params.get("expand")
+            if expand_value:
+                values.append(expand_value)
+
+        for raw_value in values:
+            if not raw_value:
+                continue
+            normalized = [part.strip() for part in raw_value.split(",") if part.strip()]
+            for part in normalized:
+                if part.lower() == "translations":
+                    return True
+                if part.lower().startswith("translations="):
+                    flag = part.split("=", 1)[1].lower()
+                    if flag in {"1", "true", "yes"}:
+                        return True
+        return False
+
+    def to_representation(self, instance):  # type: ignore[override]
+        data = super().to_representation(instance)
+        if not self._should_expand_translations():
+            data.pop("translations", None)
+        return data
+
+    def get_translations(self, instance):
+        if not self._should_expand_translations():
+            return None
+
+        translated_fields = getattr(instance._parler_meta, "get_translated_fields", lambda: [])()
+        language_codes = [code for code, _ in getattr(settings, "LANGUAGES", ())]
+        if not language_codes:
+            language_codes = [self._language_code()]
+
+        result = OrderedDict()
+        for language_code in language_codes:
+            with switch_language(instance, language_code):
+                result[language_code] = {
+                    field_name: getattr(instance, field_name)
+                    for field_name in translated_fields
+                }
+        return result
+
+
+class CategorySerializer(_TranslationAwareSerializer):
     """Public representation of a blog category."""
 
     post_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = ["name", "slug", "description", "is_active", "post_count"]
-        read_only_fields = ["slug", "post_count"]
+        fields = [
+            "name",
+            "slug",
+            "description",
+            "is_active",
+            "post_count",
+            "translations",
+        ]
+        read_only_fields = ["slug", "post_count", "translations"]
 
     def get_post_count(self, obj: Category) -> int:
         """Return the number of posts associated with the category.
@@ -66,7 +141,11 @@ class TagNameField(serializers.SlugRelatedField):
         if not value:
             raise serializers.ValidationError("Este campo no puede estar vacío.")
 
-        language_code = settings.LANGUAGE_CODE
+        request = self.context.get("request")
+        if request is not None and hasattr(request, "LANGUAGE_CODE"):
+            language_code = request.LANGUAGE_CODE
+        else:
+            language_code = self.context.get("language_code", settings.LANGUAGE_CODE)
         existing = (
             Tag.objects.language(language_code)
             .filter(name__iexact=value)
@@ -127,7 +206,9 @@ class _PostCategoryRepresentationMixin:
         return data
 
 
-class PostListSerializer(_PostCategoryRepresentationMixin, serializers.ModelSerializer):
+class PostListSerializer(
+    _PostCategoryRepresentationMixin, _TranslationAwareSerializer
+):
     """Compact serializer for listing posts."""
 
     tags = serializers.SlugRelatedField(many=True, read_only=True, slug_field="name")
@@ -149,6 +230,7 @@ class PostListSerializer(_PostCategoryRepresentationMixin, serializers.ModelSeri
             "categories_detail",
             "created_at",
             "image",
+            "translations",
         ]
         read_only_fields = [
             "id",
@@ -157,6 +239,7 @@ class PostListSerializer(_PostCategoryRepresentationMixin, serializers.ModelSeri
             "image",
             "categories",
             "categories_detail",
+            "translations",
         ]
 
     def to_representation(self, instance):  # type: ignore[override]
@@ -179,7 +262,9 @@ class PostListSerializer(_PostCategoryRepresentationMixin, serializers.ModelSeri
         return self._serialize_date(getattr(instance, "date", None))
 
 
-class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSerializer):
+class PostDetailSerializer(
+    _PostCategoryRepresentationMixin, _TranslationAwareSerializer
+):
     """Detailed serializer for retrieving and creating posts."""
 
     title = serializers.CharField()
@@ -215,6 +300,7 @@ class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSe
             "imageAlt",
             "author",
             "date",
+            "translations",
         ]
         read_only_fields = [
             "id",
@@ -222,6 +308,7 @@ class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSe
             "created_at",
             "updated_at",
             "categories_detail",
+            "translations",
         ]
 
     def get_created_at(self, obj: Post):
@@ -260,9 +347,10 @@ class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSe
     def create(self, validated_data):
         tags = validated_data.pop("tags", [])
         categories = validated_data.pop("categories", [])
-        with set_parler_language(settings.LANGUAGE_CODE):
+        language_code = self._language_code()
+        with set_parler_language(language_code):
             post = Post.objects.create(**validated_data)
-            post.set_current_language(settings.LANGUAGE_CODE)
+            post.set_current_language(language_code)
         self._set_tags(post, tags)
         self._set_categories(post, categories)
         return post
@@ -270,9 +358,10 @@ class PostDetailSerializer(_PostCategoryRepresentationMixin, serializers.ModelSe
     def update(self, instance, validated_data):
         tags = validated_data.pop("tags", None)
         categories = validated_data.pop("categories", None)
-        with set_parler_language(settings.LANGUAGE_CODE):
+        language_code = self._language_code()
+        with set_parler_language(language_code):
             if hasattr(instance, "set_current_language"):
-                instance.set_current_language(settings.LANGUAGE_CODE)
+                instance.set_current_language(language_code)
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
             instance.save()

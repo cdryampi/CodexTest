@@ -35,6 +35,19 @@ def get_active_language(request) -> str:
             if lang_from_query in supported:
                 return lang_from_query
 
+        content_language = None
+        if hasattr(request, "headers"):
+            content_language = request.headers.get("Content-Language")
+        elif hasattr(request, "META"):
+            content_language = request.META.get("HTTP_CONTENT_LANGUAGE")
+        if content_language:
+            content_language = content_language.strip()
+            if content_language in supported:
+                return content_language
+            normalized = content_language.split("-", 1)[0]
+            if normalized in supported:
+                return normalized
+
         negotiated = translation.get_language_from_request(request, check_path=False)
         if negotiated in supported:
             return negotiated
