@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+from django.conf import settings
 from django.db.models import Count, F, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiResponse,
+    OpenApiTypes,
+    extend_schema,
+    extend_schema_view,
+)
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
@@ -22,7 +30,278 @@ from .serializers import (
     ReactionSummarySerializer,
     ReactionToggleSerializer,
 )
+from .utils.i18n import get_active_language, set_parler_language
+
+
+class LanguageNegotiationMixin:
+    """Resolve the active language and expose it to serializers and responses."""
+
+    language_code: str = settings.LANGUAGE_CODE
+
+    def initial(self, request, *args, **kwargs):  # type: ignore[override]
+        self.language_code = get_active_language(request)
+        self._language_context = set_parler_language(self.language_code)
+        self._language_context.__enter__()
+        if request is not None:
+            setattr(request, "LANGUAGE_CODE", self.language_code)
+        return super().initial(request, *args, **kwargs)
+
+    def finalize_response(self, request, response, *args, **kwargs):  # type: ignore[override]
+        response = super().finalize_response(request, response, *args, **kwargs)
+        if response is not None and self.language_code:
+            response["Content-Language"] = self.language_code
+        language_context = getattr(self, "_language_context", None)
+        if language_context is not None:
+            language_context.__exit__(None, None, None)
+            setattr(self, "_language_context", None)
+        return response
+
+    def get_serializer_context(self):  # type: ignore[override]
+        context = super().get_serializer_context()
+        context["language_code"] = self.language_code
+        return context
+
+    def apply_language(self, queryset):
+        return queryset
+
+
+LANGUAGE_CODES = [code for code, _name in getattr(settings, "LANGUAGES", ())]
+
+LANGUAGE_QUERY_PARAMETER = OpenApiParameter(
+    name="lang",
+    type=OpenApiTypes.STR,
+    location=OpenApiParameter.QUERY,
+    required=False,
+    enum=LANGUAGE_CODES,
+    description=(
+        "Forzar el idioma activo de la respuesta. Si no se especifica se utiliza "
+        "el idioma negociado automáticamente."
+    ),
+)
+
+EXPAND_TRANSLATIONS_PARAMETER = OpenApiParameter(
+    name="expand",
+    type=OpenApiTypes.STR,
+    location=OpenApiParameter.QUERY,
+    required=False,
+    description=(
+        "Incluye `translations` con todas las variantes disponibles cuando se "
+        "proporciona `expand=translations` o `expand=translations=true`."
+    ),
+)
+
+ACCEPT_LANGUAGE_HEADER = OpenApiParameter(
+    name="Accept-Language",
+    type=OpenApiTypes.STR,
+    location=OpenApiParameter.HEADER,
+    required=False,
+    description="Cabecera HTTP opcional para negociar el idioma de la solicitud.",
+)
+
+CONTENT_LANGUAGE_HEADER = OpenApiParameter(
+    name="Content-Language",
+    type=OpenApiTypes.STR,
+    location=OpenApiParameter.HEADER,
+    required=False,
+    description="Idioma utilizado en el cuerpo de la respuesta.",
+)
+
+POST_LIST_PLAIN_EXAMPLE = OpenApiExample(
+    "Listado en modo plano",
+    value={
+        "count": 1,
+        "next": None,
+        "previous": None,
+        "results": [
+            {
+                "id": 1,
+                "title": "Optimiza el renderizado en React",
+                "slug": "optimiza-el-renderizado-en-react",
+                "excerpt": "Mejora el rendimiento renderizando solo lo necesario...",
+                "tags": ["react", "performance"],
+                "categories": ["frontend"],
+                "categories_detail": [
+                    {
+                        "name": "Frontend",
+                        "slug": "frontend",
+                        "description": "Noticias y tutoriales sobre UI",
+                        "is_active": True,
+                        "post_count": 4,
+                    }
+                ],
+                "created_at": "2024-02-01",
+                "image": "https://cdn.example.com/posts/react.png",
+            }
+        ],
+    },
+    response_only=True,
+)
+
+POST_LIST_EXPANDED_EXAMPLE = OpenApiExample(
+    "Listado con traducciones",
+    value={
+        "count": 1,
+        "next": None,
+        "previous": None,
+        "results": [
+            {
+                "id": 1,
+                "title": "Optimiza el renderizado en React",
+                "slug": "optimiza-el-renderizado-en-react",
+                "excerpt": "Mejora el rendimiento renderizando solo lo necesario...",
+                "tags": ["react", "performance"],
+                "categories": ["frontend"],
+                "categories_detail": [],
+                "created_at": "2024-02-01",
+                "image": "https://cdn.example.com/posts/react.png",
+                "translations": {
+                    "es": {
+                        "title": "Optimiza el renderizado en React",
+                        "slug": "optimiza-el-renderizado-en-react",
+                        "excerpt": "Mejora el rendimiento renderizando solo lo necesario...",
+                    },
+                    "en": {
+                        "title": "Optimize rendering in React",
+                        "slug": "optimize-rendering-in-react",
+                        "excerpt": "Improve performance by rendering only what's needed...",
+                    },
+                },
+            }
+        ],
+    },
+    response_only=True,
+)
+
+POST_DETAIL_PLAIN_EXAMPLE = OpenApiExample(
+    "Detalle en modo plano",
+    value={
+        "id": 1,
+        "title": "Optimiza el renderizado en React",
+        "slug": "optimiza-el-renderizado-en-react",
+        "excerpt": "Mejora el rendimiento renderizando solo lo necesario...",
+        "content": "Contenido largo en español...",
+        "tags": ["react", "performance"],
+        "categories": ["frontend"],
+        "categories_detail": [],
+        "created_at": "2024-02-01",
+        "updated_at": "2024-02-01",
+        "image": "https://cdn.example.com/posts/react.png",
+        "thumb": "https://cdn.example.com/posts/react-thumb.png",
+        "imageAlt": "Ilustración de componentes React",
+        "author": "Codex Team",
+        "date": "2024-02-01",
+    },
+    response_only=True,
+)
+
+POST_DETAIL_EXPANDED_EXAMPLE = OpenApiExample(
+    "Detalle con traducciones",
+    value={
+        "id": 1,
+        "title": "Optimiza el renderizado en React",
+        "slug": "optimiza-el-renderizado-en-react",
+        "excerpt": "Mejora el rendimiento renderizando solo lo necesario...",
+        "content": "Contenido largo en español...",
+        "tags": ["react", "performance"],
+        "categories": ["frontend"],
+        "categories_detail": [
+            {
+                "name": "Frontend",
+                "slug": "frontend",
+                "description": "Noticias y tutoriales sobre UI",
+                "is_active": True,
+                "post_count": 4,
+            }
+        ],
+        "created_at": "2024-02-01",
+        "updated_at": "2024-02-01",
+        "image": "https://cdn.example.com/posts/react.png",
+        "thumb": "https://cdn.example.com/posts/react-thumb.png",
+        "imageAlt": "Ilustración de componentes React",
+        "author": "Codex Team",
+        "date": "2024-02-01",
+        "translations": {
+            "es": {
+                "title": "Optimiza el renderizado en React",
+                "slug": "optimiza-el-renderizado-en-react",
+                "excerpt": "Mejora el rendimiento renderizando solo lo necesario...",
+                "content": "Contenido largo en español...",
+            },
+            "en": {
+                "title": "Optimize rendering in React",
+                "slug": "optimize-rendering-in-react",
+                "excerpt": "Improve performance by rendering only what's needed...",
+                "content": "Long form content in English...",
+            },
+        },
+    },
+    response_only=True,
+)
+
+TRANSLATED_RESPONSE_DESCRIPTION = (
+    "Respuesta localizada. El header `Content-Language` indica el idioma servido."
+)
+
+
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            LANGUAGE_QUERY_PARAMETER,
+            EXPAND_TRANSLATIONS_PARAMETER,
+            ACCEPT_LANGUAGE_HEADER,
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=PostListSerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+                examples=[POST_LIST_PLAIN_EXAMPLE, POST_LIST_EXPANDED_EXAMPLE],
+            )
+        },
+    ),
+    retrieve=extend_schema(
+        parameters=[
+            LANGUAGE_QUERY_PARAMETER,
+            EXPAND_TRANSLATIONS_PARAMETER,
+            ACCEPT_LANGUAGE_HEADER,
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=PostDetailSerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+                examples=[POST_DETAIL_PLAIN_EXAMPLE, POST_DETAIL_EXPANDED_EXAMPLE],
+            )
+        },
+    ),
+    create=extend_schema(
+        parameters=[LANGUAGE_QUERY_PARAMETER, ACCEPT_LANGUAGE_HEADER],
+        responses={
+            201: OpenApiResponse(
+                response=PostDetailSerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+    update=extend_schema(
+        parameters=[LANGUAGE_QUERY_PARAMETER, ACCEPT_LANGUAGE_HEADER],
+        responses={
+            200: OpenApiResponse(
+                response=PostDetailSerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+    partial_update=extend_schema(
+        parameters=[LANGUAGE_QUERY_PARAMETER, ACCEPT_LANGUAGE_HEADER],
+        responses={
+            200: OpenApiResponse(
+                response=PostDetailSerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+)
 class PostViewSet(
+    LanguageNegotiationMixin,
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -62,7 +341,14 @@ class PostViewSet(
         category_slug = self.request.query_params.get("category")
         if category_slug:
             queryset = queryset.filter(categories__slug__iexact=category_slug)
-        return queryset
+        return self.apply_language(queryset)
+
+    def filter_queryset(self, queryset):  # type: ignore[override]
+        queryset = super().filter_queryset(queryset)
+        search_term = (self.request.query_params.get("search") or "").strip()
+        if search_term:
+            queryset = queryset.filter(translations__language_code=self.language_code)
+        return queryset.distinct()
 
     def get_serializer_class(self):  # type: ignore[override]
         if self.action == "list":
@@ -209,7 +495,63 @@ class PostViewSet(
         return Response(summary)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            LANGUAGE_QUERY_PARAMETER,
+            EXPAND_TRANSLATIONS_PARAMETER,
+            ACCEPT_LANGUAGE_HEADER,
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=CategorySerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+    retrieve=extend_schema(
+        parameters=[
+            LANGUAGE_QUERY_PARAMETER,
+            EXPAND_TRANSLATIONS_PARAMETER,
+            ACCEPT_LANGUAGE_HEADER,
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=CategorySerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+    create=extend_schema(
+        parameters=[LANGUAGE_QUERY_PARAMETER, ACCEPT_LANGUAGE_HEADER],
+        responses={
+            201: OpenApiResponse(
+                response=CategorySerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+    update=extend_schema(
+        parameters=[LANGUAGE_QUERY_PARAMETER, ACCEPT_LANGUAGE_HEADER],
+        responses={
+            200: OpenApiResponse(
+                response=CategorySerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+    partial_update=extend_schema(
+        parameters=[LANGUAGE_QUERY_PARAMETER, ACCEPT_LANGUAGE_HEADER],
+        responses={
+            200: OpenApiResponse(
+                response=CategorySerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+)
 class CategoryViewSet(
+    LanguageNegotiationMixin,
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -225,7 +567,7 @@ class CategoryViewSet(
     ordering = ["name"]
 
     def get_queryset(self):
-        queryset = Category.objects.all()
+        queryset = self.apply_language(Category.objects.all())
         params = self.request.query_params
         search_term = params.get("q")
         if search_term:
@@ -234,6 +576,7 @@ class CategoryViewSet(
                 Q(name__icontains=search_term)
                 | Q(description__icontains=search_term)
             )
+            queryset = queryset.filter(translations__language_code=self.language_code)
 
         is_active = params.get("is_active")
         if is_active is not None:
@@ -250,7 +593,12 @@ class CategoryViewSet(
         return queryset.order_by(*self.ordering).distinct()
 
 
-class CommentViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+class CommentViewSet(
+    LanguageNegotiationMixin,
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
     """Manage comments nested under posts."""
 
     serializer_class = CommentSerializer
