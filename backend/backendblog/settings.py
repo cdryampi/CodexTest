@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "django_filters",
     "drf_spectacular",
+    "parler",
+    "parler_rest",
     "dj_rest_auth",
     "dj_rest_auth.registration",
     "allauth",
@@ -75,6 +77,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -147,9 +150,22 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = "es"
+LANGUAGES = (
+    ("es", "Español"),
+    ("en", "English"),
+)
+I18N_ENABLED = True
 TIME_ZONE = "Europe/Madrid"
 USE_I18N = True
 USE_TZ = True
+PARLER_DEFAULT_LANGUAGE_CODE = LANGUAGE_CODE
+PARLER_LANGUAGES = {
+    1: tuple({"code": code} for code, _name in LANGUAGES),
+    "default": {
+        "fallbacks": [LANGUAGE_CODE],
+        "hide_untranslated": False,
+    },
+}
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"

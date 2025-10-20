@@ -8,6 +8,9 @@ django-jazzmin
 dj-rest-auth
 django-allauth
 djangorestframework-simplejwt
+django-parler
+django-parler-rest
+python-slugify
 requests
 gunicorn
 psycopg2-binary
