@@ -782,6 +782,70 @@ export async function deleteTag(tagId) {
   }
 }
 
+const normalizeReactionSummary = (payload = {}) => {
+  const baseCounts = {
+    like: 0,
+    love: 0,
+    clap: 0,
+    wow: 0,
+    laugh: 0,
+    insight: 0
+  };
+  const incomingCounts =
+    payload && typeof payload === 'object' && payload.counts && typeof payload.counts === 'object'
+      ? payload.counts
+      : {};
+
+  const counts = Object.entries(baseCounts).reduce((acc, [type, defaultValue]) => {
+    const rawValue = incomingCounts?.[type];
+    const parsed = typeof rawValue === 'number' ? rawValue : parseInt(rawValue, 10);
+    acc[type] = Number.isFinite(parsed) && parsed >= 0 ? parsed : defaultValue;
+    return acc;
+  }, {});
+
+  const total = typeof payload.total === 'number' && payload.total >= 0
+    ? payload.total
+    : Object.values(counts).reduce((sum, value) => sum + value, 0);
+
+  const myReaction = typeof payload.my_reaction === 'string' ? payload.my_reaction : null;
+
+  return { counts, total, my_reaction: myReaction };
+};
+
+export async function getPostReactions(slug, options = {}) {
+  if (!slug) {
+    throw new Error('Debes indicar el slug del post para consultar reacciones.');
+  }
+
+  const config = {};
+  if (options.signal) {
+    config.signal = options.signal;
+  }
+
+  try {
+    const response = await api.get(`posts/${slug}/reactions/`, config);
+    return normalizeReactionSummary(response.data ?? {});
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
+export async function togglePostReaction(slug, type) {
+  if (!slug) {
+    throw new Error('Debes indicar el slug del post para registrar la reacción.');
+  }
+  if (!type) {
+    throw new Error('Debes indicar el tipo de reacción.');
+  }
+
+  try {
+    const response = await api.post(`posts/${slug}/reactions/`, { type });
+    return normalizeReactionSummary(response.data ?? {});
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
 export async function listComments(slug, params = {}) {
   if (!slug) {
     throw new Error('Debes indicar el slug del post para listar comentarios.');

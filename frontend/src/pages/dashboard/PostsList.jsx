@@ -7,12 +7,14 @@ import {
   PlusCircleIcon,
   MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
+import { Loader2 } from 'lucide-react';
 import Select from 'react-select';
 import DashboardLayout from './DashboardLayout.jsx';
 import DataTable from '../../components/DataTable.jsx';
 import { listarPosts, eliminarPost } from '../../services/posts.js';
 import { listarCategorias } from '../../services/categories.js';
 import { listarTags } from '../../services/tags.js';
+import { getPostReactions } from '../../services/api.js';
 import toast from 'react-hot-toast';
 import { useUIStore, selectIsDark } from '../../store/useUI';
 
@@ -107,6 +109,7 @@ function PostsList() {
   const [totalItems, setTotalItems] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [postToDelete, setPostToDelete] = useState(null);
+  const [reactionsBySlug, setReactionsBySlug] = useState({});
 
   const fetchTaxonomies = useCallback(async () => {
     try {
@@ -170,6 +173,50 @@ function PostsList() {
   useEffect(() => {
     loadPosts();
   }, [loadPosts]);
+
+  useEffect(() => {
+    if (!Array.isArray(posts) || posts.length === 0) {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    const fetchReactions = async () => {
+      const slugs = posts
+        .map((post) => post.slug ?? post.id ?? '')
+        .filter((slug) => Boolean(slug));
+      const pending = slugs.filter((slug) => !reactionsBySlug[slug]);
+      if (pending.length === 0) {
+        return;
+      }
+      const results = await Promise.allSettled(
+        pending.map((slug) =>
+          getPostReactions(slug, { signal: controller.signal })
+            .then((summary) => ({ slug, summary }))
+            .catch(() => null)
+        )
+      );
+      if (cancelled) {
+        return;
+      }
+      setReactionsBySlug((prev) => {
+        const next = { ...prev };
+        results.forEach((result) => {
+          if (result.status === 'fulfilled' && result.value?.slug && result.value?.summary) {
+            next[result.value.slug] = result.value.summary;
+          }
+        });
+        return next;
+      });
+    };
+
+    fetchReactions();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [posts, reactionsBySlug]);
 
   const columns = useMemo(
     () => [
@@ -240,6 +287,38 @@ function PostsList() {
             {formatDate(row.original.created_at ?? row.original.created ?? row.original.published_at)}
           </span>
         )
+      },
+      {
+        id: 'reactions',
+        header: 'Reacciones',
+        cell: ({ row }) => {
+          const slug = row.original.slug ?? row.original.id;
+          if (!slug) {
+            return <span className="text-sm text-slate-400">—</span>;
+          }
+          const summary = reactionsBySlug[slug];
+          if (!summary) {
+            return <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-hidden="true" />;
+          }
+          const breakdown = [
+            { type: 'like', emoji: '👍' },
+            { type: 'love', emoji: '❤️' },
+            { type: 'clap', emoji: '👏' },
+            { type: 'wow', emoji: '⚡' },
+            { type: 'laugh', emoji: '😄' },
+            { type: 'insight', emoji: '💡' }
+          ]
+            .map((reaction) => `${reaction.emoji} ${summary.counts?.[reaction.type] ?? 0}`)
+            .join(' · ');
+          return (
+            <span
+              className="inline-flex min-w-[2.5rem] justify-center rounded-full bg-slate-100 px-2 py-1 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-200"
+              title={breakdown}
+            >
+              {summary.total ?? 0}
+            </span>
+          );
+        }
       },
       {
         id: 'actions',

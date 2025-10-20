@@ -1,6 +1,9 @@
 """Blog app models."""
 from __future__ import annotations
 
+from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
@@ -120,3 +123,52 @@ class Comment(models.Model):
     def __str__(self) -> str:
         author = self.author_name or "Anónimo"
         return f"{author} en {self.post.title}"
+
+
+class ReactionQuerySet(models.QuerySet):
+    """Custom queryset with helpers for reaction aggregations."""
+
+    def for_instance(self, instance: models.Model) -> "ReactionQuerySet":
+        """Filter reactions for the provided model instance."""
+
+        content_type = ContentType.objects.get_for_model(instance, for_concrete_model=False)
+        return self.filter(content_type=content_type, object_id=instance.pk)
+
+
+class Reaction(models.Model):
+    """Reaction attached to any content object such as posts or comments."""
+
+    class Types(models.TextChoices):
+        LIKE = "like", "Me gusta"
+        LOVE = "love", "Me encanta"
+        CLAP = "clap", "Aplausos"
+        WOW = "wow", "Asombro"
+        LAUGH = "laugh", "Me divierte"
+        INSIGHT = "insight", "Interesante"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="reactions",
+        verbose_name="Usuario",
+    )
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveBigIntegerField()
+    content_object = GenericForeignKey("content_type", "object_id")
+    type = models.CharField("Tipo", max_length=20, choices=Types.choices)
+    created_at = models.DateTimeField("Creado", auto_now_add=True)
+
+    objects = ReactionQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "Reacción"
+        verbose_name_plural = "Reacciones"
+        unique_together = ("user", "content_type", "object_id", "type")
+        indexes = [
+            models.Index(fields=["content_type", "object_id"]),
+            models.Index(fields=["user", "content_type", "object_id"]),
+        ]
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self) -> str:  # pragma: no cover - human readable helper
+        return f"{self.get_type_display()} por {self.user}"
