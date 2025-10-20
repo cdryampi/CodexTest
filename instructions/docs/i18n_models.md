@@ -14,22 +14,18 @@ El resto de atributos (imágenes, fechas, relaciones, estados) se mantienen como
 
 ## Restricciones y optimizaciones
 
-* **Unicidad por idioma**: cada traducción define un índice de unicidad `(language_code, slug)` además del par estándar `(language_code, master)` de parler. Esto garantiza que no se repita un slug dentro del mismo idioma sin limitar las traducciones en otros idiomas.
-* **Índices compuestos**:
-  * `PostTranslation(language_code, title)`
-  * `CategoryTranslation(language_code, name)`
-  * `TagTranslation(language_code, name)`
-
-Estos índices aceleran búsquedas y ordenamientos por campos traducibles en el admin y futuras consultas multi-idioma.
+* **Unicidad por idioma**: la validación de modelos garantiza que no se repita un slug dentro del mismo idioma (`clean()` verifica la ausencia de duplicados antes de guardar). El esquema mantiene la restricción estándar de parler `(language_code, master)` para identificar cada traducción.
+* **Índices**: se trabajan los campos traducibles directamente desde Django sin índices adicionales. Si en el futuro se detecta algún cuello de botella en búsquedas multi-idioma, se podrán añadir `BTree` compuestos específicos mediante una migración dedicada.
 
 ## Migraciones
 
-Se añadieron dos migraciones nuevas en `backend/blog/migrations`:
+Se añadieron migraciones nuevas en `backend/blog/migrations`:
 
-1. `0005_parler_schema.py`: crea las tablas de traducción (`CategoryTranslation`, `PostTranslation`, `TagTranslation`), aplica las restricciones de unicidad y los índices compuestos.
+1. `0005_parler_schema.py`: crea las tablas de traducción (`CategoryTranslation`, `PostTranslation`, `TagTranslation`) y define las relaciones base para trabajar con `TranslatedFields`.
 2. `0006_parler_data_migration.py`: copia los valores existentes al idioma por defecto y elimina las columnas antiguas (`title`, `slug`, `excerpt`, `content`, `name`, `description`). También incluye un camino inverso seguro para restaurar los valores originales en caso de rollback.
+3. `0007_remove_translation_indexes.py`: elimina los índices automáticos generados en la migración estructural y deja únicamente la restricción `(language_code, master)` gestionada por parler.
 
-Ambas migraciones son reversibles y pueden ejecutarse sobre SQLite (modo test) o PostgreSQL.
+Todas las migraciones son reversibles y pueden ejecutarse sobre SQLite (modo test) o PostgreSQL.
 
 ## Administración
 

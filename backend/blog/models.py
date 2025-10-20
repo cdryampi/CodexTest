@@ -6,7 +6,6 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models.signals import class_prepared
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -14,43 +13,6 @@ from parler.managers import TranslatableManager, TranslatableQuerySet
 from parler.models import TranslatableModel, TranslatedFields
 
 from .utils.i18n import slugify_localized
-def _translation_class_prepared(sender, **kwargs) -> None:
-    """Configure parler translation models once they are ready."""
-
-    if sender._meta.app_label != "blog":
-        return
-
-    if sender.__name__ == "CategoryTranslation":
-        sender._meta.indexes = [
-            models.Index(
-                fields=["language_code", "name"],
-                name="category_lang_name_idx",
-            )
-        ]
-    elif sender.__name__ == "TagTranslation":
-        sender._meta.indexes = [
-            models.Index(
-                fields=["language_code", "name"],
-                name="tag_lang_name_idx",
-            )
-        ]
-    elif sender.__name__ == "PostTranslation":
-        sender._meta.indexes = [
-            models.Index(
-                fields=["language_code", "title"],
-                name="post_lang_title_idx",
-            )
-        ]
-    else:
-        return
-
-    sender._meta.unique_together = (
-        ("language_code", "master"),
-        ("language_code", "slug"),
-    )
-
-
-class_prepared.connect(_translation_class_prepared)
 
 
 class TranslationAwareQuerySet(TranslatableQuerySet):
@@ -268,18 +230,6 @@ class Category(TranslatableSlugMixin, TranslatableModel):
         name=models.CharField("Nombre", max_length=150),
         slug=models.SlugField("Slug", max_length=160, blank=True),
         description=models.TextField("Descripción", blank=True),
-        Meta={
-            "unique_together": (
-                ("language_code", "master"),
-                ("language_code", "slug"),
-            ),
-            "indexes": (
-                models.Index(
-                    fields=["language_code", "name"],
-                    name="category_lang_name_idx",
-                ),
-            ),
-        },
     )
     is_active = models.BooleanField("Activa", default=True)
     created_at = models.DateTimeField("Creada", auto_now_add=True)
@@ -314,18 +264,6 @@ class Tag(TranslatableSlugMixin, TranslatableModel):
     translations = TranslatedFields(
         name=models.CharField("Nombre", max_length=100),
         slug=models.SlugField("Slug", max_length=120, blank=True),
-        Meta={
-            "unique_together": (
-                ("language_code", "master"),
-                ("language_code", "slug"),
-            ),
-            "indexes": (
-                models.Index(
-                    fields=["language_code", "name"],
-                    name="tag_lang_name_idx",
-                ),
-            ),
-        },
     )
 
     objects = TranslationAwareManager()
@@ -359,18 +297,6 @@ class Post(TranslatableSlugMixin, TranslatableModel):
         slug=models.SlugField("Slug", max_length=255, blank=True),
         excerpt=models.TextField("Resumen"),
         content=models.TextField("Contenido"),
-        Meta={
-            "unique_together": (
-                ("language_code", "master"),
-                ("language_code", "slug"),
-            ),
-            "indexes": (
-                models.Index(
-                    fields=["language_code", "title"],
-                    name="post_lang_title_idx",
-                ),
-            ),
-        },
     )
     date = models.DateField("Fecha", default=timezone.now)
     image = models.URLField("Imagen")
@@ -406,45 +332,6 @@ class Post(TranslatableSlugMixin, TranslatableModel):
 
     slug_source_field = "title"
     slug_fallback = "post"
-
-
-def _translation_class_prepared(sender, **kwargs) -> None:
-    """Configure parler translation models once they are ready."""
-
-    if sender._meta.app_label != "blog":
-        return
-
-    if sender.__name__ == "CategoryTranslation":
-        sender._meta.indexes = [
-            models.Index(
-                fields=["language_code", "name"],
-                name="category_lang_name_idx",
-            )
-        ]
-    elif sender.__name__ == "TagTranslation":
-        sender._meta.indexes = [
-            models.Index(
-                fields=["language_code", "name"],
-                name="tag_lang_name_idx",
-            )
-        ]
-    elif sender.__name__ == "PostTranslation":
-        sender._meta.indexes = [
-            models.Index(
-                fields=["language_code", "title"],
-                name="post_lang_title_idx",
-            )
-        ]
-    else:
-        return
-
-    sender._meta.unique_together = (
-        ("language_code", "master"),
-        ("language_code", "slug"),
-    )
-
-
-class_prepared.connect(_translation_class_prepared)
 
 
 class Comment(models.Model):
