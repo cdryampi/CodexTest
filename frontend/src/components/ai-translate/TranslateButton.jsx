@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import { Tooltip } from 'flowbite-react';
 import { Languages } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button.jsx';
 import { isAIConfigured } from '../../services/ai.js';
 import { cn } from '../../lib/utils.js';
@@ -12,13 +13,14 @@ function TranslateButton({
   disabled,
   size,
   tooltip,
-  variant
+  variant,
+  ariaLabel
 }) {
+  const { t } = useTranslation();
   const aiReady = isAIConfigured();
   const baseDisabled = disabled || !aiReady;
-  const tooltipContent = !aiReady
-    ? 'Configura VITE_OPEN_IA_KEY para habilitar el asistente de traducción.'
-    : tooltip;
+  const fallbackTooltip = aiReady ? tooltip || t('actions.translateAI') : t('ai.configureKey');
+  const label = children || t('actions.translateAI');
 
   const button = (
     <Button
@@ -28,21 +30,20 @@ function TranslateButton({
       onClick={onClick}
       className={cn('gap-2', className)}
       disabled={baseDisabled}
+      aria-label={ariaLabel || label}
     >
-      <Languages className={cn(children ? 'h-4 w-4' : 'h-4 w-4')} aria-hidden="true" />
-      {children ? <span className="font-semibold">{children}</span> : <span>Traducir</span>}
+      <Languages className={cn('h-4 w-4')} aria-hidden="true" />
+      <span className="font-semibold">{label}</span>
     </Button>
   );
 
-  if (!tooltipContent) {
+  if (!fallbackTooltip) {
     return button;
   }
 
   return (
-    <Tooltip content={tooltipContent} trigger="hover" placement="bottom">
-      <span className={cn('inline-flex', baseDisabled ? 'cursor-not-allowed' : '')}>
-        {button}
-      </span>
+    <Tooltip content={fallbackTooltip} trigger="hover" placement="bottom" style="dark">
+      <span className={cn('inline-flex', baseDisabled ? 'cursor-not-allowed opacity-90' : '')}>{button}</span>
     </Tooltip>
   );
 }
@@ -54,7 +55,8 @@ TranslateButton.propTypes = {
   disabled: PropTypes.bool,
   size: PropTypes.oneOf(['default', 'sm', 'lg', 'icon']),
   tooltip: PropTypes.node,
-  variant: PropTypes.oneOf(['default', 'destructive', 'outline', 'secondary', 'ghost', 'link'])
+  variant: PropTypes.oneOf(['default', 'destructive', 'outline', 'secondary', 'ghost', 'link']),
+  ariaLabel: PropTypes.string
 };
 
 TranslateButton.defaultProps = {
@@ -63,8 +65,9 @@ TranslateButton.defaultProps = {
   className: '',
   disabled: false,
   size: 'sm',
-  tooltip: null,
-  variant: 'ghost'
+  tooltip: undefined,
+  variant: 'ghost',
+  ariaLabel: ''
 };
 
 export default TranslateButton;

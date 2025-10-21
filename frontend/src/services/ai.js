@@ -1,7 +1,10 @@
+import { toast } from 'sonner';
+
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const DEFAULT_MODEL = 'gpt-4o-mini';
-const LARGE_RESPONSE_HINT =
-  'El servicio de traducción no pudo procesar la solicitud. Inténtalo de nuevo en unos minutos.';
+const MAX_TEXT_LENGTH = 2000;
+const SYSTEM_PROMPT =
+  'Eres un asistente de traducción para un blog técnico. Conserva formato Markdown/HTML, respeta enlaces y código, no inventes contenido.';
 
 export function isAIConfigured() {
   const key = import.meta.env?.VITE_OPEN_IA_KEY;
@@ -10,61 +13,87 @@ export function isAIConfigured() {
 
 const normalizeLang = (value) => (value ? value.toString().trim().toLowerCase() : '');
 
-const buildUserPrompt = ({ text, targetLang, sourceLang, format, tone }) => {
+const buildUserPrompt = ({ text, targetLang, sourceLang, format }) => {
   const detectedSource = sourceLang ? normalizeLang(sourceLang) : 'origen detectado automáticamente';
-  const normalizedTarget = normalizeLang(targetLang);
+  const normalizedTarget = normalizeLang(targetLang) || 'es';
   const normalizedFormat = format === 'html' ? 'HTML' : 'Markdown';
-  const normalizedTone = tone || 'neutral';
 
   return [
     `Idioma origen: ${detectedSource}.`,
     `Idioma destino: ${normalizedTarget}.`,
     `Formato a conservar: ${normalizedFormat}.`,
-    `Tono deseado: ${normalizedTone}.`,
     'Traduce el siguiente contenido sin añadir comentarios ni notas adicionales.',
     'Texto:',
     text
   ].join('\n');
 };
 
+const handleApiError = async (response) => {
+  let detail = 'El servicio de traducción no pudo procesar la solicitud. Inténtalo de nuevo en unos minutos.';
+  try {
+    const errorPayload = await response.json();
+    if (errorPayload?.error?.message) {
+      detail = errorPayload.error.message;
+    }
+  } catch (error) {
+    // Ignorar errores de parsing.
+  }
+
+  if (response.status === 401) {
+    detail = 'La clave de OpenAI no es válida o ha expirado.';
+  } else if (response.status === 429) {
+    detail = 'Se alcanzó el límite de uso de la API de OpenAI. Inténtalo más tarde.';
+  }
+
+  toast.error(detail);
+  throw new Error(detail);
+};
+
 export async function translateText({
   text,
   targetLang,
-  sourceLang = null,
-  format = 'markdown',
-  tone = 'neutral'
+  sourceLang = 'es',
+  format = 'markdown'
 }) {
   if (!isAIConfigured()) {
-    throw new Error('Configura la variable VITE_OPEN_IA_KEY antes de solicitar traducciones.');
+    const message = 'Configura VITE_OPEN_IA_KEY antes de solicitar traducciones.';
+    toast.error(message);
+    throw new Error(message);
   }
 
   const normalizedText = (text ?? '').toString();
   if (!normalizedText.trim()) {
-    throw new Error('No hay texto disponible para traducir.');
+    const message = 'No hay texto disponible para traducir.';
+    toast.error(message);
+    throw new Error(message);
+  }
+
+  if (normalizedText.length > MAX_TEXT_LENGTH) {
+    const message = `El texto supera el límite permitido (${MAX_TEXT_LENGTH} caracteres). Reduce el contenido e inténtalo de nuevo.`;
+    toast.warning(message);
+    throw new Error(message);
   }
 
   const normalizedTarget = normalizeLang(targetLang);
   if (!normalizedTarget) {
-    throw new Error('Debes indicar un idioma de destino válido.');
+    const message = 'Debes indicar un idioma de destino válido.';
+    toast.error(message);
+    throw new Error(message);
   }
 
   const apiKey = import.meta.env.VITE_OPEN_IA_KEY;
-  const systemPrompt =
-    'Eres un asistente de traducción para un blog técnico. Conserva formato (Markdown/HTML), respetando código/links. No inventes contenido. Mantén el tono.';
-
   const payload = {
     model: DEFAULT_MODEL,
     temperature: 0.2,
     messages: [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: SYSTEM_PROMPT },
       {
         role: 'user',
         content: buildUserPrompt({
           text: normalizedText,
           targetLang: normalizedTarget,
           sourceLang,
-          format,
-          tone
+          format
         })
       }
     ]
@@ -82,40 +111,29 @@ export async function translateText({
       body: JSON.stringify(payload)
     });
   } catch (networkError) {
-    throw new Error('No fue posible contactar el servicio de traducción. Verifica tu conexión.');
+    const message = 'No fue posible contactar el servicio de traducción. Verifica tu conexión.';
+    toast.error(message);
+    throw new Error(message);
   }
 
   if (!response.ok) {
-    let detail = LARGE_RESPONSE_HINT;
-    try {
-      const errorPayload = await response.json();
-      if (errorPayload?.error?.message) {
-        detail = errorPayload.error.message;
-      }
-    } catch (parseError) {
-      // Silenciar parseos fallidos.
-    }
-
-    if (response.status === 401) {
-      throw new Error('La clave de OpenAI no es válida o ha expirado.');
-    }
-    if (response.status === 429) {
-      throw new Error('Se alcanzó el límite de uso de la API de OpenAI. Inténtalo más tarde.');
-    }
-
-    throw new Error(detail);
+    await handleApiError(response);
   }
 
   let data;
   try {
     data = await response.json();
   } catch (error) {
-    throw new Error('No fue posible interpretar la respuesta del servicio de traducción.');
+    const message = 'No fue posible interpretar la respuesta del servicio de traducción.';
+    toast.error(message);
+    throw new Error(message);
   }
 
   const translated = data?.choices?.[0]?.message?.content;
   if (!translated) {
-    throw new Error('El servicio de traducción no devolvió un resultado.');
+    const message = 'El servicio de traducción no devolvió un resultado.';
+    toast.error(message);
+    throw new Error(message);
   }
 
   return translated.trim();
