@@ -3,6 +3,7 @@ import { Tooltip } from 'flowbite-react';
 import { Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { isAIConfigured } from '../../services/ai.js';
 import { cn } from '../../lib/utils.js';
 
@@ -17,7 +18,8 @@ function TranslateButton({
   ariaLabel
 }) {
   const { t } = useTranslation();
-  const aiReady = isAIConfigured();
+  const { isAuthenticated } = useAuth();
+  const aiReady = isAuthenticated && isAIConfigured();
   const baseDisabled = disabled || !aiReady;
   const fallbackTooltip = aiReady ? tooltip || t('actions.translateAI') : t('ai.configureKey');
   const label = children || t('actions.translateAI');
