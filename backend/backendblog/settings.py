@@ -89,6 +89,28 @@ def _env_float(key: str | Iterable[str], default: float) -> float:
         return default
 
 
+def _env_optional_int(
+    key: str | Iterable[str], default: int | None = None
+) -> int | None:
+    """Return an optional integer honouring "none"/"null" sentinels."""
+
+    value = _getenv(key)
+    if value is None:
+        return default
+
+    normalized = str(value).strip().lower()
+    if not normalized or normalized in {"default"}:
+        return default
+    if normalized in {"none", "null"}:
+        return None
+
+    try:
+        parsed = int(normalized)
+    except (TypeError, ValueError):
+        return default
+    return max(parsed, 0)
+
+
 SECRET_KEY = _env(("SECRET_KEY", "DJANGO_SECRET_KEY", "SECRET"), "unsafe-secret-key")
 DEBUG = _env_bool(("DEBUG", "DJANGO_DEBUG"), False)
 
@@ -204,6 +226,29 @@ else:
                 "NAME": BASE_DIR / "db.sqlite3",
             }
         }
+
+_conn_max_age = _env_optional_int(
+    (
+        "DATABASE_CONN_MAX_AGE",
+        "DJANGO_DATABASE_CONN_MAX_AGE",
+        "CONN_MAX_AGE",
+        "DJANGO_CONN_MAX_AGE",
+    )
+)
+if _conn_max_age is not None:
+    DATABASES["default"]["CONN_MAX_AGE"] = _conn_max_age
+
+_conn_health_checks = _env_bool(
+    (
+        "DATABASE_CONN_HEALTH_CHECKS",
+        "DJANGO_DATABASE_CONN_HEALTH_CHECKS",
+        "CONN_HEALTH_CHECKS",
+        "DJANGO_CONN_HEALTH_CHECKS",
+    ),
+    False,
+)
+if _conn_health_checks:
+    DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
