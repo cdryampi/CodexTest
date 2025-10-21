@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -7,6 +7,8 @@ import slugify from 'slugify';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { toast } from 'sonner';
+import * as Tabs from '@radix-ui/react-tabs';
+import { useTranslation } from 'react-i18next';
 import InputField from '../forms/Input.jsx';
 import TextareaField from '../forms/Textarea.jsx';
 import SelectField from '../forms/Select.jsx';
@@ -14,6 +16,7 @@ import MultiSelectField from '../forms/MultiSelect.jsx';
 import { Button } from '../ui/button.jsx';
 import TranslateButton from '../ai-translate/TranslateButton.jsx';
 import TranslateModal from '../ai-translate/TranslateModal.jsx';
+import LanguageFlags from '../ai-translate/LanguageFlags.jsx';
 import {
   listCategories,
   listTags,
@@ -22,6 +25,17 @@ import {
   updatePost,
   updatePostTranslation
 } from '../../services/api.js';
+
+const LANGUAGE_TABS = [
+  { code: 'es', label: 'Español', flag: '🇪🇸' },
+  { code: 'en', label: 'Inglés', flag: '🇬🇧' },
+  { code: 'ca', label: 'Catalán', flag: '🇨🇦' }
+];
+
+const TRANSLATION_FIELD_MAP = {
+  en: { title: 'title_en', excerpt: 'excerpt_en', content: 'content_en', slug: 'slug_en' },
+  ca: { title: 'title_ca', excerpt: 'excerpt_ca', content: 'content_ca', slug: 'slug_ca' }
+};
 
 const tagOptionSchema = z.object({
   value: z.string().trim().min(1, 'El tag no puede estar vacío.'),
@@ -51,7 +65,15 @@ const postSchema = z
     imageAlt: z.string().trim().min(3, 'El texto alternativo debe tener al menos 3 caracteres.'),
     author: z.string().trim().min(3, 'Indica el nombre de la persona autora.'),
     status: z.enum(['published', 'scheduled']).default('published'),
-    published_at: z.string().min(1, 'Selecciona una fecha de publicación.')
+    published_at: z.string().min(1, 'Selecciona una fecha de publicación.'),
+    title_en: z.string().optional(),
+    slug_en: z.string().optional(),
+    excerpt_en: z.string().optional(),
+    content_en: z.string().optional(),
+    title_ca: z.string().optional(),
+    slug_ca: z.string().optional(),
+    excerpt_ca: z.string().optional(),
+    content_ca: z.string().optional()
   })
   .superRefine((values, ctx) => {
     const plain = values.content
@@ -95,6 +117,14 @@ const defaultValues = {
   slug: '',
   excerpt: '',
   content: '',
+  title_en: '',
+  slug_en: '',
+  excerpt_en: '',
+  content_en: '',
+  title_ca: '',
+  slug_ca: '',
+  excerpt_ca: '',
+  content_ca: '',
   category: '',
   tags: [],
   image: '',
@@ -129,6 +159,7 @@ const normalizeCollection = (payload) => {
 };
 
 function PostForm({ mode, slug, onCancel, onSuccess }) {
+  const { t } = useTranslation();
   const {
     control,
     handleSubmit,
@@ -136,6 +167,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
     watch,
     setValue,
     setError,
+    getValues,
     formState: { isSubmitting, errors }
   } = useForm({
     resolver: zodResolver(postSchema),
@@ -147,12 +179,20 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
   const [isLoading, setIsLoading] = useState(true);
   const [contentError, setContentError] = useState(null);
   const [translateModalOpen, setTranslateModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('es');
 
   const titleValue = watch('title');
   const excerptValue = watch('excerpt');
   const slugValue = watch('slug');
   const contentValue = watch('content');
   const statusValue = watch('status');
+  const titleEn = watch('title_en');
+  const excerptEn = watch('excerpt_en');
+  const contentEn = watch('content_en');
+  const titleCa = watch('title_ca');
+  const excerptCa = watch('excerpt_ca');
+  const contentCa = watch('content_ca');
+
   const autoSlugRef = useRef('');
   const onCancelRef = useRef(onCancel);
 
@@ -205,6 +245,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
         const post = await getPost(postSlug);
         const tagsData = Array.isArray(post?.tags) ? post.tags : [];
         const categoriesData = Array.isArray(post?.categories) ? post.categories : [];
+        const translations = post?.translations ?? {};
 
         const mappedTags = tagsData.map((tag) => ({
           value: typeof tag === 'string' ? tag : tag?.name,
@@ -219,6 +260,14 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
           slug: post?.slug ?? '',
           excerpt: post?.excerpt ?? '',
           content: post?.content ?? '',
+          title_en: translations?.en?.title ?? '',
+          slug_en: translations?.en?.slug ?? '',
+          excerpt_en: translations?.en?.excerpt ?? '',
+          content_en: translations?.en?.content ?? '',
+          title_ca: translations?.ca?.title ?? '',
+          slug_ca: translations?.ca?.slug ?? '',
+          excerpt_ca: translations?.ca?.excerpt ?? '',
+          content_ca: translations?.ca?.content ?? '',
           category: categoriesData[0] ?? '',
           tags: mappedTags,
           image: post?.image ?? '',
@@ -268,22 +317,38 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
     }
   }, [contentValue]);
 
-  const handleApplyTranslation = useCallback((lang, translatedFields) => {
-    if (!translatedFields || typeof translatedFields !== 'object') {
-      return;
-    }
-    Object.entries(translatedFields).forEach(([key, value]) => {
-      if (typeof value !== 'string') {
+  const languageStatuses = useMemo(() => ({
+    es: titleValue?.trim() || excerptValue?.trim() || contentValue?.trim() ? 'listo' : 'pendiente',
+    en: titleEn?.trim() || excerptEn?.trim() || contentEn?.trim() ? 'listo' : 'pendiente',
+    ca: titleCa?.trim() || excerptCa?.trim() || contentCa?.trim() ? 'listo' : 'pendiente'
+  }), [titleValue, excerptValue, contentValue, titleEn, excerptEn, contentEn, titleCa, excerptCa, contentCa]);
+
+  const handleApplyTranslation = useCallback(
+    (lang, translatedFields) => {
+      if (!translatedFields || typeof translatedFields !== 'object') {
         return;
       }
-      if (['title', 'excerpt', 'content', 'slug'].includes(key)) {
-        setValue(key, value, { shouldDirty: true, shouldValidate: true });
-        if (key === 'content') {
-          setContentError(null);
-        }
+      const map = TRANSLATION_FIELD_MAP[lang];
+      if (!map) {
+        Object.entries(translatedFields).forEach(([key, value]) => {
+          if (['title', 'excerpt', 'content', 'slug'].includes(key) && typeof value === 'string') {
+            setValue(key, value, { shouldDirty: true, shouldValidate: true });
+            if (key === 'content') {
+              setContentError(null);
+            }
+          }
+        });
+        return;
       }
-    });
-  }, [setValue]);
+      Object.entries(map).forEach(([sourceKey, formKey]) => {
+        if (translatedFields[sourceKey] !== undefined) {
+          setValue(formKey, translatedFields[sourceKey], { shouldDirty: true, shouldValidate: false });
+        }
+      });
+      setActiveTab(lang);
+    },
+    [setValue]
+  );
 
   const handleSaveTranslation = useCallback(async (lang, translatedFields) => {
     if (mode !== 'edit') {
@@ -293,17 +358,26 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
     if (!postSlug) {
       throw new Error('Necesitas un slug válido para guardar la traducción.');
     }
+    const map = TRANSLATION_FIELD_MAP[lang];
+    if (!map) {
+      throw new Error('Selecciona un idioma válido para guardar la traducción.');
+    }
     const payload = {};
-    ['title', 'excerpt', 'content', 'slug'].forEach((key) => {
-      if (translatedFields && Object.prototype.hasOwnProperty.call(translatedFields, key)) {
-        const value = translatedFields[key];
-        if (value !== undefined) {
-          payload[key] = value;
+    Object.entries(map).forEach(([sourceKey, formKey]) => {
+      if (translatedFields && Object.prototype.hasOwnProperty.call(translatedFields, sourceKey)) {
+        const value = translatedFields[sourceKey];
+        if (typeof value === 'string') {
+          payload[sourceKey] = value;
+          return;
         }
+      }
+      const currentValue = getValues(formKey);
+      if (typeof currentValue === 'string' && currentValue.trim()) {
+        payload[sourceKey] = currentValue;
       }
     });
     await updatePostTranslation(postSlug, lang, payload);
-  }, [mode, slug, slugValue]);
+  }, [mode, slug, slugValue, getValues]);
 
   const handleCreateTag = (inputValue) => {
     const value = inputValue.trim();
@@ -388,151 +462,252 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
   return (
     <>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
-      <div className="space-y-6 rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/70">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Contenido principal</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Genera traducciones a inglés o catalán sin salir del formulario.</p>
+        <div className="space-y-6 rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/70">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                  {t('backoffice.post.sections.mainContent')}
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {t('backoffice.post.sections.description')}
+                </p>
+              </div>
+              <TranslateButton
+                onClick={() => setTranslateModalOpen(true)}
+                disabled={!titleValue?.trim()}
+                tooltip={!titleValue?.trim() ? t('backoffice.post.sections.fillTitle') : undefined}
+              />
+            </div>
+            <LanguageFlags selected={activeTab} onSelect={setActiveTab} statuses={languageStatuses} />
           </div>
-          <TranslateButton
-            onClick={() => setTranslateModalOpen(true)}
-            disabled={!titleValue?.trim()}
-            tooltip={!titleValue?.trim() ? 'Completa el título antes de traducir.' : 'Abrir asistente de traducción.'}
-          >
-            Asistente IA
-          </TranslateButton>
+
+          <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
+            <Tabs.List className="sr-only">
+              {LANGUAGE_TABS.map((tab) => (
+                <Tabs.Trigger key={tab.code} value={tab.code}>
+                  {tab.label}
+                </Tabs.Trigger>
+              ))}
+            </Tabs.List>
+            <Tabs.Content value="es" className="space-y-6 pt-2">
+              <div className="grid gap-6 lg:grid-cols-2">
+                <InputField
+                  control={control}
+                  name="title"
+                  label={t('backoffice.post.fields.title')}
+                  placeholder={t('backoffice.post.placeholders.title')}
+                  autoComplete="off"
+                />
+                <InputField
+                  control={control}
+                  name="slug"
+                  label={t('backoffice.post.fields.slug')}
+                  placeholder="auto-generado"
+                  helperText={t('backoffice.post.helpers.slug')}
+                  autoComplete="off"
+                />
+              </div>
+              <TextareaField
+                control={control}
+                name="excerpt"
+                label={t('backoffice.post.fields.excerpt')}
+                rows={4}
+                placeholder={t('backoffice.post.placeholders.excerpt')}
+              />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-200" htmlFor="post-content">
+                  {t('backoffice.post.fields.content')}
+                </label>
+                <ReactQuill
+                  id="post-content"
+                  theme="snow"
+                  value={contentValue}
+                  onChange={(value) => setValue('content', value, { shouldDirty: true })}
+                  modules={quillModules}
+                  aria-label={t('backoffice.post.fields.content')}
+                />
+                {displayedContentError ? (
+                  <p className="text-xs text-red-500">{displayedContentError}</p>
+                ) : (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {t('backoffice.post.helpers.content')}
+                  </p>
+                )}
+              </div>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <SelectField
+                  control={control}
+                  name="category"
+                  label={t('backoffice.post.fields.category')}
+                  placeholder={t('backoffice.post.placeholders.category')}
+                  helperText={t('backoffice.post.helpers.category')}
+                >
+                  <option value="">{t('backoffice.post.placeholders.noCategory')}</option>
+                  {categoryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </SelectField>
+                <MultiSelectField
+                  control={control}
+                  name="tags"
+                  label={t('backoffice.post.fields.tags')}
+                  options={tagOptions}
+                  placeholder={t('backoffice.post.placeholders.tags')}
+                  helperText={t('backoffice.post.helpers.tags')}
+                  isCreatable
+                  onCreateOption={handleCreateTag}
+                />
+              </div>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <InputField
+                  control={control}
+                  name="image"
+                  label={t('backoffice.post.fields.image')}
+                  placeholder="https://..."
+                  helperText={t('backoffice.post.helpers.image')}
+                />
+                <InputField
+                  control={control}
+                  name="thumb"
+                  label={t('backoffice.post.fields.thumbnail')}
+                  placeholder="https://..."
+                  helperText={t('backoffice.post.helpers.thumbnail')}
+                />
+              </div>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <InputField
+                  control={control}
+                  name="imageAlt"
+                  label={t('backoffice.post.fields.imageAlt')}
+                  placeholder={t('backoffice.post.placeholders.imageAlt')}
+                />
+                <InputField
+                  control={control}
+                  name="author"
+                  label={t('backoffice.post.fields.author')}
+                  placeholder={t('backoffice.post.placeholders.author')}
+                />
+              </div>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <SelectField
+                  control={control}
+                  name="status"
+                  label={t('backoffice.post.fields.status')}
+                  helperText={t('backoffice.post.helpers.status')}
+                >
+                  <option value="published">{t('backoffice.post.status.published')}</option>
+                  <option value="scheduled">{t('backoffice.post.status.scheduled')}</option>
+                </SelectField>
+                <InputField
+                  control={control}
+                  name="published_at"
+                  type="date"
+                  label={statusValue === 'scheduled' ? t('backoffice.post.fields.scheduledDate') : t('backoffice.post.fields.publishDate')}
+                />
+              </div>
+            </Tabs.Content>
+
+            <Tabs.Content value="en" className="space-y-6 pt-2">
+              <div className="grid gap-6 lg:grid-cols-2">
+                <InputField
+                  control={control}
+                  name="title_en"
+                  label={t('backoffice.post.fields.titleEn')}
+                  placeholder={t('backoffice.post.placeholders.translationTitle', { lang: 'EN' })}
+                  autoComplete="off"
+                />
+                <InputField
+                  control={control}
+                  name="slug_en"
+                  label={t('backoffice.post.fields.slugEn')}
+                  placeholder="auto-generado"
+                  autoComplete="off"
+                />
+              </div>
+              <TextareaField
+                control={control}
+                name="excerpt_en"
+                label={t('backoffice.post.fields.excerptEn')}
+                rows={4}
+                placeholder={t('backoffice.post.placeholders.translationExcerpt', { lang: 'EN' })}
+              />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-200" htmlFor="post-content-en">
+                  {t('backoffice.post.fields.contentEn')}
+                </label>
+                <ReactQuill
+                  id="post-content-en"
+                  theme="snow"
+                  value={contentEn ?? ''}
+                  onChange={(value) => setValue('content_en', value, { shouldDirty: true })}
+                  modules={quillModules}
+                  aria-label={t('backoffice.post.fields.contentEn')}
+                />
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {t('backoffice.post.helpers.translationEditor')}
+                </p>
+              </div>
+            </Tabs.Content>
+
+            <Tabs.Content value="ca" className="space-y-6 pt-2">
+              <div className="grid gap-6 lg:grid-cols-2">
+                <InputField
+                  control={control}
+                  name="title_ca"
+                  label={t('backoffice.post.fields.titleCa')}
+                  placeholder={t('backoffice.post.placeholders.translationTitle', { lang: 'CA' })}
+                  autoComplete="off"
+                />
+                <InputField
+                  control={control}
+                  name="slug_ca"
+                  label={t('backoffice.post.fields.slugCa')}
+                  placeholder="auto-generado"
+                  autoComplete="off"
+                />
+              </div>
+              <TextareaField
+                control={control}
+                name="excerpt_ca"
+                label={t('backoffice.post.fields.excerptCa')}
+                rows={4}
+                placeholder={t('backoffice.post.placeholders.translationExcerpt', { lang: 'CA' })}
+              />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-200" htmlFor="post-content-ca">
+                  {t('backoffice.post.fields.contentCa')}
+                </label>
+                <ReactQuill
+                  id="post-content-ca"
+                  theme="snow"
+                  value={contentCa ?? ''}
+                  onChange={(value) => setValue('content_ca', value, { shouldDirty: true })}
+                  modules={quillModules}
+                  aria-label={t('backoffice.post.fields.contentCa')}
+                />
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {t('backoffice.post.helpers.translationEditor')}
+                </p>
+              </div>
+            </Tabs.Content>
+          </Tabs.Root>
         </div>
-        <div className="grid gap-6 lg:grid-cols-2">
-          <InputField
-            control={control}
-            name="title"
-            label="Título"
-            placeholder="Ingresa el título del post"
-            autoComplete="off"
-          />
-          <InputField
-            control={control}
-            name="slug"
-            label="Slug"
-            placeholder="auto-generado"
-            helperText="Este valor se utilizará en la URL pública."
-            autoComplete="off"
-          />
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
+            {t('actions.cancel')}
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting
+              ? t('actions.saving')
+              : mode === 'edit'
+                ? t('actions.saveChanges')
+                : t('actions.createPost')}
+          </Button>
         </div>
-        <TextareaField
-          control={control}
-          name="excerpt"
-          label="Resumen"
-          rows={4}
-          placeholder="Introduce un resumen breve del post"
-        />
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-200" htmlFor="post-content">
-            Contenido
-          </label>
-          <ReactQuill
-            id="post-content"
-            theme="snow"
-            value={contentValue}
-            onChange={(value) => setValue('content', value, { shouldDirty: true })}
-            modules={quillModules}
-            aria-label="Contenido del post"
-          />
-          {displayedContentError ? (
-            <p className="text-xs text-red-500">{displayedContentError}</p>
-          ) : (
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Utiliza el editor para dar formato al contenido del post.
-            </p>
-          )}
-        </div>
-        <div className="grid gap-6 lg:grid-cols-2">
-          <SelectField
-            control={control}
-            name="category"
-            label="Categoría"
-            placeholder="Selecciona una categoría"
-            helperText="Puedes crear nuevas categorías desde la sección correspondiente."
-          >
-            <option value="">Sin categoría</option>
-            {categoryOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectField>
-          <MultiSelectField
-            control={control}
-            name="tags"
-            label="Tags"
-            options={tagOptions}
-            placeholder="Selecciona tags relacionados"
-            helperText="Puedes elegir varias etiquetas o crear nuevas para organizar el contenido."
-            isCreatable
-            onCreateOption={handleCreateTag}
-          />
-        </div>
-        <div className="grid gap-6 lg:grid-cols-2">
-          <InputField
-            control={control}
-            name="image"
-            label="Imagen destacada (URL)"
-            placeholder="https://..."
-            helperText="Utiliza una URL pública accesible desde el backend."
-          />
-          <InputField
-            control={control}
-            name="thumb"
-            label="Miniatura (URL)"
-            placeholder="https://..."
-            helperText="Será usada para listados y tarjetas."
-          />
-        </div>
-        <div className="grid gap-6 lg:grid-cols-2">
-          <InputField
-            control={control}
-            name="imageAlt"
-            label="Texto alternativo de la imagen"
-            placeholder="Describe brevemente la imagen"
-          />
-          <InputField
-            control={control}
-            name="author"
-            label="Autor o autora"
-            placeholder="Nombre visible en el post"
-          />
-        </div>
-        <div className="grid gap-6 lg:grid-cols-2">
-          <SelectField
-            control={control}
-            name="status"
-            label="Estado"
-            helperText="Selecciona si el post se publica ahora o queda programado."
-          >
-            <option value="published">Publicado</option>
-            <option value="scheduled">Programado</option>
-          </SelectField>
-          <InputField
-            control={control}
-            name="published_at"
-            type="date"
-            label={statusValue === 'scheduled' ? 'Fecha programada' : 'Fecha de publicación'}
-          />
-        </div>
-      </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-        <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting
-            ? 'Guardando...'
-            : mode === 'edit'
-              ? 'Guardar cambios'
-              : 'Crear post'}
-        </Button>
-      </div>
-    </form>
+      </form>
       <TranslateModal
         open={translateModalOpen}
         onOpenChange={setTranslateModalOpen}
@@ -543,6 +718,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
         allowSave={mode === 'edit' && Boolean(postIdentifier)}
         onApply={handleApplyTranslation}
         onSave={mode === 'edit' ? handleSaveTranslation : undefined}
+        preferredTargetLang={activeTab !== 'es' ? activeTab : 'en'}
       />
     </>
   );

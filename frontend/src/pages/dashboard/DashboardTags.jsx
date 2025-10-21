@@ -3,6 +3,8 @@ import { Modal } from 'flowbite-react';
 import slugify from 'slugify';
 import { toast } from 'sonner';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
+import * as Tabs from '@radix-ui/react-tabs';
+import { useTranslation } from 'react-i18next';
 import { useDashboardLayout } from '../../layouts/DashboardLayout.jsx';
 import {
   useDashboardStore,
@@ -12,8 +14,14 @@ import { listTags, createTag, updateTag, deleteTag, updateTagTranslation } from 
 import { Button } from '../../components/ui/button.jsx';
 import TranslateButton from '../../components/ai-translate/TranslateButton.jsx';
 import TranslateModal from '../../components/ai-translate/TranslateModal.jsx';
+import LanguageFlags from '../../components/ai-translate/LanguageFlags.jsx';
 import { Input } from '../../components/ui/input.jsx';
 import ConfirmModal from '../../components/backoffice/ConfirmModal.jsx';
+
+const TRANSLATION_FIELD_MAP = {
+  en: { name: 'name_en', slug: 'slug_en' },
+  ca: { name: 'name_ca', slug: 'slug_ca' }
+};
 
 const normalizeName = (value) => value.trim();
 
@@ -38,6 +46,7 @@ const dedupeTags = (tags) => {
 };
 
 function DashboardTags() {
+  const { t } = useTranslation();
   const { setHeader } = useDashboardLayout();
   const tagsState = useDashboardStore(selectTagsState);
   const setTagSearch = useDashboardStore((state) => state.setTagSearch);
@@ -45,47 +54,73 @@ function DashboardTags() {
 
   const [tags, setTags] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [modalState, setModalState] = useState({ open: false, mode: 'create', id: null, slug: null, value: '' });
+  const [activeLang, setActiveLang] = useState('es');
+  const [modalState, setModalState] = useState({
+    open: false,
+    mode: 'create',
+    id: null,
+    slug: null,
+    name: '',
+    name_en: '',
+    slug_en: '',
+    name_ca: '',
+    slug_ca: ''
+  });
   const [deleteState, setDeleteState] = useState({ open: false, id: null, name: '', loading: false });
-  const [translateModalState, setTranslateModalState] = useState({ open: false, identifier: null });
+  const [translateModalState, setTranslateModalState] = useState({ open: false, identifier: null, targetLang: 'en' });
   const inputRef = useRef(null);
 
   useEffect(() => {
     setHeader({
-      title: 'Etiquetas',
-      description: 'Gestiona las etiquetas disponibles para tus publicaciones.',
+      title: t('dashboard.tags.title'),
+      description: t('dashboard.tags.description'),
       showSearch: false,
       actions: (
-        <Button type="button" size="sm" onClick={() => setModalState({ open: true, mode: 'create', id: null, value: '' })}>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() =>
+            setModalState({
+              open: true,
+              mode: 'create',
+              id: null,
+              slug: null,
+              name: '',
+              name_en: '',
+              slug_en: '',
+              name_ca: '',
+              slug_ca: ''
+            })
+          }
+        >
           <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-          Nueva etiqueta
+          {t('dashboard.tags.new')}
         </Button>
       )
     });
-  }, [setHeader]);
+  }, [setHeader, t]);
 
   useEffect(() => {
     const fetchTags = async () => {
       setIsLoading(true);
       try {
         const response = await listTags();
-        const normalized = Array.isArray(response)
-          ? response
-          : [];
+        const normalized = Array.isArray(response) ? response : [];
         setTags(dedupeTags(normalized));
       } catch (error) {
-        toast.error('No pudimos cargar las etiquetas, intenta de nuevo.');
+        toast.error(t('dashboard.tags.errors.fetch'));
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchTags();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!modalState.open) {
-      setTranslateModalState({ open: false, identifier: null });
+      setTranslateModalState({ open: false, identifier: null, targetLang: 'en' });
+      setActiveLang('es');
     }
   }, [modalState.open]);
 
@@ -98,50 +133,115 @@ function DashboardTags() {
   }, [tags, tagsState.search]);
 
   const openEditModal = (tag) => {
-    setModalState({ open: true, mode: 'edit', id: tag.id ?? tag.slug ?? tag.name, slug: tag.slug ?? tag.id ?? tag.name, value: tag.name ?? '' });
+    const translations = tag?.translations ?? {};
+    setModalState({
+      open: true,
+      mode: 'edit',
+      id: tag.id ?? tag.slug ?? tag.name,
+      slug: tag.slug ?? tag.id ?? tag.name,
+      name: tag.name ?? '',
+      name_en: translations?.en?.name ?? '',
+      slug_en: translations?.en?.slug ?? '',
+      name_ca: translations?.ca?.name ?? '',
+      slug_ca: translations?.ca?.slug ?? ''
+    });
   };
 
   const closeModal = () => {
-    setModalState({ open: false, mode: 'create', id: null, slug: null, value: '' });
+    setModalState({
+      open: false,
+      mode: 'create',
+      id: null,
+      slug: null,
+      name: '',
+      name_en: '',
+      slug_en: '',
+      name_ca: '',
+      slug_ca: ''
+    });
   };
 
   const openTranslateAssistant = useCallback(() => {
     if (modalState.mode !== 'edit') {
-      toast.info('Guarda la etiqueta antes de traducirla.');
+      toast.info(t('dashboard.tags.errors.saveBeforeTranslate'));
       return;
     }
-    const identifier = modalState.id ?? modalState.slug ?? modalState.value;
+    const identifier = modalState.id ?? modalState.slug ?? modalState.name;
     if (!identifier) {
-      toast.info('Selecciona una etiqueta válida para traducir.');
+      toast.info(t('dashboard.tags.errors.selectValid'));
       return;
     }
-    setTranslateModalState({ open: true, identifier });
-  }, [modalState.id, modalState.mode, modalState.slug, modalState.value, toast]);
+    setTranslateModalState({ open: true, identifier, targetLang: activeLang !== 'es' ? activeLang : 'en' });
+  }, [modalState.id, modalState.mode, modalState.slug, modalState.name, toast, activeLang, t]);
+
+  const handleChangeField = (field, value) => {
+    setModalState((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const languageStatuses = useMemo(
+    () => ({
+      es: modalState.name?.trim() ? 'listo' : 'pendiente',
+      en: modalState.name_en?.trim() ? 'listo' : 'pendiente',
+      ca: modalState.name_ca?.trim() ? 'listo' : 'pendiente'
+    }),
+    [modalState]
+  );
 
   const handleApplyTranslation = useCallback((lang, translatedFields) => {
     if (!translatedFields || typeof translatedFields !== 'object') {
       return;
     }
+    const map = TRANSLATION_FIELD_MAP[lang];
+    if (!map) {
+      setModalState((prev) => ({
+        ...prev,
+        name: translatedFields.name ?? prev.name,
+        slug: translatedFields.slug ?? prev.slug
+      }));
+      return;
+    }
     setModalState((prev) => ({
       ...prev,
-      value: translatedFields.name ?? prev.value,
-      slug: translatedFields.slug ?? prev.slug
+      [map.name]: translatedFields.name ?? prev[map.name],
+      [map.slug]: translatedFields.slug ?? prev[map.slug]
     }));
+    setActiveLang(lang);
   }, []);
 
-  const handleSaveTranslation = useCallback(async (lang, translatedFields) => {
-    const identifier = translateModalState.identifier ?? modalState.id ?? modalState.slug ?? modalState.value;
-    if (!identifier) {
-      throw new Error('Selecciona una etiqueta existente antes de guardar la traducción.');
-    }
-    await updateTagTranslation(identifier, lang, translatedFields);
-  }, [modalState.id, modalState.slug, modalState.value, translateModalState.identifier]);
+  const handleSaveTranslation = useCallback(
+    async (lang, translatedFields) => {
+      const identifier = translateModalState.identifier ?? modalState.id ?? modalState.slug ?? modalState.name;
+      if (!identifier) {
+        throw new Error(t('dashboard.tags.errors.selectValid'));
+      }
+      const map = TRANSLATION_FIELD_MAP[lang];
+      if (!map) {
+        throw new Error(t('dashboard.tags.errors.selectTarget'));
+      }
+      const payload = {};
+      Object.entries(map).forEach(([key, stateKey]) => {
+        if (translatedFields && Object.prototype.hasOwnProperty.call(translatedFields, key)) {
+          const value = translatedFields[key];
+          if (typeof value === 'string') {
+            payload[key] = value;
+            return;
+          }
+        }
+        const current = modalState[stateKey];
+        if (typeof current === 'string' && current.trim()) {
+          payload[key] = current;
+        }
+      });
+      await updateTagTranslation(identifier, lang, payload);
+    },
+    [modalState, translateModalState.identifier, t]
+  );
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const name = normalizeName(modalState.value);
+    const name = normalizeName(modalState.name);
     if (!name) {
-      toast.error('El nombre de la etiqueta es obligatorio.');
+      toast.error(t('dashboard.tags.errors.requiredName'));
       return;
     }
 
@@ -157,7 +257,7 @@ function DashboardTags() {
     });
 
     if (duplicate) {
-      toast.error('Ya existe una etiqueta con ese nombre.');
+      toast.error(t('dashboard.tags.errors.duplicate'));
       return;
     }
 
@@ -173,15 +273,15 @@ function DashboardTags() {
             )
           )
         );
-        toast.success('Etiqueta actualizada.');
+        toast.success(t('dashboard.tags.success.updated'));
       } else {
         const created = await createTag({ name });
         setTags((prev) => dedupeTags([{ ...created, name: created?.name ?? name }, ...prev]));
-        toast.success('Etiqueta creada.');
+        toast.success(t('dashboard.tags.success.created'));
       }
       closeModal();
     } catch (error) {
-      toast.error(error?.message ?? 'No se pudo guardar la etiqueta.');
+      toast.error(error?.message ?? t('dashboard.tags.errors.save'));
     }
   };
 
@@ -193,25 +293,33 @@ function DashboardTags() {
     try {
       await deleteTag(deleteState.id);
       setTags((prev) => dedupeTags(prev.filter((tag) => tag.id !== deleteState.id && tag.slug !== deleteState.id)));
-      toast.success('Etiqueta eliminada.');
+      toast.success(t('dashboard.tags.success.deleted'));
     } catch (error) {
-      toast.error(error?.message ?? 'No se pudo eliminar la etiqueta.');
+      toast.error(error?.message ?? t('dashboard.tags.errors.delete'));
     } finally {
       setDeleteState({ open: false, id: null, name: '', loading: false });
     }
   };
 
-  const computedSlug = useMemo(
-    () => slugify(modalState.value || '', { lower: true, strict: true }),
-    [modalState.value]
-  );
+  useEffect(() => {
+    if (modalState.open && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [modalState.open]);
+
+  const computedSlug = useMemo(() => {
+    if (modalState.mode === 'edit') {
+      return modalState.slug ?? '';
+    }
+    return slugify(modalState.name || '', { lower: true, strict: true });
+  }, [modalState.mode, modalState.name, modalState.slug]);
 
   const tagTranslationFields = useMemo(
     () => ({
-      name: modalState.value ?? '',
+      name: modalState.name ?? '',
       slug: modalState.slug ?? computedSlug ?? ''
     }),
-    [modalState.slug, modalState.value, computedSlug]
+    [modalState.name, modalState.slug, computedSlug]
   );
 
   return (
@@ -219,17 +327,17 @@ function DashboardTags() {
       <div className="flex flex-col gap-3 rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/70">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Buscar etiqueta</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t('dashboard.tags.searchLabel')}</span>
             <Input
               type="search"
               value={tagsState.search}
               onChange={(event) => setTagSearch(event.target.value)}
-              placeholder="Filtra por nombre"
-              aria-label="Buscar etiqueta"
+              placeholder={t('dashboard.tags.searchPlaceholder')}
+              aria-label={t('dashboard.tags.searchAria')}
             />
           </label>
           <Button type="button" variant="ghost" size="sm" onClick={resetTags}>
-            Restablecer filtros
+            {t('actions.resetFilters')}
           </Button>
         </div>
         <div className="overflow-hidden rounded-3xl border border-slate-200/70 dark:border-slate-800/70">
@@ -237,16 +345,16 @@ function DashboardTags() {
             <thead className="bg-slate-50/80 dark:bg-slate-900/70">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Nombre
+                  {t('dashboard.tags.table.name')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Slug
+                  {t('dashboard.tags.table.slug')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Uso
+                  {t('dashboard.tags.table.usage')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Acciones
+                  {t('dashboard.tags.table.actions')}
                 </th>
               </tr>
             </thead>
@@ -254,24 +362,24 @@ function DashboardTags() {
               {isLoading ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-16 text-center text-sm text-slate-500 dark:text-slate-400">
-                    Cargando etiquetas...
+                    {t('dashboard.tags.loading')}
                   </td>
                 </tr>
               ) : filteredTags.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-16 text-center text-sm text-slate-500 dark:text-slate-400">
-                    No se encontraron etiquetas con los criterios indicados.
+                    {t('dashboard.tags.empty')}
                   </td>
                 </tr>
               ) : (
                 filteredTags.map((tag) => (
-                  <tr key={tag.id ?? tag.slug ?? tag.name}>
+                  <tr key={tag.slug ?? tag.name}>
                     <td className="px-6 py-3 text-sm font-semibold text-slate-700 dark:text-slate-100">{tag.name}</td>
-                    <td className="px-6 py-3 text-sm text-slate-500 dark:text-slate-400">{tag.slug ?? '—'}</td>
+                    <td className="px-6 py-3 text-sm text-slate-500 dark:text-slate-400">{tag.slug}</td>
                     <td className="px-6 py-3 text-sm text-slate-500 dark:text-slate-400">{tag.usage ?? 0}</td>
                     <td className="px-6 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button type="button" size="icon" variant="ghost" onClick={() => openEditModal(tag)} aria-label={`Editar ${tag.name}`}>
+                        <Button type="button" size="icon" variant="ghost" onClick={() => openEditModal(tag)} aria-label={t('actions.editItem', { name: tag.name })}>
                           <Pencil className="h-4 w-4" aria-hidden="true" />
                         </Button>
                         <Button
@@ -279,8 +387,8 @@ function DashboardTags() {
                           size="icon"
                           variant="ghost"
                           className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
-                          onClick={() => setDeleteState({ open: true, id: tag.id ?? tag.slug ?? tag.name, name: tag.name ?? '', loading: false })}
-                          aria-label={`Eliminar ${tag.name}`}
+                          onClick={() => setDeleteState({ open: true, id: tag.id ?? tag.slug ?? tag.name, name: tag.name, loading: false })}
+                          aria-label={t('actions.deleteItem', { name: tag.name })}
                         >
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </Button>
@@ -293,7 +401,7 @@ function DashboardTags() {
           </table>
         </div>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          {filteredTags.length} etiqueta(s) de {tags.length} disponibles.
+          {t('dashboard.tags.counter', { count: filteredTags.length, total: tags.length })}
         </p>
       </div>
 
@@ -301,49 +409,97 @@ function DashboardTags() {
         show={modalState.open}
         size="md"
         onClose={closeModal}
-        initialFocus={inputRef.current ?? undefined}
         aria-labelledby="tag-modal-title"
       >
         <Modal.Header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 id="tag-modal-title" className="text-lg font-semibold text-slate-900 dark:text-white">
-            {modalState.mode === 'edit' ? 'Editar etiqueta' : 'Nueva etiqueta'}
+            {modalState.mode === 'edit' ? t('dashboard.tags.modal.editTitle') : t('dashboard.tags.modal.createTitle')}
           </h2>
           {modalState.mode === 'edit' ? (
             <TranslateButton
               size="sm"
               onClick={openTranslateAssistant}
-              disabled={!modalState.value?.trim()}
-              tooltip={!modalState.value?.trim() ? 'Completa el nombre antes de traducir.' : 'Abrir asistente de traducción.'}
-            >
-              Traducir
-            </TranslateButton>
+              disabled={!modalState.name?.trim()}
+              tooltip={!modalState.name?.trim() ? t('dashboard.tags.modal.fillName') : undefined}
+            />
           ) : null}
         </Modal.Header>
-        <form onSubmit={handleSubmit}>
-          <Modal.Body className="space-y-3">
-            <label className="flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-300" htmlFor="tag-name">
-              Nombre de la etiqueta
-              <Input
-                id="tag-name"
-                ref={inputRef}
-                value={modalState.value}
-                onChange={(event) => setModalState((prev) => ({ ...prev, value: event.target.value }))}
-                placeholder="Ej. rendimiento"
-                autoFocus
-                aria-describedby="tag-slug-preview"
-              />
-            </label>
-            <p id="tag-slug-preview" className="text-xs text-slate-500 dark:text-slate-400">
-              Slug previsto: {computedSlug || '—'}
-            </p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Modal.Body className="space-y-4">
+            <Tabs.Root value={activeLang} onValueChange={setActiveLang}>
+              <Tabs.List className="sr-only">
+                {['es', 'en', 'ca'].map((lang) => (
+                  <Tabs.Trigger key={lang} value={lang}>
+                    {lang}
+                  </Tabs.Trigger>
+                ))}
+              </Tabs.List>
+              <LanguageFlags selected={activeLang} onSelect={setActiveLang} statuses={languageStatuses} />
+              <Tabs.Content value="es" className="space-y-4 pt-2">
+                <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400" htmlFor="tag-name">
+                  {t('dashboard.tags.modal.fields.name')}
+                  <Input
+                    id="tag-name"
+                    ref={inputRef}
+                    value={modalState.name}
+                    onChange={(event) => handleChangeField('name', event.target.value)}
+                    placeholder={t('dashboard.tags.modal.placeholders.name')}
+                    aria-describedby="tag-slug-preview"
+                  />
+                </label>
+                <p id="tag-slug-preview" className="text-xs text-slate-500 dark:text-slate-400">
+                  {t('dashboard.tags.modal.slugPreview', { slug: computedSlug || '—' })}
+                </p>
+              </Tabs.Content>
+
+              <Tabs.Content value="en" className="space-y-4 pt-2">
+                <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400" htmlFor="tag-name-en">
+                  {t('dashboard.tags.modal.fields.nameEn')}
+                  <Input
+                    id="tag-name-en"
+                    value={modalState.name_en}
+                    onChange={(event) => handleChangeField('name_en', event.target.value)}
+                    placeholder={t('dashboard.tags.modal.placeholders.translationName', { lang: 'EN' })}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400" htmlFor="tag-slug-en">
+                  {t('dashboard.tags.modal.fields.slugEn')}
+                  <Input
+                    id="tag-slug-en"
+                    value={modalState.slug_en}
+                    onChange={(event) => handleChangeField('slug_en', event.target.value)}
+                    placeholder="auto-generado"
+                  />
+                </label>
+              </Tabs.Content>
+
+              <Tabs.Content value="ca" className="space-y-4 pt-2">
+                <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400" htmlFor="tag-name-ca">
+                  {t('dashboard.tags.modal.fields.nameCa')}
+                  <Input
+                    id="tag-name-ca"
+                    value={modalState.name_ca}
+                    onChange={(event) => handleChangeField('name_ca', event.target.value)}
+                    placeholder={t('dashboard.tags.modal.placeholders.translationName', { lang: 'CA' })}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400" htmlFor="tag-slug-ca">
+                  {t('dashboard.tags.modal.fields.slugCa')}
+                  <Input
+                    id="tag-slug-ca"
+                    value={modalState.slug_ca}
+                    onChange={(event) => handleChangeField('slug_ca', event.target.value)}
+                    placeholder="auto-generado"
+                  />
+                </label>
+              </Tabs.Content>
+            </Tabs.Root>
           </Modal.Body>
           <Modal.Footer className="flex items-center justify-end gap-2">
             <Button type="button" variant="ghost" onClick={closeModal}>
-              Cancelar
+              {t('actions.cancel')}
             </Button>
-            <Button type="submit">
-              {modalState.mode === 'edit' ? 'Guardar cambios' : 'Crear etiqueta'}
-            </Button>
+            <Button type="submit">{modalState.mode === 'edit' ? t('actions.saveChanges') : t('dashboard.tags.modal.create')}</Button>
           </Modal.Footer>
         </form>
       </Modal>
@@ -358,11 +514,12 @@ function DashboardTags() {
         allowSave={Boolean(translateModalState.identifier)}
         onApply={handleApplyTranslation}
         onSave={handleSaveTranslation}
+        preferredTargetLang={translateModalState.targetLang ?? (activeLang !== 'es' ? activeLang : 'en')}
       />
       <ConfirmModal
         open={deleteState.open}
-        title="¿Eliminar etiqueta?"
-        description={deleteState.name ? `Se eliminará "${deleteState.name}" de la lista.` : null}
+        title={t('dashboard.tags.delete.title')}
+        description={deleteState.name ? t('dashboard.tags.delete.description', { name: deleteState.name }) : null}
         onCancel={() => setDeleteState({ open: false, id: null, name: '', loading: false })}
         onConfirm={confirmDelete}
         tone="danger"

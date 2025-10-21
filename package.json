@@ -44,7 +44,11 @@
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.22.4",
-    "zustand": "^4.5.2"
+    "zustand": "^4.5.2",
+    "i18next": "^23.0.0",
+    "react-i18next": "^13.2.2",
+    "i18next-browser-languagedetector": "^8.0.2",
+    "@radix-ui/react-tabs": "^1.0.5"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",

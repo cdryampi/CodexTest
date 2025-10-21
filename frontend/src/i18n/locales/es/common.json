@@ -1,0 +1,227 @@
+{
+  "actions": {
+    "cancel": "Cancelar",
+    "saving": "Guardando...",
+    "saveChanges": "Guardar cambios",
+    "createPost": "Crear post",
+    "resetFilters": "Restablecer filtros",
+    "editItem": "Editar {{name}}",
+    "deleteItem": "Eliminar {{name}}",
+    "translateAI": "Traducir con IA"
+  },
+  "ai": {
+    "configureKey": "Configura VITE_OPEN_IA_KEY para habilitar el asistente de traducción."
+  },
+  "language": {
+    "spanish": "Español",
+    "english": "Inglés"
+  },
+  "navbar": {
+    "home": "Inicio",
+    "timeline": "Timeline",
+    "panel": "Panel",
+    "posts": "Posts",
+    "categories": "Categorías",
+    "tags": "Etiquetas",
+    "comments": "Comentarios",
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "search": "Buscar...",
+    "language": "Idioma",
+    "profile": "Perfil",
+    "profileAlt": "Perfil de usuario",
+    "register": "Crear cuenta",
+    "account": "Cuenta",
+    "activeSession": "Sesión activa",
+    "userFallback": "Usuario",
+    "subtitle": "Historias, tutoriales y noticias",
+    "searchPosts": "Buscar publicaciones",
+    "mobileSearchSubmit": "Buscar",
+    "mobileSearchClear": "Limpiar",
+    "menuOpen": "Abrir menú",
+    "menuClose": "Cerrar menú",
+    "theme": "Tema",
+    "themeMode": "Actualmente en modo {{mode}}",
+    "modeLight": "claro",
+    "modeDark": "oscuro"
+  },
+  "backoffice": {
+    "post": {
+      "sections": {
+        "mainContent": "Contenido principal",
+        "description": "Genera traducciones a inglés o catalán sin salir del formulario.",
+        "fillTitle": "Completa el título antes de traducir."
+      },
+      "fields": {
+        "title": "Título",
+        "slug": "Slug",
+        "excerpt": "Resumen",
+        "content": "Contenido",
+        "category": "Categoría",
+        "tags": "Tags",
+        "image": "Imagen destacada (URL)",
+        "thumbnail": "Miniatura (URL)",
+        "imageAlt": "Texto alternativo de la imagen",
+        "author": "Autor o autora",
+        "status": "Estado",
+        "scheduledDate": "Fecha programada",
+        "publishDate": "Fecha de publicación",
+        "titleEn": "Título (EN)",
+        "slugEn": "Slug (EN)",
+        "excerptEn": "Resumen (EN)",
+        "contentEn": "Contenido (EN)",
+        "titleCa": "Título (CA)",
+        "slugCa": "Slug (CA)",
+        "excerptCa": "Resumen (CA)",
+        "contentCa": "Contenido (CA)"
+      },
+      "placeholders": {
+        "title": "Ingresa el título del post",
+        "excerpt": "Introduce un resumen breve del post",
+        "category": "Selecciona una categoría",
+        "tags": "Selecciona tags relacionados",
+        "imageAlt": "Describe brevemente la imagen",
+        "author": "Nombre visible en el post",
+        "translationTitle": "Título traducido ({{lang}})",
+        "translationExcerpt": "Resumen traducido ({{lang}})"
+      },
+      "helpers": {
+        "slug": "Este valor se utilizará en la URL pública.",
+        "content": "Utiliza el editor para dar formato al contenido del post.",
+        "category": "Puedes crear nuevas categorías desde la sección correspondiente.",
+        "tags": "Puedes elegir varias etiquetas o crear nuevas para organizar el contenido.",
+        "image": "Utiliza una URL pública accesible desde el backend.",
+        "thumbnail": "Será usada para listados y tarjetas.",
+        "translationEditor": "Revisa y ajusta la traducción antes de guardar."
+      },
+      "status": {
+        "published": "Publicado",
+        "scheduled": "Programado"
+      }
+    }
+  },
+  "dashboard": {
+    "categories": {
+      "title": "Categorías",
+      "description": "Crea y administra las categorías disponibles para el contenido.",
+      "new": "Nueva categoría",
+      "searchLabel": "Buscar categoría",
+      "searchPlaceholder": "Filtra por nombre",
+      "searchAria": "Buscar categoría",
+      "table": {
+        "name": "Nombre",
+        "slug": "Slug",
+        "status": "Estado",
+        "posts": "Posts asociados",
+        "actions": "Acciones"
+      },
+      "loading": "Cargando categorías...",
+      "empty": "No se encontraron categorías con los criterios indicados.",
+      "counter": "{{count}} categoría(s) de {{total}} disponibles.",
+      "status": {
+        "active": "Activa",
+        "inactive": "Inactiva"
+      },
+      "modal": {
+        "editTitle": "Editar categoría",
+        "createTitle": "Nueva categoría",
+        "fields": {
+          "name": "Nombre de la categoría",
+          "description": "Descripción",
+          "active": "¿Categoría activa?",
+          "nameEn": "Nombre (EN)",
+          "slugEn": "Slug (EN)",
+          "descriptionEn": "Descripción (EN)",
+          "nameCa": "Nombre (CA)",
+          "slugCa": "Slug (CA)",
+          "descriptionCa": "Descripción (CA)"
+        },
+        "placeholders": {
+          "name": "Nombre de la categoría",
+          "description": "Descripción opcional de la categoría",
+          "translationName": "Nombre traducido ({{lang}})",
+          "translationDescription": "Descripción traducida ({{lang}})"
+        },
+        "helpers": {
+          "description": "Esta información ayuda a tu equipo a reutilizar la categoría correctamente."
+        },
+        "slugPreview": "Slug previsto: {{slug}}",
+        "fillName": "Completa el nombre antes de traducir.",
+        "create": "Crear categoría"
+      },
+      "delete": {
+        "title": "¿Eliminar categoría?",
+        "description": "Se eliminará \"{{name}}\" del listado."
+      },
+      "errors": {
+        "fetch": "No pudimos cargar las categorías, intenta de nuevo.",
+        "saveBeforeTranslate": "Guarda la categoría antes de traducirla.",
+        "selectValid": "Selecciona una categoría válida para traducir.",
+        "selectTarget": "Selecciona un idioma válido para la traducción.",
+        "requiredName": "El nombre de la categoría es obligatorio.",
+        "duplicate": "Ya existe una categoría con ese nombre.",
+        "save": "No se pudo guardar la categoría.",
+        "delete": "No se pudo eliminar la categoría."
+      },
+      "success": {
+        "updated": "Categoría actualizada.",
+        "created": "Categoría creada.",
+        "deleted": "Categoría eliminada."
+      }
+    },
+    "tags": {
+      "title": "Etiquetas",
+      "description": "Gestiona las etiquetas disponibles para tus publicaciones.",
+      "new": "Nueva etiqueta",
+      "searchLabel": "Buscar etiqueta",
+      "searchPlaceholder": "Filtra por nombre",
+      "searchAria": "Buscar etiqueta",
+      "table": {
+        "name": "Nombre",
+        "slug": "Slug",
+        "usage": "Uso",
+        "actions": "Acciones"
+      },
+      "loading": "Cargando etiquetas...",
+      "empty": "No se encontraron etiquetas con los criterios indicados.",
+      "counter": "{{count}} etiqueta(s) de {{total}} disponibles.",
+      "modal": {
+        "editTitle": "Editar etiqueta",
+        "createTitle": "Nueva etiqueta",
+        "fields": {
+          "name": "Nombre de la etiqueta",
+          "nameEn": "Nombre (EN)",
+          "slugEn": "Slug (EN)",
+          "nameCa": "Nombre (CA)",
+          "slugCa": "Slug (CA)"
+        },
+        "placeholders": {
+          "name": "Nombre de la etiqueta",
+          "translationName": "Nombre traducido ({{lang}})"
+        },
+        "slugPreview": "Slug previsto: {{slug}}",
+        "fillName": "Completa el nombre antes de traducir.",
+        "create": "Crear etiqueta"
+      },
+      "delete": {
+        "title": "¿Eliminar etiqueta?",
+        "description": "Se eliminará \"{{name}}\" del listado."
+      },
+      "errors": {
+        "fetch": "No pudimos cargar las etiquetas, intenta de nuevo.",
+        "saveBeforeTranslate": "Guarda la etiqueta antes de traducirla.",
+        "selectValid": "Selecciona una etiqueta válida para traducir.",
+        "selectTarget": "Selecciona un idioma válido para la traducción.",
+        "requiredName": "El nombre de la etiqueta es obligatorio.",
+        "duplicate": "Ya existe una etiqueta con ese nombre.",
+        "save": "No se pudo guardar la etiqueta.",
+        "delete": "No se pudo eliminar la etiqueta."
+      },
+      "success": {
+        "updated": "Etiqueta actualizada.",
+        "created": "Etiqueta creada.",
+        "deleted": "Etiqueta eliminada."
+      }
+    }
+  }
+}

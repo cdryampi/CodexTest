@@ -3,6 +3,8 @@ import { Modal, ToggleSwitch } from 'flowbite-react';
 import slugify from 'slugify';
 import { toast } from 'sonner';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
+import * as Tabs from '@radix-ui/react-tabs';
+import { useTranslation } from 'react-i18next';
 import { useDashboardLayout } from '../../layouts/DashboardLayout.jsx';
 import {
   useDashboardStore,
@@ -18,9 +20,15 @@ import {
 import { Button } from '../../components/ui/button.jsx';
 import TranslateButton from '../../components/ai-translate/TranslateButton.jsx';
 import TranslateModal from '../../components/ai-translate/TranslateModal.jsx';
+import LanguageFlags from '../../components/ai-translate/LanguageFlags.jsx';
 import { Input } from '../../components/ui/input.jsx';
 import { Textarea } from '../../components/ui/textarea.jsx';
 import ConfirmModal from '../../components/backoffice/ConfirmModal.jsx';
+
+const TRANSLATION_FIELD_MAP = {
+  en: { name: 'name_en', description: 'description_en', slug: 'slug_en' },
+  ca: { name: 'name_ca', description: 'description_ca', slug: 'slug_ca' }
+};
 
 const normalizeCollection = (payload) => {
   if (Array.isArray(payload)) return payload;
@@ -50,6 +58,7 @@ const dedupeCategories = (categories) => {
 };
 
 function DashboardCategories() {
+  const { t } = useTranslation();
   const { setHeader } = useDashboardLayout();
   const categoriesState = useDashboardStore(selectCategoriesState);
   const setCategoriesSearch = useDashboardStore((state) => state.setCategoriesSearch);
@@ -57,6 +66,7 @@ function DashboardCategories() {
 
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeLang, setActiveLang] = useState('es');
   const [modalState, setModalState] = useState({
     open: false,
     mode: 'create',
@@ -64,28 +74,50 @@ function DashboardCategories() {
     slug: null,
     name: '',
     description: '',
-    isActive: true
+    isActive: true,
+    name_en: '',
+    description_en: '',
+    slug_en: '',
+    name_ca: '',
+    description_ca: '',
+    slug_ca: ''
   });
   const [deleteState, setDeleteState] = useState({ open: false, slug: null, name: '', loading: false });
-  const [translateModalState, setTranslateModalState] = useState({ open: false, identifier: null });
+  const [translateModalState, setTranslateModalState] = useState({ open: false, identifier: null, targetLang: 'en' });
 
   useEffect(() => {
     setHeader({
-      title: 'Categorías',
-      description: 'Crea y administra las categorías disponibles para el contenido.',
+      title: t('dashboard.categories.title'),
+      description: t('dashboard.categories.description'),
       showSearch: false,
       actions: (
         <Button
           type="button"
           size="sm"
-          onClick={() => setModalState({ open: true, mode: 'create', id: null, slug: null, name: '', description: '', isActive: true })}
+          onClick={() =>
+            setModalState({
+              open: true,
+              mode: 'create',
+              id: null,
+              slug: null,
+              name: '',
+              description: '',
+              isActive: true,
+              name_en: '',
+              description_en: '',
+              slug_en: '',
+              name_ca: '',
+              description_ca: '',
+              slug_ca: ''
+            })
+          }
         >
           <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-          Nueva categoría
+          {t('dashboard.categories.new')}
         </Button>
       )
     });
-  }, [setHeader]);
+  }, [setHeader, t]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -95,18 +127,19 @@ function DashboardCategories() {
         const normalized = normalizeCollection(response);
         setCategories(dedupeCategories(normalized));
       } catch (error) {
-        toast.error('No pudimos cargar las categorías, intenta de nuevo.');
+        toast.error(t('dashboard.categories.errors.fetch'));
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchCategories();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!modalState.open) {
-      setTranslateModalState({ open: false, identifier: null });
+      setTranslateModalState({ open: false, identifier: null, targetLang: 'en' });
+      setActiveLang('es');
     }
   }, [modalState.open]);
 
@@ -119,6 +152,7 @@ function DashboardCategories() {
   }, [categories, categoriesState.search]);
 
   const openEditModal = (category) => {
+    const translations = category?.translations ?? {};
     setModalState({
       open: true,
       mode: 'edit',
@@ -126,52 +160,117 @@ function DashboardCategories() {
       slug: category.slug,
       name: category.name ?? '',
       description: category.description ?? '',
-      isActive: category.is_active !== false
+      isActive: category.is_active !== false,
+      name_en: translations?.en?.name ?? '',
+      description_en: translations?.en?.description ?? '',
+      slug_en: translations?.en?.slug ?? '',
+      name_ca: translations?.ca?.name ?? '',
+      description_ca: translations?.ca?.description ?? '',
+      slug_ca: translations?.ca?.slug ?? ''
     });
   };
 
   const closeModal = () => {
-    setModalState({ open: false, mode: 'create', id: null, slug: null, name: '', description: '', isActive: true });
+    setModalState({
+      open: false,
+      mode: 'create',
+      id: null,
+      slug: null,
+      name: '',
+      description: '',
+      isActive: true,
+      name_en: '',
+      description_en: '',
+      slug_en: '',
+      name_ca: '',
+      description_ca: '',
+      slug_ca: ''
+    });
   };
 
   const openTranslateAssistant = useCallback(() => {
     if (modalState.mode !== 'edit') {
-      toast.info('Guarda la categoría antes de traducirla.');
+      toast.info(t('dashboard.categories.errors.saveBeforeTranslate'));
       return;
     }
     const identifier = modalState.id ?? modalState.slug;
     if (!identifier) {
-      toast.info('Selecciona una categoría válida para traducir.');
+      toast.info(t('dashboard.categories.errors.selectValid'));
       return;
     }
-    setTranslateModalState({ open: true, identifier });
-  }, [modalState.id, modalState.mode, modalState.slug, toast]);
+    setTranslateModalState({ open: true, identifier, targetLang: activeLang !== 'es' ? activeLang : 'en' });
+  }, [modalState.id, modalState.mode, modalState.slug, toast, activeLang, t]);
+
+  const handleChangeField = (field, value) => {
+    setModalState((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const languageStatuses = useMemo(
+    () => ({
+      es: modalState.name?.trim() || modalState.description?.trim() ? 'listo' : 'pendiente',
+      en: modalState.name_en?.trim() || modalState.description_en?.trim() ? 'listo' : 'pendiente',
+      ca: modalState.name_ca?.trim() || modalState.description_ca?.trim() ? 'listo' : 'pendiente'
+    }),
+    [modalState]
+  );
 
   const handleApplyTranslation = useCallback((lang, translatedFields) => {
     if (!translatedFields || typeof translatedFields !== 'object') {
       return;
     }
+    const map = TRANSLATION_FIELD_MAP[lang];
+    if (!map) {
+      setModalState((prev) => ({
+        ...prev,
+        name: translatedFields.name ?? prev.name,
+        description: translatedFields.description ?? prev.description,
+        slug: translatedFields.slug ?? prev.slug
+      }));
+      return;
+    }
     setModalState((prev) => ({
       ...prev,
-      name: translatedFields.name ?? prev.name,
-      description: translatedFields.description ?? prev.description,
-      slug: translatedFields.slug ?? prev.slug
+      [map.name]: translatedFields.name ?? prev[map.name],
+      [map.description]: translatedFields.description ?? prev[map.description],
+      [map.slug]: translatedFields.slug ?? prev[map.slug]
     }));
+    setActiveLang(lang);
   }, []);
 
-  const handleSaveTranslation = useCallback(async (lang, translatedFields) => {
-    const identifier = translateModalState.identifier ?? modalState.id ?? modalState.slug;
-    if (!identifier) {
-      throw new Error('Selecciona una categoría existente antes de guardar la traducción.');
-    }
-    await updateCategoryTranslation(identifier, lang, translatedFields);
-  }, [modalState.id, modalState.slug, translateModalState.identifier]);
+  const handleSaveTranslation = useCallback(
+    async (lang, translatedFields) => {
+      const identifier = translateModalState.identifier ?? modalState.id ?? modalState.slug;
+      if (!identifier) {
+        throw new Error(t('dashboard.categories.errors.selectValid'));
+      }
+      const map = TRANSLATION_FIELD_MAP[lang];
+      if (!map) {
+        throw new Error(t('dashboard.categories.errors.selectTarget'));
+      }
+      const payload = {};
+      Object.entries(map).forEach(([key, stateKey]) => {
+        if (translatedFields && Object.prototype.hasOwnProperty.call(translatedFields, key)) {
+          const value = translatedFields[key];
+          if (typeof value === 'string') {
+            payload[key] = value;
+            return;
+          }
+        }
+        const current = modalState[stateKey];
+        if (typeof current === 'string' && current.trim()) {
+          payload[key] = current;
+        }
+      });
+      await updateCategoryTranslation(identifier, lang, payload);
+    },
+    [modalState, translateModalState.identifier, t]
+  );
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     const name = modalState.name.trim();
     if (!name) {
-      toast.error('El nombre de la categoría es obligatorio.');
+      toast.error(t('dashboard.categories.errors.requiredName'));
       return;
     }
     const duplicate = categories.some((category) => {
@@ -185,7 +284,7 @@ function DashboardCategories() {
     });
 
     if (duplicate) {
-      toast.error('Ya existe una categoría con ese nombre.');
+      toast.error(t('dashboard.categories.errors.duplicate'));
       return;
     }
 
@@ -213,15 +312,15 @@ function DashboardCategories() {
             )
           )
         );
-        toast.success('Categoría actualizada.');
+        toast.success(t('dashboard.categories.success.updated'));
       } else {
         const created = await createCategory(payload);
         setCategories((prev) => dedupeCategories([created, ...prev]));
-        toast.success('Categoría creada.');
+        toast.success(t('dashboard.categories.success.created'));
       }
       closeModal();
     } catch (error) {
-      toast.error(error?.message ?? 'No se pudo guardar la categoría.');
+      toast.error(error?.message ?? t('dashboard.categories.errors.save'));
     }
   };
 
@@ -233,9 +332,9 @@ function DashboardCategories() {
     try {
       await deleteCategory(deleteState.slug);
       setCategories((prev) => dedupeCategories(prev.filter((category) => category.slug !== deleteState.slug)));
-      toast.success('Categoría eliminada.');
+      toast.success(t('dashboard.categories.success.deleted'));
     } catch (error) {
-      toast.error(error?.message ?? 'No se pudo eliminar la categoría.');
+      toast.error(error?.message ?? t('dashboard.categories.errors.delete'));
     } finally {
       setDeleteState({ open: false, slug: null, name: '', loading: false });
     }
@@ -262,17 +361,17 @@ function DashboardCategories() {
       <div className="flex flex-col gap-3 rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/70">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Buscar categoría</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t('dashboard.categories.searchLabel')}</span>
             <Input
               type="search"
               value={categoriesState.search}
               onChange={(event) => setCategoriesSearch(event.target.value)}
-              placeholder="Filtra por nombre"
-              aria-label="Buscar categoría"
+              placeholder={t('dashboard.categories.searchPlaceholder')}
+              aria-label={t('dashboard.categories.searchAria')}
             />
           </label>
           <Button type="button" variant="ghost" size="sm" onClick={resetCategories}>
-            Restablecer filtros
+            {t('actions.resetFilters')}
           </Button>
         </div>
         <div className="overflow-hidden rounded-3xl border border-slate-200/70 dark:border-slate-800/70">
@@ -280,19 +379,19 @@ function DashboardCategories() {
             <thead className="bg-slate-50/80 dark:bg-slate-900/70">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Nombre
+                  {t('dashboard.categories.table.name')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Slug
+                  {t('dashboard.categories.table.slug')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Estado
+                  {t('dashboard.categories.table.status')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Posts asociados
+                  {t('dashboard.categories.table.posts')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Acciones
+                  {t('dashboard.categories.table.actions')}
                 </th>
               </tr>
             </thead>
@@ -300,13 +399,13 @@ function DashboardCategories() {
               {isLoading ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-16 text-center text-sm text-slate-500 dark:text-slate-400">
-                    Cargando categorías...
+                    {t('dashboard.categories.loading')}
                   </td>
                 </tr>
               ) : filteredCategories.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-16 text-center text-sm text-slate-500 dark:text-slate-400">
-                    No se encontraron categorías con los criterios indicados.
+                    {t('dashboard.categories.empty')}
                   </td>
                 </tr>
               ) : (
@@ -322,13 +421,15 @@ function DashboardCategories() {
                             : 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300'
                         }`}
                       >
-                        {category.is_active !== false ? 'Activa' : 'Inactiva'}
+                        {category.is_active !== false
+                          ? t('dashboard.categories.status.active')
+                          : t('dashboard.categories.status.inactive')}
                       </span>
                     </td>
                     <td className="px-6 py-3 text-sm text-slate-500 dark:text-slate-400">{category.post_count ?? 0}</td>
                     <td className="px-6 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button type="button" size="icon" variant="ghost" onClick={() => openEditModal(category)} aria-label={`Editar ${category.name}`}>
+                        <Button type="button" size="icon" variant="ghost" onClick={() => openEditModal(category)} aria-label={t('actions.editItem', { name: category.name })}>
                           <Pencil className="h-4 w-4" aria-hidden="true" />
                         </Button>
                         <Button
@@ -337,7 +438,7 @@ function DashboardCategories() {
                           variant="ghost"
                           className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
                           onClick={() => setDeleteState({ open: true, slug: category.slug, name: category.name, loading: false })}
-                          aria-label={`Eliminar ${category.name}`}
+                          aria-label={t('actions.deleteItem', { name: category.name })}
                         >
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </Button>
@@ -350,7 +451,7 @@ function DashboardCategories() {
           </table>
         </div>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          {filteredCategories.length} categoría(s) de {categories.length} disponibles.
+          {t('dashboard.categories.counter', { count: filteredCategories.length, total: categories.length })}
         </p>
       </div>
 
@@ -362,60 +463,132 @@ function DashboardCategories() {
       >
         <Modal.Header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 id="category-modal-title" className="text-lg font-semibold text-slate-900 dark:text-white">
-            {modalState.mode === 'edit' ? 'Editar categoría' : 'Nueva categoría'}
+            {modalState.mode === 'edit' ? t('dashboard.categories.modal.editTitle') : t('dashboard.categories.modal.createTitle')}
           </h2>
           {modalState.mode === 'edit' ? (
             <TranslateButton
               size="sm"
               onClick={openTranslateAssistant}
               disabled={!modalState.name?.trim()}
-              tooltip={!modalState.name?.trim() ? 'Completa el nombre antes de traducir.' : 'Abrir asistente de traducción.'}
-            >
-              Traducir
-            </TranslateButton>
+              tooltip={!modalState.name?.trim() ? t('dashboard.categories.modal.fillName') : undefined}
+            />
           ) : null}
         </Modal.Header>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Modal.Body className="space-y-4">
-            <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400" htmlFor="category-name">
-              Nombre de la categoría
-              <Input
-                id="category-name"
-                value={modalState.name}
-                onChange={(event) => setModalState((prev) => ({ ...prev, name: event.target.value }))}
-                placeholder="Nombre de la categoría"
-                aria-describedby="category-slug-preview"
-                autoFocus
-              />
-            </label>
-            <p id="category-slug-preview" className="text-xs text-slate-500 dark:text-slate-400">
-              Slug previsto: {computedSlug || '—'}
-            </p>
-            <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-              <span>¿Categoría activa?</span>
-              <ToggleSwitch
-                checked={modalState.isActive}
-                label=""
-                onChange={(checked) => setModalState((prev) => ({ ...prev, isActive: checked }))}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400" htmlFor="category-description">
-              Descripción
-              <Textarea
-                id="category-description"
-                value={modalState.description}
-                onChange={(event) => setModalState((prev) => ({ ...prev, description: event.target.value }))}
-                rows={4}
-                placeholder="Descripción opcional de la categoría"
-              />
-              <span className="text-xs text-slate-400 dark:text-slate-500">Esta información ayuda a tu equipo a reutilizar la categoría correctamente.</span>
-            </label>
+            <Tabs.Root value={activeLang} onValueChange={setActiveLang}>
+              <Tabs.List className="sr-only">
+                {['es', 'en', 'ca'].map((lang) => (
+                  <Tabs.Trigger key={lang} value={lang}>
+                    {lang}
+                  </Tabs.Trigger>
+                ))}
+              </Tabs.List>
+              <LanguageFlags selected={activeLang} onSelect={setActiveLang} statuses={languageStatuses} />
+              <Tabs.Content value="es" className="space-y-4 pt-2">
+                <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400" htmlFor="category-name">
+                  {t('dashboard.categories.modal.fields.name')}
+                  <Input
+                    id="category-name"
+                    value={modalState.name}
+                    onChange={(event) => handleChangeField('name', event.target.value)}
+                    placeholder={t('dashboard.categories.modal.placeholders.name')}
+                    aria-describedby="category-slug-preview"
+                    autoFocus
+                  />
+                </label>
+                <p id="category-slug-preview" className="text-xs text-slate-500 dark:text-slate-400">
+                  {t('dashboard.categories.modal.slugPreview', { slug: computedSlug || '—' })}
+                </p>
+                <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                  <span>{t('dashboard.categories.modal.fields.active')}</span>
+                  <ToggleSwitch
+                    checked={modalState.isActive}
+                    label=""
+                    onChange={(checked) => handleChangeField('isActive', checked)}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400" htmlFor="category-description">
+                  {t('dashboard.categories.modal.fields.description')}
+                  <Textarea
+                    id="category-description"
+                    value={modalState.description}
+                    onChange={(event) => handleChangeField('description', event.target.value)}
+                    rows={4}
+                    placeholder={t('dashboard.categories.modal.placeholders.description')}
+                  />
+                  <span className="text-xs text-slate-400 dark:text-slate-500">{t('dashboard.categories.modal.helpers.description')}</span>
+                </label>
+              </Tabs.Content>
+
+              <Tabs.Content value="en" className="space-y-4 pt-2">
+                <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400" htmlFor="category-name-en">
+                  {t('dashboard.categories.modal.fields.nameEn')}
+                  <Input
+                    id="category-name-en"
+                    value={modalState.name_en}
+                    onChange={(event) => handleChangeField('name_en', event.target.value)}
+                    placeholder={t('dashboard.categories.modal.placeholders.translationName', { lang: 'EN' })}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400" htmlFor="category-slug-en">
+                  {t('dashboard.categories.modal.fields.slugEn')}
+                  <Input
+                    id="category-slug-en"
+                    value={modalState.slug_en}
+                    onChange={(event) => handleChangeField('slug_en', event.target.value)}
+                    placeholder="auto-generado"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400" htmlFor="category-description-en">
+                  {t('dashboard.categories.modal.fields.descriptionEn')}
+                  <Textarea
+                    id="category-description-en"
+                    value={modalState.description_en}
+                    onChange={(event) => handleChangeField('description_en', event.target.value)}
+                    rows={4}
+                    placeholder={t('dashboard.categories.modal.placeholders.translationDescription', { lang: 'EN' })}
+                  />
+                </label>
+              </Tabs.Content>
+
+              <Tabs.Content value="ca" className="space-y-4 pt-2">
+                <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400" htmlFor="category-name-ca">
+                  {t('dashboard.categories.modal.fields.nameCa')}
+                  <Input
+                    id="category-name-ca"
+                    value={modalState.name_ca}
+                    onChange={(event) => handleChangeField('name_ca', event.target.value)}
+                    placeholder={t('dashboard.categories.modal.placeholders.translationName', { lang: 'CA' })}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400" htmlFor="category-slug-ca">
+                  {t('dashboard.categories.modal.fields.slugCa')}
+                  <Input
+                    id="category-slug-ca"
+                    value={modalState.slug_ca}
+                    onChange={(event) => handleChangeField('slug_ca', event.target.value)}
+                    placeholder="auto-generado"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400" htmlFor="category-description-ca">
+                  {t('dashboard.categories.modal.fields.descriptionCa')}
+                  <Textarea
+                    id="category-description-ca"
+                    value={modalState.description_ca}
+                    onChange={(event) => handleChangeField('description_ca', event.target.value)}
+                    rows={4}
+                    placeholder={t('dashboard.categories.modal.placeholders.translationDescription', { lang: 'CA' })}
+                  />
+                </label>
+              </Tabs.Content>
+            </Tabs.Root>
           </Modal.Body>
           <Modal.Footer className="flex items-center justify-end gap-2">
             <Button type="button" variant="ghost" onClick={closeModal}>
-              Cancelar
+              {t('actions.cancel')}
             </Button>
-            <Button type="submit">{modalState.mode === 'edit' ? 'Guardar cambios' : 'Crear categoría'}</Button>
+            <Button type="submit">{modalState.mode === 'edit' ? t('actions.saveChanges') : t('dashboard.categories.modal.create')}</Button>
           </Modal.Footer>
         </form>
       </Modal>
@@ -430,11 +603,12 @@ function DashboardCategories() {
         allowSave={Boolean(translateModalState.identifier)}
         onApply={handleApplyTranslation}
         onSave={handleSaveTranslation}
+        preferredTargetLang={translateModalState.targetLang ?? (activeLang !== 'es' ? activeLang : 'en')}
       />
       <ConfirmModal
         open={deleteState.open}
-        title="¿Eliminar categoría?"
-        description={deleteState.name ? `Se eliminará "${deleteState.name}" del listado.` : null}
+        title={t('dashboard.categories.delete.title')}
+        description={deleteState.name ? t('dashboard.categories.delete.description', { name: deleteState.name }) : null}
         onCancel={() => setDeleteState({ open: false, slug: null, name: '', loading: false })}
         onConfirm={confirmDelete}
         tone="danger"

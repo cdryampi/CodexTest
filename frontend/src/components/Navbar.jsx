@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import {
   AlignJustify,
   Bolt,
@@ -23,6 +24,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useUIStore, selectIsDark, selectSearch } from '../store/useUI';
 import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList } from './ui/navigation-menu.jsx';
 import ThemeToggle from './ui/theme-toggle.jsx';
+import LanguageSwitcher from './common/LanguageSwitcher.jsx';
 import { Button } from './ui/button.jsx';
 import { Input } from './ui/input.jsx';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar.jsx';
@@ -37,47 +39,47 @@ import {
 } from './ui/dropdown-menu.jsx';
 import { cn } from '../lib/utils';
 
-const mainLinks = [
+const MAIN_LINKS = [
   {
     to: '/',
-    label: 'Inicio',
+    labelKey: 'navbar.home',
     icon: Home
   },
   {
     to: '/timeline',
-    label: 'Timeline',
+    labelKey: 'navbar.timeline',
     icon: Clock3
   }
 ];
 
-const dashboardLinks = [
+const DASHBOARD_LINKS = [
   {
     to: '/dashboard',
-    label: 'Panel',
+    labelKey: 'navbar.panel',
     icon: LayoutDashboard,
     match: (path) => path === '/dashboard'
   },
   {
     to: '/dashboard/posts',
-    label: 'Posts',
+    labelKey: 'navbar.posts',
     icon: NotebookPen,
     match: (path) => path.startsWith('/dashboard/posts')
   },
   {
     to: '/dashboard/categories',
-    label: 'Categorías',
+    labelKey: 'navbar.categories',
     icon: LayoutList,
     match: (path) => path.startsWith('/dashboard/categories')
   },
   {
     to: '/dashboard/tags',
-    label: 'Etiquetas',
+    labelKey: 'navbar.tags',
     icon: Tags,
     match: (path) => path.startsWith('/dashboard/tags')
   },
   {
     to: '/dashboard/comments',
-    label: 'Comentarios',
+    labelKey: 'navbar.comments',
     icon: MessageSquare,
     match: (path) => path.startsWith('/dashboard/comments')
   }
@@ -94,6 +96,12 @@ function Navbar() {
 
   const [localSearch, setLocalSearch] = useState(globalSearch);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { t } = useTranslation();
+  const mainLinks = useMemo(() => MAIN_LINKS.map((link) => ({ ...link, label: t(link.labelKey) })), [t]);
+  const dashboardLinks = useMemo(() =>
+    DASHBOARD_LINKS.map((link) => ({ ...link, label: t(link.labelKey) })),
+    [t]
+  );
 
   useEffect(() => {
     setLocalSearch(globalSearch);
@@ -174,7 +182,7 @@ function Navbar() {
     <Button asChild className="hidden lg:inline-flex" size="sm">
       <Link to="/dashboard/posts" className="flex items-center gap-2">
         <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
-        Panel
+        {t('navbar.panel')}
       </Link>
     </Button>
   ) : null;
@@ -188,19 +196,19 @@ function Navbar() {
         >
           <Avatar className="h-9 w-9">
             {user?.avatar ? (
-              <AvatarImage src={user.avatar} alt={displayName || 'Perfil de usuario'} />
+              <AvatarImage src={user.avatar} alt={displayName || t('navbar.profileAlt')} />
             ) : null}
             <AvatarFallback>{avatarInitials}</AvatarFallback>
           </Avatar>
           <span className="hidden max-w-[10rem] truncate text-left text-sm lg:block">
-            {displayName || user?.email || 'Cuenta'}
+            {displayName || user?.email || t('navbar.account')}
           </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-60" align="end" sideOffset={12}>
         <DropdownMenuLabel className="flex flex-col gap-0.5">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Sesión activa</span>
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-100">{displayName || 'Usuario'}</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t('navbar.activeSession')}</span>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-100">{displayName || t('navbar.userFallback')}</span>
           {user?.email ? <span className="text-xs text-slate-400 dark:text-slate-500">{user.email}</span> : null}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -208,7 +216,7 @@ function Navbar() {
           <DropdownMenuItem asChild>
             <Link to="/profile" className="flex w-full items-center gap-2">
               <User className="h-4 w-4" aria-hidden="true" />
-              Perfil
+              {t('navbar.profile')}
             </Link>
           </DropdownMenuItem>
           {dashboardLinks.map((link) => {
@@ -226,7 +234,7 @@ function Navbar() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={handleLogoutSelect} className="text-red-600 focus-visible:bg-red-50 focus-visible:text-red-700 dark:text-red-400 dark:focus-visible:bg-red-500/10">
           <LogOut className="h-4 w-4" aria-hidden="true" />
-          Cerrar sesión
+          {t('navbar.logout')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -235,13 +243,13 @@ function Navbar() {
       <Button variant="ghost" asChild size="sm">
         <Link to="/login" className="flex items-center gap-2">
           <LogIn className="h-4 w-4" aria-hidden="true" />
-          Iniciar sesión
+          {t('navbar.login')}
         </Link>
       </Button>
       <Button variant="outline" asChild size="sm">
         <Link to="/register" className="flex items-center gap-2">
           <UserPlus className="h-4 w-4" aria-hidden="true" />
-          Crear cuenta
+          {t('navbar.register')}
         </Link>
       </Button>
     </div>
@@ -251,13 +259,13 @@ function Navbar() {
     ...mainLinks,
     ...(isAuthenticated
       ? [
-          { to: '/profile', label: 'Perfil', icon: UserCircle2 },
+          { to: '/profile', label: t('navbar.profile'), icon: UserCircle2 },
           ...dashboardLinks,
-          { to: '/logout', label: 'Cerrar sesión', icon: LogOut, action: handleLogout }
+          { to: '/logout', label: t('navbar.logout'), icon: LogOut, action: handleLogout }
         ]
       : [
-          { to: '/login', label: 'Iniciar sesión', icon: LogIn },
-          { to: '/register', label: 'Crear cuenta', icon: UserPlus }
+          { to: '/login', label: t('navbar.login'), icon: LogIn },
+          { to: '/register', label: t('navbar.register'), icon: UserPlus }
         ])
   ];
 
@@ -270,7 +278,7 @@ function Navbar() {
           </span>
           <div className="flex flex-col">
             <span className="text-lg font-bold">React Tailwind Blog</span>
-            <span className="text-xs text-slate-400 dark:text-slate-500">Historias, tutoriales y noticias</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">{t('navbar.subtitle')}</span>
           </div>
         </Link>
         <div className="hidden flex-1 items-center justify-center gap-6 lg:flex">
@@ -292,14 +300,15 @@ function Navbar() {
               type="search"
               value={localSearch}
               onChange={(event) => setLocalSearch(event.target.value)}
-              placeholder="Buscar publicaciones"
-              aria-label="Buscar publicaciones"
+              placeholder={t('navbar.searchPosts')}
+              aria-label={t('navbar.searchPosts')}
               className="pl-10"
             />
           </form>
         </div>
         <div className="flex items-center gap-2">
           {quickActions}
+          <LanguageSwitcher className="hidden lg:inline-flex" />
           <ThemeToggle className="hidden lg:inline-flex" />
           {isLoading ? null : authContent}
           <Button
@@ -307,7 +316,7 @@ function Navbar() {
             variant="ghost"
             size="icon"
             className="lg:hidden"
-            aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+            aria-label={isMobileMenuOpen ? t('navbar.menuClose') : t('navbar.menuOpen')}
             aria-expanded={isMobileMenuOpen}
             aria-controls="mobile-navigation"
             onClick={() => setIsMobileMenuOpen((prev) => !prev)}
@@ -352,14 +361,14 @@ function Navbar() {
                     type="search"
                     value={localSearch}
                     onChange={(event) => setLocalSearch(event.target.value)}
-                    placeholder="Buscar publicaciones"
-                    aria-label="Buscar publicaciones"
+                    placeholder={t('navbar.searchPosts')}
+                    aria-label={t('navbar.searchPosts')}
                     className="pl-10"
                   />
                 </div>
                 <div className="flex items-center gap-3">
                   <Button type="submit" className="flex-1">
-                    Buscar
+                    {t('navbar.mobileSearchSubmit')}
                   </Button>
                   <Button
                     type="button"
@@ -370,7 +379,7 @@ function Navbar() {
                       setLocalSearch('');
                     }}
                   >
-                    Limpiar
+                    {t('navbar.mobileSearchClear')}
                   </Button>
                 </div>
               </form>
@@ -424,10 +433,13 @@ function Navbar() {
               </div>
               <div className="mt-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
                 <div>
-                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-200">Tema</p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">Actualmente en modo {isDark ? 'oscuro' : 'claro'}</p>
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-200">{t('navbar.theme')}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">{t('navbar.themeMode', { mode: t(isDark ? 'navbar.modeDark' : 'navbar.modeLight') })}</p>
                 </div>
-                <ThemeToggle />
+                <div className="flex items-center gap-2">
+                  <LanguageSwitcher className="lg:hidden" />
+                  <ThemeToggle />
+                </div>
               </div>
             </motion.nav>
           </>

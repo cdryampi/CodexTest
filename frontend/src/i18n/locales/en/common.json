@@ -1,0 +1,227 @@
+{
+  "actions": {
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "saveChanges": "Save changes",
+    "createPost": "Create post",
+    "resetFilters": "Reset filters",
+    "editItem": "Edit {{name}}",
+    "deleteItem": "Delete {{name}}",
+    "translateAI": "Translate with AI"
+  },
+  "ai": {
+    "configureKey": "Configure VITE_OPEN_IA_KEY to enable the translation assistant."
+  },
+  "language": {
+    "spanish": "Spanish",
+    "english": "English"
+  },
+  "navbar": {
+    "home": "Home",
+    "timeline": "Timeline",
+    "panel": "Dashboard",
+    "posts": "Posts",
+    "categories": "Categories",
+    "tags": "Tags",
+    "comments": "Comments",
+    "login": "Log in",
+    "logout": "Log out",
+    "search": "Search...",
+    "language": "Language",
+    "profile": "Profile",
+    "profileAlt": "User profile",
+    "register": "Create account",
+    "account": "Account",
+    "activeSession": "Active session",
+    "userFallback": "User",
+    "subtitle": "Stories, tutorials and news",
+    "searchPosts": "Search posts",
+    "mobileSearchSubmit": "Search",
+    "mobileSearchClear": "Clear",
+    "menuOpen": "Open menu",
+    "menuClose": "Close menu",
+    "theme": "Theme",
+    "themeMode": "Currently in {{mode}} mode",
+    "modeLight": "light",
+    "modeDark": "dark"
+  },
+  "backoffice": {
+    "post": {
+      "sections": {
+        "mainContent": "Main content",
+        "description": "Generate English or Catalan translations without leaving the editor.",
+        "fillTitle": "Add a title before requesting a translation."
+      },
+      "fields": {
+        "title": "Title",
+        "slug": "Slug",
+        "excerpt": "Summary",
+        "content": "Content",
+        "category": "Category",
+        "tags": "Tags",
+        "image": "Featured image (URL)",
+        "thumbnail": "Thumbnail (URL)",
+        "imageAlt": "Image alternative text",
+        "author": "Author",
+        "status": "Status",
+        "scheduledDate": "Scheduled date",
+        "publishDate": "Publish date",
+        "titleEn": "Title (EN)",
+        "slugEn": "Slug (EN)",
+        "excerptEn": "Summary (EN)",
+        "contentEn": "Content (EN)",
+        "titleCa": "Title (CA)",
+        "slugCa": "Slug (CA)",
+        "excerptCa": "Summary (CA)",
+        "contentCa": "Content (CA)"
+      },
+      "placeholders": {
+        "title": "Enter the post title",
+        "excerpt": "Add a short summary for the post",
+        "category": "Select a category",
+        "tags": "Select related tags",
+        "imageAlt": "Describe the image",
+        "author": "Visible author name",
+        "translationTitle": "Translated title ({{lang}})",
+        "translationExcerpt": "Translated summary ({{lang}})"
+      },
+      "helpers": {
+        "slug": "This value is used in the public URL.",
+        "content": "Use the editor to format the post content.",
+        "category": "Create new categories from the dedicated section.",
+        "tags": "Select multiple tags or create new ones to organize content.",
+        "image": "Provide a public image URL accessible from the backend.",
+        "thumbnail": "Used for listings and cards.",
+        "translationEditor": "Review and polish the translation before saving."
+      },
+      "status": {
+        "published": "Published",
+        "scheduled": "Scheduled"
+      }
+    }
+  },
+  "dashboard": {
+    "categories": {
+      "title": "Categories",
+      "description": "Create and manage the categories available for your content.",
+      "new": "New category",
+      "searchLabel": "Search category",
+      "searchPlaceholder": "Filter by name",
+      "searchAria": "Search category",
+      "table": {
+        "name": "Name",
+        "slug": "Slug",
+        "status": "Status",
+        "posts": "Related posts",
+        "actions": "Actions"
+      },
+      "loading": "Loading categories...",
+      "empty": "No categories match the current filters.",
+      "counter": "{{count}} category(ies) out of {{total}}.",
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "modal": {
+        "editTitle": "Edit category",
+        "createTitle": "New category",
+        "fields": {
+          "name": "Category name",
+          "description": "Description",
+          "active": "Active category?",
+          "nameEn": "Name (EN)",
+          "slugEn": "Slug (EN)",
+          "descriptionEn": "Description (EN)",
+          "nameCa": "Name (CA)",
+          "slugCa": "Slug (CA)",
+          "descriptionCa": "Description (CA)"
+        },
+        "placeholders": {
+          "name": "Category name",
+          "description": "Optional category description",
+          "translationName": "Translated name ({{lang}})",
+          "translationDescription": "Translated description ({{lang}})"
+        },
+        "helpers": {
+          "description": "This information helps the team reuse the category properly."
+        },
+        "slugPreview": "Suggested slug: {{slug}}",
+        "fillName": "Add a name before requesting a translation.",
+        "create": "Create category"
+      },
+      "delete": {
+        "title": "Delete category?",
+        "description": "\"{{name}}\" will be removed from the list."
+      },
+      "errors": {
+        "fetch": "We couldn’t load the categories. Try again later.",
+        "saveBeforeTranslate": "Save the category before translating it.",
+        "selectValid": "Choose a valid category to translate.",
+        "selectTarget": "Pick a valid target language.",
+        "requiredName": "Category name is required.",
+        "duplicate": "A category with that name already exists.",
+        "save": "The category could not be saved.",
+        "delete": "The category could not be deleted."
+      },
+      "success": {
+        "updated": "Category updated.",
+        "created": "Category created.",
+        "deleted": "Category deleted."
+      }
+    },
+    "tags": {
+      "title": "Tags",
+      "description": "Manage the tags available for your posts.",
+      "new": "New tag",
+      "searchLabel": "Search tag",
+      "searchPlaceholder": "Filter by name",
+      "searchAria": "Search tag",
+      "table": {
+        "name": "Name",
+        "slug": "Slug",
+        "usage": "Usage",
+        "actions": "Actions"
+      },
+      "loading": "Loading tags...",
+      "empty": "No tags match the current filters.",
+      "counter": "{{count}} tag(s) out of {{total}}.",
+      "modal": {
+        "editTitle": "Edit tag",
+        "createTitle": "New tag",
+        "fields": {
+          "name": "Tag name",
+          "nameEn": "Name (EN)",
+          "slugEn": "Slug (EN)",
+          "nameCa": "Name (CA)",
+          "slugCa": "Slug (CA)"
+        },
+        "placeholders": {
+          "name": "Tag name",
+          "translationName": "Translated name ({{lang}})"
+        },
+        "slugPreview": "Suggested slug: {{slug}}",
+        "fillName": "Add a name before requesting a translation.",
+        "create": "Create tag"
+      },
+      "delete": {
+        "title": "Delete tag?",
+        "description": "\"{{name}}\" will be removed from the list."
+      },
+      "errors": {
+        "fetch": "We couldn’t load the tags. Try again later.",
+        "saveBeforeTranslate": "Save the tag before translating it.",
+        "selectValid": "Choose a valid tag to translate.",
+        "selectTarget": "Pick a valid target language.",
+        "requiredName": "Tag name is required.",
+        "duplicate": "A tag with that name already exists.",
+        "save": "The tag could not be saved.",
+        "delete": "The tag could not be deleted."
+      },
+      "success": {
+        "updated": "Tag updated.",
+        "created": "Tag created.",
+        "deleted": "Tag deleted."
+      }
+    }
+  }
+}
