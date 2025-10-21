@@ -130,7 +130,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "backendblog.wsgi.application"
 
-_DATABASE_URL = _env("DATABASE_URL")
+_DATABASE_URL = _env("DATABASE_URL") or _env("POSTGRES_URL")
 if _DATABASE_URL:
     parsed = urlparse(_DATABASE_URL)
     DATABASES: Dict[str, Dict[str, object]] = {

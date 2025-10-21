@@ -14,7 +14,7 @@ El módulo de deploy ya incluye los artefactos necesarios para contenedizar el b
 - CORS y CSRF configurados para `https://cdryampi.github.io/CodexTest/`, `https://backendblog.yampi.eu` y `https://cdryampi.github.io`.
 
 ## Variables de entorno
-Se leen con `django-environ`. Dokploy/Codex ya proveen ejemplos (`SECRET_KEY`, `DEBUG`, `SECURE_SSL_REDIRECT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`). Si se expone `DATABASE_URL`, tiene prioridad sobre los campos individuales. Revisa `backend/.env.example` para conocer todas las claves esperadas.
+Se leen con `django-environ`. Dokploy/Codex ya proveen ejemplos (`SECRET_KEY`, `DEBUG`, `SECURE_SSL_REDIRECT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`). Si se expone `DATABASE_URL`, tiene prioridad sobre los campos individuales. En Dokploy asígnala directamente desde el proyecto con `DATABASE_URL=${{project.POSTGRES_URL}}` para reutilizar la URL administrada por la plataforma. Revisa `backend/.env.example` para conocer todas las claves esperadas.
 
 ## Flujo de despliegue con Dokploy
 1. Construir y publicar la imagen del backend usando `deploy/backend.Dockerfile` (Dokploy puede construirla automáticamente desde el repo o desde GHCR).
