@@ -8,13 +8,13 @@ El backend del blog ya está operativo con Django REST Framework y Jazzmin.
 - Fixtures: `blog/fixtures/seed_posts.json` con el post "Optimiza el renderizado en React" y sus tags.
 
 ## Configuración clave (`settings.py`)
-- Variables cargadas con `python-decouple`:
-  - `SECRET` → `SECRET_KEY`.
-  - `DJANGO_DEBUG` (por defecto `False`).
-  - `DJANGO_ALLOWED_HOSTS` (complementa a `backendblog.yampi.eu`, `localhost`, `127.0.0.1`).
-  - `DJANGO_SECURE_SSL_REDIRECT` (por defecto `not DEBUG`).
-  - `DJANGO_CSRF_TRUSTED_ORIGINS` y `DJANGO_CORS_ALLOWED_ORIGINS`.
-  - `DATABASE_URL` o, en su defecto, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT`.
+- Variables cargadas con `django-environ` (aceptan equivalentes con prefijo `DJANGO_` y las claves heredadas `SECRET`/`URL`):
+  - `SECRET_KEY` (clave de Django).
+  - `DEBUG` (por defecto `False`).
+  - `ALLOWED_HOSTS` (complementa a `backendblog.yampi.eu`, `localhost`, `127.0.0.1`).
+  - `SECURE_SSL_REDIRECT` (por defecto `not DEBUG`).
+  - `CSRF_TRUSTED_ORIGINS` y `CORS_ALLOWED_ORIGINS`.
+  - `DATABASE_URL` (en Dokploy configúrala como `DATABASE_URL=${{project.POSTGRES_URL}}`; también se admite `URL` o `DJANGO_DATABASE_URL`) o, en su defecto, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT` (cada uno admite la variante `DJANGO_POSTGRES_*`).
 - CORS restringido al origen `https://cdryampi.github.io/CodexTest/` (se acepta la ruta vía regex) y CSRF confiado a `https://backendblog.yampi.eu` y `https://cdryampi.github.io`.
 - Jazzmin activo con branding "BackendBlog".
 - `REST_FRAMEWORK` configurado con paginación de 10 elementos y ordenación por `-date`.
@@ -49,7 +49,7 @@ python manage.py runserver
 ```
 
 ## Variables de entorno documentadas
-Consulta `backend/.env.example` para ver todas las claves requeridas/optativas (`SECRET`, `DJANGO_DEBUG`, `DJANGO_SECURE_SSL_REDIRECT`, `DATABASE_URL`, `POSTGRES_*`, `GUNICORN_WORKERS`, etc.).
+Consulta `backend/.env.example` para ver todas las claves requeridas/optativas (`SECRET_KEY`, `DEBUG`, `SECURE_SSL_REDIRECT`, `DATABASE_URL`, `POSTGRES_*`, `GUNICORN_WORKERS`, etc.).
 
 ## Futuras tareas sugeridas
 - Autenticación y permisos (tokens o sesiones) para proteger endpoints de escritura.

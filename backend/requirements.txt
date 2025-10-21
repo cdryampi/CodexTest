@@ -14,7 +14,6 @@ python-slugify
 requests
 gunicorn
 psycopg2-binary
-python-decouple
-python-dotenv
+django-environ
 whitenoise
 Faker>=20

@@ -37,6 +37,7 @@ services:
       CSRF_TRUSTED_ORIGINS: "${CSRF_TRUSTED_ORIGINS:-}"
       CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-}"
       DATABASE_URL: "${DATABASE_URL:-}"
+      # En Dokploy define DATABASE_URL=${{project.POSTGRES_URL}} para reutilizar la cadena provista por el proyecto
       POSTGRES_DB: "${POSTGRES_DB:-}"
       POSTGRES_USER: "${POSTGRES_USER:-}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-}"
