@@ -4,13 +4,15 @@ services:
   postgres:
     image: postgres:16
     restart: always
-    # Las env se configuran en Dokploy -> Service -> Environment
+    # ⚠️ NO declares aquí POSTGRES_DB/USER/PASSWORD.
+    # Defínelos en Dokploy -> Service -> Environment del servicio "postgres".
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
       backend_net:
         aliases: [postgres]
     healthcheck:
+      # Usa $$ para evitar interpolación de Compose.
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
@@ -25,7 +27,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    # Solo deja env no sensibles/fijas aquí si quieres
+    # Variables técnicas no sensibles puedes dejarlas aquí.
     environment:
       POSTGRES_HOST: "postgres"
       POSTGRES_PORT: "5432"
@@ -34,6 +36,8 @@ services:
       GUNICORN_TIMEOUT: "120"
       DB_MAX_RETRIES: "30"
       DB_RETRY_DELAY: "1"
+      # ⚠️ NO declares aquí SECRET_KEY / DEBUG / DATABASE_URL / ALLOWED_HOSTS / CSRF_* / CORS_*.
+      # Ponlas en Dokploy -> Service -> Environment del servicio "backend".
     networks:
       backend_net:
         aliases: [backend]
@@ -42,6 +46,7 @@ services:
     volumes:
       - media:/app/media
     healthcheck:
+      # Si tu imagen no tiene curl, instala o cambia el check (ver abajo).
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/admin/login/ || exit 1"]
       interval: 30s
       timeout: 5s
