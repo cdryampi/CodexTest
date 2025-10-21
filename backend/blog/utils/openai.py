@@ -7,6 +7,11 @@ from typing import Any, Dict, Optional
 import requests
 from django.conf import settings
 
+try:  # pragma: no cover - defensive fallback when settings import changes
+    from backend.backendblog.settings import OPENAI_API_KEY as DEFAULT_OPENAI_API_KEY
+except ImportError:  # pragma: no cover - during setup the project settings are always available
+    DEFAULT_OPENAI_API_KEY = ""
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_OPENAI_URL = "https://api.openai.com/v1/responses"
@@ -29,11 +34,24 @@ class OpenAIRequestError(RuntimeError):
         self.status_code = status_code
 
 
+def _api_key() -> str:
+    value = getattr(settings, "OPENAI_API_KEY", None)
+    if isinstance(value, str):
+        value = value.strip()
+        if value:
+            return value
+    default_value = DEFAULT_OPENAI_API_KEY
+    if isinstance(default_value, str):
+        default_value = default_value.strip()
+        if default_value:
+            return default_value
+    return ""
+
+
 def is_configured() -> bool:
     """Return ``True`` when the OpenAI integration can be used."""
 
-    api_key = getattr(settings, "OPENAI_API_KEY", "") or ""
-    return bool(api_key.strip())
+    return bool(_api_key())
 
 
 def _settings_value(name: str, default):
@@ -109,7 +127,7 @@ def translate_text(
             "Configura VITE_OPEN_IA_KEY en el entorno del backend para habilitar las traducciones."
         )
 
-    api_key = getattr(settings, "OPENAI_API_KEY", "") or ""
+    api_key = _api_key()
     url = _settings_value("OPENAI_API_URL", DEFAULT_OPENAI_URL)
     model = _settings_value("OPENAI_DEFAULT_MODEL", DEFAULT_MODEL)
     system_prompt = _settings_value("OPENAI_SYSTEM_PROMPT", DEFAULT_SYSTEM_PROMPT)
