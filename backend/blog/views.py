@@ -479,7 +479,7 @@ class PostViewSet(
                 raise
 
             base_queryset = super().get_queryset().distinct()
-            fallback_queryset = base_queryset.untranslated().filter(
+            fallback_queryset = base_queryset.filter(
                 translations__slug__iexact=lookup_value
             )
             fallback = fallback_queryset.first()
