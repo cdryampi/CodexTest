@@ -376,6 +376,19 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
         payload[sourceKey] = currentValue;
       }
     });
+    const categoryValue = getValues('category');
+    if (typeof categoryValue === 'string' && categoryValue.trim()) {
+      payload.categories = [categoryValue.trim()];
+    }
+    const selectedTags = getValues('tags');
+    if (Array.isArray(selectedTags) && selectedTags.length > 0) {
+      const normalizedTags = selectedTags
+        .map((tag) => (typeof tag?.value === 'string' ? tag.value.trim() : ''))
+        .filter(Boolean);
+      if (normalizedTags.length > 0) {
+        payload.tags = Array.from(new Set(normalizedTags));
+      }
+    }
     await updatePostTranslation(postSlug, lang, payload);
   }, [mode, slug, slugValue, getValues]);
 

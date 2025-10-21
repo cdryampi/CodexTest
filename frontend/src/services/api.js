@@ -1106,9 +1106,9 @@ export async function updatePostTranslation(slug, lang, payload = {}) {
   if (!normalizedLang) {
     throw new Error('Selecciona un idioma válido para la traducción.');
   }
-  const body = filterTranslatablePayload(payload, ['title', 'excerpt', 'content', 'slug']);
+  const body = filterTranslatablePayload(payload, ['title', 'excerpt', 'content', 'slug', 'categories', 'tags']);
   try {
-    const response = await api.put(`posts/${normalizedSlug}/`, body, {
+    const response = await api.patch(`posts/${normalizedSlug}/`, body, {
       params: { lang: normalizedLang }
     });
     return response.data;
