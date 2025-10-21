@@ -12,12 +12,12 @@ services:
       backend_net:
         aliases: [postgres]
     healthcheck:
-      # Usa $$ para evitar interpolación de Compose.
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      # Cambiado: sin $$ para que Dokploy pueda inyectar las variables
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 5s
+      start_period: 10s
 
   backend:
     build:
