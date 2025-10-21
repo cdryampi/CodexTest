@@ -32,7 +32,8 @@ const resolveProxyTarget = (rawValue) => {
 };
 
 export default defineConfig(({ command, mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
+  const envDir = __dirname;
+  const env = loadEnv(mode, envDir, '');
   const proxyTarget = resolveProxyTarget(env.VITE_API_BASE_URL);
   const isSecureTarget = /^https:\/\//i.test(proxyTarget);
 
@@ -40,6 +41,7 @@ export default defineConfig(({ command, mode }) => {
     plugins: [react()],
     base: command === 'build' ? repositoryBase : '/',
     root: __dirname,
+    envDir,
     publicDir: resolve(__dirname, 'public'),
     server: {
       proxy: {

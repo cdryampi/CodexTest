@@ -1,84 +1,51 @@
+import axios from 'axios';
 import { toast } from 'sonner';
+import api, { getStoredTokens } from './api.js';
 
-const OPENAI_API_URL = 'https://api.openai.com/v1/responses';
-const DEFAULT_MODEL = 'gpt-4o-mini';
+const LOG_PREFIX = '[AI Translate]';
+
 const MAX_TEXT_LENGTH = 2000;
-const SYSTEM_PROMPT =
-  'Eres un asistente de traducción para un blog técnico. Conserva formato Markdown/HTML, respeta enlaces y código, no inventes contenido.';
 
 export function isAIConfigured() {
-  const key = import.meta.env?.VITE_OPEN_IA_KEY;
-  return Boolean(key && typeof key === 'string' && key.trim().length > 0);
+  const tokens = getStoredTokens();
+  return Boolean(tokens?.access);
 }
 
 const normalizeLang = (value) => (value ? value.toString().trim().toLowerCase() : '');
 
-const buildUserPrompt = ({ text, targetLang, sourceLang, format }) => {
-  const detectedSource = sourceLang ? normalizeLang(sourceLang) : 'origen detectado automáticamente';
-  const normalizedTarget = normalizeLang(targetLang) || 'es';
-  const normalizedFormat = format === 'html' ? 'HTML' : 'Markdown';
-
-  return [
-    `Idioma origen: ${detectedSource}.`,
-    `Idioma destino: ${normalizedTarget}.`,
-    `Formato a conservar: ${normalizedFormat}.`,
-    'Traduce el siguiente contenido sin añadir comentarios ni notas adicionales.',
-    'Devuelve únicamente el texto traducido sin comillas ni observaciones.',
-    'Texto:',
-    text
-  ].join('\n');
+const normalizeFormat = (value) => {
+  const normalized = (value ?? '').toString().trim().toLowerCase();
+  return normalized === 'html' ? 'html' : 'markdown';
 };
 
-const extractTranslation = (payload) => {
-  if (!payload || typeof payload !== 'object') {
-    return '';
+const extractDetailMessage = (status, data) => {
+  if (status === 401) {
+    return 'Debes iniciar sesión para solicitar traducciones.';
   }
 
-  if (typeof payload.output_text === 'string' && payload.output_text.trim()) {
-    return payload.output_text.trim();
+  if (status === 429) {
+    return 'Se alcanzó el límite de uso del servicio de traducción. Inténtalo más tarde.';
   }
 
-  if (Array.isArray(payload.output)) {
-    for (const block of payload.output) {
-      const contents = Array.isArray(block?.content) ? block.content : [];
-      for (const item of contents) {
-        const text = item?.text;
-        if (typeof text === 'string' && text.trim()) {
-          return text.trim();
-        }
-      }
-    }
+  if (status === 503) {
+    return (
+      (data && typeof data.detail === 'string' && data.detail) ||
+      'El servicio de traducción no está disponible en este momento.'
+    );
   }
 
-  if (Array.isArray(payload.choices)) {
-    const message = payload.choices[0]?.message?.content;
-    if (typeof message === 'string' && message.trim()) {
-      return message.trim();
-    }
+  if (status === 502) {
+    return (
+      (data && typeof data.detail === 'string' && data.detail) ||
+      'El servicio de traducción devolvió una respuesta no válida.'
+    );
   }
 
-  return '';
-};
-
-const handleApiError = async (response) => {
-  let detail = 'El servicio de traducción no pudo procesar la solicitud. Inténtalo de nuevo en unos minutos.';
-  try {
-    const errorPayload = await response.json();
-    if (errorPayload?.error?.message) {
-      detail = errorPayload.error.message;
-    }
-  } catch (error) {
-    // Ignorar errores de parsing.
+  if (data && typeof data.detail === 'string' && data.detail.trim()) {
+    return data.detail.trim();
   }
 
-  if (response.status === 401) {
-    detail = 'La clave de OpenAI no es válida o ha expirado.';
-  } else if (response.status === 429) {
-    detail = 'Se alcanzó el límite de uso de la API de OpenAI. Inténtalo más tarde.';
-  }
-
-  toast.error(detail);
-  throw new Error(detail);
+  return 'El servicio de traducción no pudo procesar la solicitud. Inténtalo de nuevo en unos minutos.';
 };
 
 export async function translateText({
@@ -88,7 +55,8 @@ export async function translateText({
   format = 'markdown'
 }) {
   if (!isAIConfigured()) {
-    const message = 'Configura VITE_OPEN_IA_KEY antes de solicitar traducciones.';
+    const message = 'Debes iniciar sesión para solicitar traducciones.';
+    console.warn(`${LOG_PREFIX} Solicitud bloqueada por falta de sesión o token.`);
     toast.error(message);
     throw new Error(message);
   }
@@ -102,6 +70,7 @@ export async function translateText({
 
   if (normalizedText.length > MAX_TEXT_LENGTH) {
     const message = `El texto supera el límite permitido (${MAX_TEXT_LENGTH} caracteres). Reduce el contenido e inténtalo de nuevo.`;
+    console.warn(`${LOG_PREFIX} Texto rechazado por exceder el límite permitido (${normalizedText.length} caracteres).`);
     toast.warning(message);
     throw new Error(message);
   }
@@ -109,60 +78,60 @@ export async function translateText({
   const normalizedTarget = normalizeLang(targetLang);
   if (!normalizedTarget) {
     const message = 'Debes indicar un idioma de destino válido.';
+    console.warn(`${LOG_PREFIX} Traducción sin idioma de destino válido.`);
     toast.error(message);
     throw new Error(message);
   }
 
-  const apiKey = import.meta.env.VITE_OPEN_IA_KEY;
+  const normalizedSource = normalizeLang(sourceLang);
+  const normalizedFormat = normalizeFormat(format);
+
   const payload = {
-    model: DEFAULT_MODEL,
-    temperature: 0.2,
-    instructions: SYSTEM_PROMPT,
-    input: buildUserPrompt({
-      text: normalizedText,
-      targetLang: normalizedTarget,
-      sourceLang,
-      format
-    }),
-    response_format: { type: 'text' }
+    text: normalizedText,
+    target_lang: normalizedTarget,
+    format: normalizedFormat
   };
 
-  let response;
-
-  try {
-    response = await fetch(OPENAI_API_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-  } catch (networkError) {
-    const message = 'No fue posible contactar el servicio de traducción. Verifica tu conexión.';
-    toast.error(message);
-    throw new Error(message);
+  if (normalizedSource) {
+    payload.source_lang = normalizedSource;
   }
 
-  if (!response.ok) {
-    await handleApiError(response);
-  }
-
-  let data;
   try {
-    data = await response.json();
+    const response = await api.post('ai/translations/', payload);
+    const data = response.data ?? {};
+    const translated = typeof data.translation === 'string' ? data.translation.trim() : '';
+
+    if (!translated) {
+      const message = 'El servicio de traducción no devolvió un resultado.';
+      console.warn(`${LOG_PREFIX} Respuesta sin traducción válida del backend.`, data);
+      toast.error(message);
+      throw new Error(message);
+    }
+
+    return translated;
   } catch (error) {
-    const message = 'No fue posible interpretar la respuesta del servicio de traducción.';
-    toast.error(message);
-    throw new Error(message);
-  }
+    const axiosError = axios.isAxiosError(error) ? error : null;
+    const response = axiosError?.response ?? error?.response ?? null;
+    const status = response?.status ?? axiosError?.status ?? error?.status ?? null;
+    const data = response?.data ?? axiosError?.response?.data ?? error?.data ?? null;
 
-  const translated = extractTranslation(data);
-  if (!translated) {
-    const message = 'El servicio de traducción no devolvió un resultado.';
-    toast.error(message);
-    throw new Error(message);
-  }
+    const message = response
+      ? extractDetailMessage(status, data)
+      : 'No fue posible contactar el servicio de traducción. Verifica tu conexión.';
 
-  return translated.trim();
+    toast.error(message);
+    console.error(
+      `${LOG_PREFIX} Error al solicitar traducción al backend.`,
+      {
+        status: status ?? null,
+        data: data ?? null,
+        error
+      }
+    );
+
+    const normalizedError = new Error(message);
+    normalizedError.status = status ?? null;
+    normalizedError.data = data ?? null;
+    throw normalizedError;
+  }
 }
