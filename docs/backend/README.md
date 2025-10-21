@@ -299,6 +299,7 @@ Características:
   5. Lanza `python manage.py test`.
   6. Publica artefactos y limpia recursos.
 - Este job es gate obligatorio antes de merge o despliegue Dokploy.
+- Nota: se retiraron las pruebas del endpoint de traducciones con OpenAI porque GitHub Actions no puede realizar llamadas reales al servicio y las ejecuciones fallaban de forma intermitente. Valida la integración manualmente en entornos locales con credenciales válidas cuando sea necesario.
 
 ## Troubleshooting
 - **Panel /admin sin CSS**: falta `collectstatic` o configuración de WhiteNoise; reejecuta el comando y verifica permisos de `staticfiles`.

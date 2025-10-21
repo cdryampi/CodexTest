@@ -485,20 +485,41 @@ class PostViewSet(
             if translations_model is None:
                 raise
 
-            translation = (
-                translations_model._default_manager.filter(slug__iexact=lookup_value)
-                .order_by("master_id")
-                .first()
-            )
-            if translation is None:
-                raise
+            language_candidates: list[str] = []
+            if self.language_code and self.language_code not in language_candidates:
+                language_candidates.append(self.language_code)
+            default_language = getattr(settings, "LANGUAGE_CODE", None)
+            if default_language and default_language not in language_candidates:
+                language_candidates.append(default_language)
+            for code in LANGUAGE_CODES:
+                if code not in language_candidates:
+                    language_candidates.append(code)
 
-            fallback = base_queryset.filter(pk=translation.master_id).first()
-            if fallback is None:
-                raise
+            for language_code in language_candidates:
+                with set_parler_language(language_code):
+                    translation = (
+                        translations_model._default_manager.filter(slug__iexact=lookup_value)
+                        .order_by("master_id")
+                        .first()
+                    )
+                if translation is None:
+                    continue
 
-            self.check_object_permissions(self.request, fallback)
-            return fallback
+                fallback = base_queryset.filter(pk=translation.master_id).first()
+                if fallback is None:
+                    fallback = (
+                        super()
+                        .get_queryset()
+                        .filter(pk=translation.master_id)
+                        .first()
+                    )
+                if fallback is None:
+                    continue
+
+                self.check_object_permissions(self.request, fallback)
+                return fallback
+
+            raise
 
     def filter_queryset(self, queryset):  # type: ignore[override]
         queryset = super().filter_queryset(queryset)
