@@ -1,0 +1,57 @@
+# dokploy.example.yaml
+# Estructura de referencia para declarar servicios en Dokploy vía YAML.
+# Ajusta nombres de proyecto, imágenes y dominios según tu organización.
+
+project: codextest-blog
+registry:
+  server: ghcr.io
+  username: ${GHCR_USERNAME}
+  password: ${GHCR_TOKEN}
+
+services:
+  - name: backend
+    image: ghcr.io/${GITHUB_OWNER}/${REPO_NAME}-backend:${TAG:-latest}
+    replicas: 1
+    ports:
+      - internal: 8000
+        external: 0
+    env_file: backend.env
+    volumes:
+      - name: media
+        mount_path: /app/media
+    healthcheck:
+      command: ["curl", "-fsS", "http://localhost:8000/admin/login/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    domains:
+      - host: api.example.com
+        https: true
+    auto_update:
+      enabled: true
+      strategy: rolling
+
+  - name: frontend
+    image: ghcr.io/${GITHUB_OWNER}/${REPO_NAME}-frontend:${TAG:-latest}
+    replicas: 1
+    ports:
+      - internal: 80
+        external: 0
+    env_file: frontend.env
+    healthcheck:
+      command: ["curl", "-fsS", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    domains:
+      - host: app.example.com
+        https: true
+    auto_update:
+      enabled: true
+      strategy: rolling
+
+volumes:
+  - name: media
+    driver: local
