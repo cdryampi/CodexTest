@@ -1,35 +1,28 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16
     restart: always
-    # ⚠️ NO declares aquí POSTGRES_DB/USER/PASSWORD.
-    # Defínelos en Dokploy -> Service -> Environment del servicio "postgres".
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata_v3:/var/lib/postgresql/data   # <- volumen NUEVO para reinit limpio
     networks:
       backend_net:
         aliases: [postgres]
     healthcheck:
-      # Cambiado: sin $$ para que Dokploy pueda inyectar las variables
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
       start_period: 10s
 
   backend:
     build:
       context: ..
-      dockerfile: deploy/backend.Dockerfile
+      dockerfile: deploy/backend.Dockerfile   # <- usa la ruta real
     restart: always
     depends_on:
       postgres:
         condition: service_healthy
-    env_file:
-      - path: .env
-    # Variables técnicas no sensibles puedes dejarlas aquí.
+    # sin env_file aquí
     environment:
       POSTGRES_HOST: "postgres"
       POSTGRES_PORT: "5432"
@@ -38,8 +31,6 @@ services:
       GUNICORN_TIMEOUT: "120"
       DB_MAX_RETRIES: "30"
       DB_RETRY_DELAY: "1"
-      # ⚠️ NO declares aquí SECRET_KEY / DEBUG / DATABASE_URL / ALLOWED_HOSTS / CSRF_* / CORS_*.
-      # Ponlas en Dokploy -> Service -> Environment del servicio "backend".
     networks:
       backend_net:
         aliases: [backend]
@@ -48,7 +39,6 @@ services:
     volumes:
       - media:/app/media
     healthcheck:
-      # Si tu imagen no tiene curl, instala o cambia el check (ver abajo).
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/admin/login/ || exit 1"]
       interval: 30s
       timeout: 5s
@@ -56,8 +46,8 @@ services:
       start_period: 30s
 
 volumes:
-  pgdata:
-    name: pgdata
+  pgdata_v3:
+    name: pgdata_v3
   media:
     name: backend_media
 
