@@ -17,12 +17,24 @@ def _normalize_keys(key_or_keys: str | Iterable[str]) -> tuple[str, ...]:
     return tuple(str(key) for key in key_or_keys)
 
 
+def _sanitize_env_value(value: str) -> str:
+    """Strip whitespace and surrounding quotes from an environment value."""
+
+    sanitized = value.strip()
+    if not sanitized:
+        return ""
+    # Remove surrounding quotes that may come from .env files ("value" or 'value').
+    sanitized = sanitized.strip("'\"")
+    return sanitized.strip()
+
+
 def _getenv(key_or_keys: str | Iterable[str]) -> str | None:
     for key in _normalize_keys(key_or_keys):
         value = os.getenv(key)
         if value is None:
             continue
-        value = value.strip() if isinstance(value, str) else value
+        if isinstance(value, str):
+            value = _sanitize_env_value(value)
         if isinstance(value, str) and not value:
             continue
         return value
@@ -420,8 +432,7 @@ OPENAI_API_URL = _env("OPENAI_API_URL", "https://api.openai.com/v1/responses") o
 def _clean_openai_value(raw_value: str | None) -> str:
     if raw_value is None:
         return ""
-    value = str(raw_value).strip()
-    return value
+    return _sanitize_env_value(str(raw_value))
 
 
 _openai_api_key = _clean_openai_value(

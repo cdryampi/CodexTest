@@ -1,10 +1,12 @@
 """Tests for the OpenAI utility helpers."""
 from __future__ import annotations
 
+import os
 from unittest.mock import Mock, patch
 
 from django.test import SimpleTestCase, override_settings
 
+from blog.utils import openai
 from blog.utils.openai import (
     OpenAIConfigurationError,
     OpenAIRequestError,
@@ -108,3 +110,9 @@ class OpenAIUtilsTests(SimpleTestCase):
         with patch("blog.utils.openai.requests.post", return_value=mock_response):
             with self.assertRaises(OpenAIRequestError):
                 translate_text(text="Hola", target_language="en")
+
+    @override_settings(OPENAI_API_KEY="", OPEN_IA_KEY="")
+    def test_api_key_strips_quotes_from_environment(self) -> None:
+        with patch.dict(os.environ, {"OPEN_IA_KEY": "  'quoted-key'  "}):
+            self.assertTrue(is_configured())
+            self.assertEqual(openai._api_key(), "quoted-key")
