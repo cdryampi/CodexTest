@@ -22,7 +22,7 @@ services:
   backend:
     build:
       context: ..
-      dockerfile: deploy/backend/Dockerfile
+      dockerfile: deploy/backend.Dockerfile
     restart: always
     depends_on:
       postgres:

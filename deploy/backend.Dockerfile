@@ -3,7 +3,13 @@ FROM python:3.12-alpine
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-RUN apk add --no-cache build-base postgresql-dev
+RUN apk add --no-cache \
+    build-base \
+    libffi-dev \
+    postgresql-dev \
+    jpeg-dev \
+    zlib-dev \
+    curl
 
 WORKDIR /app
 
@@ -12,6 +18,11 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY backend /app
 
+RUN mkdir -p /app/staticfiles /app/media
+
+COPY deploy/backend/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 EXPOSE 8000
 
-CMD ["sh", "-c", "gunicorn backendblog.wsgi:application --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-3}"]
+ENTRYPOINT ["/entrypoint.sh"]
