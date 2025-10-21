@@ -21,12 +21,13 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
 from .filters import PostFilterSet
-from .models import Category, Comment, Post, Reaction
+from .models import Category, Comment, Post, Reaction, Tag
 from .serializers import (
     CategorySerializer,
     CommentSerializer,
     PostDetailSerializer,
     PostListSerializer,
+    TagSerializer,
     ReactionSummarySerializer,
     ReactionToggleSerializer,
 )
@@ -241,6 +242,96 @@ POST_DETAIL_EXPANDED_EXAMPLE = OpenApiExample(
 TRANSLATED_RESPONSE_DESCRIPTION = (
     "Respuesta localizada. El header `Content-Language` indica el idioma servido."
 )
+
+
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            LANGUAGE_QUERY_PARAMETER,
+            EXPAND_TRANSLATIONS_PARAMETER,
+            ACCEPT_LANGUAGE_HEADER,
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=TagSerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+    retrieve=extend_schema(
+        parameters=[
+            LANGUAGE_QUERY_PARAMETER,
+            EXPAND_TRANSLATIONS_PARAMETER,
+            ACCEPT_LANGUAGE_HEADER,
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=TagSerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+    create=extend_schema(
+        parameters=[LANGUAGE_QUERY_PARAMETER, ACCEPT_LANGUAGE_HEADER],
+        responses={
+            201: OpenApiResponse(
+                response=TagSerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+    update=extend_schema(
+        parameters=[LANGUAGE_QUERY_PARAMETER, ACCEPT_LANGUAGE_HEADER],
+        responses={
+            200: OpenApiResponse(
+                response=TagSerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+    partial_update=extend_schema(
+        parameters=[LANGUAGE_QUERY_PARAMETER, ACCEPT_LANGUAGE_HEADER],
+        responses={
+            200: OpenApiResponse(
+                response=TagSerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+)
+class TagViewSet(
+    LanguageNegotiationMixin,
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Expose tags with optional post counters for editorial tools."""
+
+    serializer_class = TagSerializer
+    lookup_field = "slug"
+    lookup_url_kwarg = "slug"
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    ordering = ["name"]
+
+    def get_queryset(self):
+        queryset = self.apply_language(Tag.objects.all())
+        params = self.request.query_params
+        search_term = params.get("q")
+        if search_term:
+            search_term = search_term.strip()
+            if search_term:
+                queryset = queryset.filter(name__icontains=search_term)
+                queryset = queryset.filter(
+                    translations__language_code=self.language_code
+                )
+
+        with_counts = params.get("with_counts")
+        if with_counts is not None and with_counts.lower() in {"1", "true", "yes"}:
+            queryset = queryset.annotate(post_count=Count("posts", distinct=True))
+
+        return queryset.order_by(*self.ordering).distinct()
 
 
 @extend_schema_view(
