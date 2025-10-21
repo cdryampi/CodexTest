@@ -2,6 +2,8 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import api, { getStoredTokens } from './api.js';
 
+const LOG_PREFIX = '[AI Translate]';
+
 const MAX_TEXT_LENGTH = 2000;
 
 export function isAIConfigured() {
@@ -54,6 +56,7 @@ export async function translateText({
 }) {
   if (!isAIConfigured()) {
     const message = 'Debes iniciar sesión para solicitar traducciones.';
+    console.warn(`${LOG_PREFIX} Solicitud bloqueada por falta de sesión o token.`);
     toast.error(message);
     throw new Error(message);
   }
@@ -67,6 +70,7 @@ export async function translateText({
 
   if (normalizedText.length > MAX_TEXT_LENGTH) {
     const message = `El texto supera el límite permitido (${MAX_TEXT_LENGTH} caracteres). Reduce el contenido e inténtalo de nuevo.`;
+    console.warn(`${LOG_PREFIX} Texto rechazado por exceder el límite permitido (${normalizedText.length} caracteres).`);
     toast.warning(message);
     throw new Error(message);
   }
@@ -74,6 +78,7 @@ export async function translateText({
   const normalizedTarget = normalizeLang(targetLang);
   if (!normalizedTarget) {
     const message = 'Debes indicar un idioma de destino válido.';
+    console.warn(`${LOG_PREFIX} Traducción sin idioma de destino válido.`);
     toast.error(message);
     throw new Error(message);
   }
@@ -98,6 +103,7 @@ export async function translateText({
 
     if (!translated) {
       const message = 'El servicio de traducción no devolvió un resultado.';
+      console.warn(`${LOG_PREFIX} Respuesta sin traducción válida del backend.`, data);
       toast.error(message);
       throw new Error(message);
     }
@@ -114,6 +120,14 @@ export async function translateText({
       : 'No fue posible contactar el servicio de traducción. Verifica tu conexión.';
 
     toast.error(message);
+    console.error(
+      `${LOG_PREFIX} Error al solicitar traducción al backend.`,
+      {
+        status: status ?? null,
+        data: data ?? null,
+        error
+      }
+    );
 
     const normalizedError = new Error(message);
     normalizedError.status = status ?? null;

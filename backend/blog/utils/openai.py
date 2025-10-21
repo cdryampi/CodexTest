@@ -8,9 +8,13 @@ import requests
 from django.conf import settings
 
 try:  # pragma: no cover - defensive fallback when settings import changes
-    from backend.backendblog.settings import OPENAI_API_KEY as DEFAULT_OPENAI_API_KEY
+    from backend.backendblog.settings import (
+        OPENAI_API_KEY as DEFAULT_OPENAI_API_KEY,
+        OPEN_IA_KEY as DEFAULT_OPEN_IA_KEY,
+    )
 except ImportError:  # pragma: no cover - during setup the project settings are always available
     DEFAULT_OPENAI_API_KEY = ""
+    DEFAULT_OPEN_IA_KEY = ""
 
 logger = logging.getLogger(__name__)
 
@@ -35,16 +39,19 @@ class OpenAIRequestError(RuntimeError):
 
 
 def _api_key() -> str:
-    value = getattr(settings, "OPENAI_API_KEY", None)
-    if isinstance(value, str):
-        value = value.strip()
-        if value:
-            return value
-    default_value = DEFAULT_OPENAI_API_KEY
-    if isinstance(default_value, str):
-        default_value = default_value.strip()
-        if default_value:
-            return default_value
+    candidates = [
+        getattr(settings, "OPENAI_API_KEY", None),
+        getattr(settings, "OPEN_IA_KEY", None),
+        DEFAULT_OPENAI_API_KEY,
+        DEFAULT_OPEN_IA_KEY,
+    ]
+
+    for candidate in candidates:
+        if isinstance(candidate, str):
+            value = candidate.strip()
+            if value:
+                return value
+
     return ""
 
 
@@ -124,7 +131,7 @@ def translate_text(
 
     if not is_configured():
         raise OpenAIConfigurationError(
-            "Configura VITE_OPEN_IA_KEY en el entorno del backend para habilitar las traducciones."
+            "Configura OPEN_IA_KEY en el entorno del backend para habilitar las traducciones."
         )
 
     api_key = _api_key()

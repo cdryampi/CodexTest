@@ -323,11 +323,27 @@ DEFAULT_FROM_EMAIL = _env(
 )
 
 OPENAI_API_URL = _env("OPENAI_API_URL", "https://api.openai.com/v1/responses") or "https://api.openai.com/v1/responses"
-_openai_api_key = _env("OPENAI_API_KEY")
+
+
+def _clean_openai_value(raw_value: str | None) -> str:
+    if raw_value is None:
+        return ""
+    value = str(raw_value).strip()
+    return value
+
+
+_openai_api_key = _clean_openai_value(_env("OPENAI_API_KEY"))
+_open_ia_key = _clean_openai_value(_env("OPEN_IA_KEY"))
+_vite_openia_key = _clean_openai_value(_env("VITE_OPEN_IA_KEY"))
+
 if _openai_api_key:
     OPENAI_API_KEY = _openai_api_key
+elif _open_ia_key:
+    OPENAI_API_KEY = _open_ia_key
 else:
-    OPENAI_API_KEY = _env("VITE_OPEN_IA_KEY", "") or ""
+    OPENAI_API_KEY = _vite_openia_key
+
+OPEN_IA_KEY = OPENAI_API_KEY
 OPENAI_DEFAULT_MODEL = _env("OPENAI_DEFAULT_MODEL", "gpt-4o-mini") or "gpt-4o-mini"
 OPENAI_SYSTEM_PROMPT = _env(
     "OPENAI_SYSTEM_PROMPT",

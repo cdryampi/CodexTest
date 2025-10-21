@@ -11,7 +11,7 @@ Este módulo incorpora un flujo de asistencia para traducir posts, categorías y
 
 ## Flujo de uso
 
-1. **Requisitos previos**: iniciar sesión en el backoffice y configurar `VITE_OPEN_IA_KEY` en el entorno del backend. Si el usuario no está autenticado o el backend no dispone de la clave, los botones de traducción permanecen deshabilitados.
+1. **Requisitos previos**: iniciar sesión en el backoffice y configurar `OPEN_IA_KEY` en el entorno del backend. Si el usuario no está autenticado o el backend no dispone de la clave, los botones de traducción permanecen deshabilitados.
 2. **Iniciar traducción**: desde los formularios de post, categoría o etiqueta, pulsa el botón "Traducir" para abrir el modal. El asistente detecta el idioma origen (por defecto español) y permite elegir 🇬🇧 `en` o 🇨🇦 `ca` como destino.
 3. **Optimizar tokens**:
    - La opción *Solo título + resumen* reduce el payload a `title` y `excerpt` antes de llamar a OpenAI.
@@ -19,7 +19,7 @@ Este módulo incorpora un flujo de asistencia para traducir posts, categorías y
 4. **Revisión**: cada campo aparece en una pestaña con la versión original (solo lectura) y la propuesta editable. Las respuestas se almacenan en caché por sesión (`entityType+lang+hash`) para evitar llamadas repetidas.
 5. **Insertar en formulario**: al confirmar, el asistente reemplaza temporalmente los inputs locales para permitir ajustes manuales antes de guardar.
 6. **Guardar en backend**: envía un `PUT` a `/api/<entity>/?lang=<destino>` con los campos traducidos (`title`, `excerpt`, `content`, `slug` para posts; `name`, `description`, `slug` para categorías; `name`, `slug` para etiquetas).
-7. **Mensajería**: se utiliza `sonner` para notificar estados (éxito, error, cuota excedida). No se registran en consola ni se persisten los textos enviados a OpenAI.
+7. **Mensajería**: se utiliza `sonner` para notificar estados (éxito, error, cuota excedida). Los incidentes se registran en consola con el prefijo `[AI Translate]`, sin exponer los textos enviados a OpenAI.
 
 ## Límites y consideraciones
 

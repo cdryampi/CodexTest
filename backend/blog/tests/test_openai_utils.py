@@ -20,7 +20,11 @@ class OpenAIUtilsTests(SimpleTestCase):
     def test_is_configured_when_key_is_present(self) -> None:
         self.assertTrue(is_configured())
 
-    @override_settings(OPENAI_API_KEY="")
+    @override_settings(OPENAI_API_KEY="", OPEN_IA_KEY="fallback-key")
+    def test_is_configured_with_open_ia_key(self) -> None:
+        self.assertTrue(is_configured())
+
+    @override_settings(OPENAI_API_KEY="", OPEN_IA_KEY="")
     def test_is_configured_when_key_missing(self) -> None:
         self.assertFalse(is_configured())
 
@@ -46,7 +50,28 @@ class OpenAIUtilsTests(SimpleTestCase):
         self.assertIn("Hola mundo", kwargs["json"]["input"])
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test-key")
 
-    @override_settings(OPENAI_API_KEY="")
+    @override_settings(
+        OPENAI_API_KEY="",
+        OPEN_IA_KEY="open-ia-key",
+        OPENAI_API_URL="https://api.openai.com/v1/responses",
+        OPENAI_DEFAULT_MODEL="test-model",
+        OPENAI_SYSTEM_PROMPT="prompt",
+        OPENAI_REQUEST_TIMEOUT=5,
+    )
+    def test_translate_text_uses_open_ia_key(self) -> None:
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"output_text": "Hello world"}
+
+        with patch("blog.utils.openai.requests.post", return_value=mock_response) as mock_post:
+            translation = translate_text(text="Hola mundo", target_language="en")
+
+        self.assertEqual(translation, "Hello world")
+        mock_post.assert_called_once()
+        kwargs = mock_post.call_args.kwargs
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer open-ia-key")
+
+    @override_settings(OPENAI_API_KEY="", OPEN_IA_KEY="")
     def test_translate_text_requires_configuration(self) -> None:
         with self.assertRaises(OpenAIConfigurationError):
             translate_text(text="Hola", target_language="en")
