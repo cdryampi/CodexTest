@@ -8,14 +8,13 @@ from django.core.management.base import BaseCommand, CommandError, OutputWrapper
 from django.core.management.color import color_style, no_style
 from django.db import DEFAULT_DB_ALIAS, connections, transaction
 
-from ...models import Comment, Post, Tag
+from ...models import Category, Comment, Post, Tag
 from ...seed_config import (
     COMMENTS_PER_POST_MAX,
     COMMENTS_PER_POST_MIN,
     POST_COUNT,
     USER_COUNT,
     is_seed_allowed,
-    is_seed_reset_allowed,
 )
 
 
@@ -87,11 +86,6 @@ class Command(BaseCommand):
             help="Utiliza un tamaño reducido de datos para pruebas rápidas.",
         )
         parser.add_argument(
-            "--reset",
-            action="store_true",
-            help="Borra posts, tags y comentarios antes de sembrar (requiere ALLOW_SEED_RESET=true).",
-        )
-        parser.add_argument(
             "--domain",
             type=str,
             default="example.com",
@@ -125,16 +119,12 @@ class Command(BaseCommand):
             counts["comments_max"] = override
             counts["comments_min"] = min(counts["comments_min"], override)
 
-        if options.get("reset"):
-            if not is_seed_reset_allowed():
-                raise CommandError(
-                    "El reseteo de datos no está permitido. Exporta ALLOW_SEED_RESET=true para habilitarlo."
-                )
-            self.stdout.write("Eliminando posts, comentarios y tags existentes...")
-            with transaction.atomic():
-                Comment.objects.all().delete()
-                Post.objects.all().delete()
-                Tag.objects.all().delete()
+        self.stdout.write("Reiniciando posts, categorías y tags del blog...")
+        with transaction.atomic():
+            Comment.objects.all().delete()
+            Post.objects.all().delete()
+            Category.objects.all().delete()
+            Tag.objects.all().delete()
 
         verbosity = int(options.get("verbosity", 1))
         domain = options.get("domain", "example.com")
