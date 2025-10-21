@@ -22,6 +22,7 @@ jobs:
     env:
       DJANGO_SETTINGS_MODULE: backend.settings_test
       PYTHONPATH: "${{ github.workspace }}:${{ github.workspace }}/backend"
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
