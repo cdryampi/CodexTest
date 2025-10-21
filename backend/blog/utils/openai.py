@@ -22,8 +22,9 @@ logger = logging.getLogger(__name__)
 DEFAULT_OPENAI_URL = "https://api.openai.com/v1/responses"
 DEFAULT_MODEL = "gpt-4o-mini"
 DEFAULT_SYSTEM_PROMPT = (
-    "Eres un asistente de traducción para un blog técnico. Conserva formato "
-    "Markdown/HTML, respeta enlaces y código, no inventes contenido."
+    "Eres un asistente de traducción para un blog técnico. Conserva el formato "
+    "Markdown o HTML cuando se solicite, respeta enlaces y código, y si se "
+    "pide texto plano elimina cualquier marca o etiqueta. No inventes contenido."
 )
 
 
@@ -82,16 +83,28 @@ def _normalize_lang(value: Optional[str]) -> str:
     return value.strip().lower()
 
 
+def _format_instruction(fmt: str) -> str:
+    normalized = (fmt or "").strip().lower()
+    if normalized == "plain":
+        return (
+            "Formato de salida: texto plano sin etiquetas ni Markdown."
+        )
+    if normalized == "html":
+        return (
+            "Formato a conservar: HTML (usa equivalentes en Markdown cuando sea necesario)."
+        )
+    return "Formato a conservar: Markdown."
+
+
 def _build_prompt(*, text: str, target_language: str, source_language: Optional[str], fmt: str) -> str:
     detected_source = _normalize_lang(source_language) or "origen detectado automáticamente"
     normalized_target = _normalize_lang(target_language) or "es"
-    normalized_format = "HTML" if fmt == "html" else "Markdown"
 
     return "\n".join(
         [
             f"Idioma origen: {detected_source}.",
             f"Idioma destino: {normalized_target}.",
-            f"Formato a conservar: {normalized_format}.",
+            _format_instruction(fmt),
             "Traduce el siguiente contenido sin añadir comentarios ni notas adicionales.",
             "Devuelve únicamente el texto traducido sin comillas ni observaciones.",
             "Texto:",
@@ -100,13 +113,13 @@ def _build_prompt(*, text: str, target_language: str, source_language: Optional[
     )
 
 
-def _text_format(fmt: Optional[str]) -> str:
-    """Return the requested OpenAI text format, defaulting to Markdown."""
+def _text_format(fmt: Optional[str]) -> Dict[str, str]:
+    """Return the OpenAI text format payload."""
 
     normalized = (fmt or "").strip().lower()
-    if normalized in {"markdown", "plain"}:
-        return normalized
-    return "markdown"
+    if normalized in {"json", "json_object"}:
+        return {"type": "json_object"}
+    return {"type": "text"}
 
 
 def _extract_translation(payload: Dict[str, Any]) -> str:

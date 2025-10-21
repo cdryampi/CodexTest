@@ -50,7 +50,10 @@ class OpenAIUtilsTests(SimpleTestCase):
         kwargs = mock_post.call_args.kwargs
         self.assertEqual(kwargs["json"]["model"], "test-model")
         self.assertIn("Hola mundo", kwargs["json"]["input"])
-        self.assertEqual(kwargs["json"]["text"], {"format": "markdown"})
+        self.assertEqual(
+            kwargs["json"]["text"], {"format": {"type": "text"}}
+        )
+        self.assertIn("Formato a conservar: Markdown.", kwargs["json"]["input"])
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test-key")
 
     @override_settings(OPENAI_API_KEY="test-key")
@@ -63,7 +66,10 @@ class OpenAIUtilsTests(SimpleTestCase):
             translate_text(text="<p>Hola</p>", target_language="en", fmt="html")
 
         kwargs = mock_post.call_args.kwargs
-        self.assertEqual(kwargs["json"]["text"], {"format": "markdown"})
+        self.assertEqual(
+            kwargs["json"]["text"], {"format": {"type": "text"}}
+        )
+        self.assertIn("Formato a conservar: HTML", kwargs["json"]["input"])
 
     @override_settings(OPENAI_API_KEY="test-key")
     def test_translate_text_uses_plain_format(self) -> None:
@@ -75,7 +81,10 @@ class OpenAIUtilsTests(SimpleTestCase):
             translate_text(text="Hola", target_language="en", fmt="plain")
 
         kwargs = mock_post.call_args.kwargs
-        self.assertEqual(kwargs["json"]["text"], {"format": "plain"})
+        self.assertEqual(
+            kwargs["json"]["text"], {"format": {"type": "text"}}
+        )
+        self.assertIn("Formato de salida: texto plano", kwargs["json"]["input"])
 
     @override_settings(
         OPENAI_API_KEY="",
