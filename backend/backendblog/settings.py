@@ -8,48 +8,49 @@ from pathlib import Path
 from typing import Dict
 from urllib.parse import parse_qs, urlparse
 
-from dotenv import load_dotenv
+import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR / ".env")
+env = environ.Env()
+
+_ENV_FILES = [
+    BASE_DIR.parent / ".env",  # Prefer the monorepo root when running via Dokploy
+    BASE_DIR / ".env",  # Fallback to the legacy backend-specific .env
+]
+
+for _env_file in _ENV_FILES:
+    if _env_file.exists():
+        environ.Env.read_env(_env_file)
+        break
 
 def _env(key: str, default: str | None = None) -> str | None:
-    value = os.getenv(key)
-    if value is None:
-        return default
-    value = value.strip()
-    return value if value else default
+    value = env(key, default=default)
+    if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return default
+    return value
 
 
 def _env_bool(key: str, default: bool = False) -> bool:
-    value = os.getenv(key)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+    return env.bool(key, default=default)
 
 
 def _env_csv(key: str) -> list[str]:
-    raw = os.getenv(key, "")
-    return [item.strip() for item in raw.split(",") if item.strip()]
+    return [item.strip() for item in env.list(key, default=[]) if item.strip()]
 
 
 def _env_int(key: str, default: int) -> int:
-    value = os.getenv(key)
-    if value is None:
-        return default
     try:
-        return int(value.strip())
+        return env.int(key, default=default)
     except (TypeError, ValueError):
         return default
 
 
 def _env_float(key: str, default: float) -> float:
-    value = os.getenv(key)
-    if value is None:
-        return default
     try:
-        return float(value.strip())
+        return env.float(key, default=default)
     except (TypeError, ValueError):
         return default
 
@@ -129,7 +130,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "backendblog.wsgi.application"
 
-_DATABASE_URL = os.getenv("DATABASE_URL")
+_DATABASE_URL = _env("DATABASE_URL")
 if _DATABASE_URL:
     parsed = urlparse(_DATABASE_URL)
     DATABASES: Dict[str, Dict[str, object]] = {
@@ -146,7 +147,7 @@ if _DATABASE_URL:
     if query:
         DATABASES["default"]["OPTIONS"] = {key: values[-1] for key, values in query.items() if values}
 else:
-    _env_postgres_host = os.getenv("POSTGRES_HOST")
+    _env_postgres_host = _env("POSTGRES_HOST")
     if _env_postgres_host:
         DATABASES = {
             "default": {
