@@ -10,7 +10,7 @@
     "translateAI": "Traducir con IA"
   },
   "ai": {
-    "configureKey": "Configura VITE_OPEN_IA_KEY para habilitar el asistente de traducción."
+    "configureKey": "Inicia sesión para habilitar el asistente de traducción."
   },
   "language": {
     "spanish": "Español",
