@@ -5,10 +5,28 @@ import os
 import re
 from datetime import timedelta
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Iterable
 from urllib.parse import parse_qs, urlparse
 
 import environ
+
+
+def _normalize_keys(key_or_keys: str | Iterable[str]) -> tuple[str, ...]:
+    if isinstance(key_or_keys, str):
+        return (key_or_keys,)
+    return tuple(str(key) for key in key_or_keys)
+
+
+def _getenv(key_or_keys: str | Iterable[str]) -> str | None:
+    for key in _normalize_keys(key_or_keys):
+        value = os.getenv(key)
+        if value is None:
+            continue
+        value = value.strip() if isinstance(value, str) else value
+        if isinstance(value, str) and not value:
+            continue
+        return value
+    return None
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -24,42 +42,58 @@ for _env_file in _ENV_FILES:
         environ.Env.read_env(_env_file)
         break
 
-def _env(key: str, default: str | None = None) -> str | None:
-    value = env(key, default=default)
-    if isinstance(value, str):
-        value = value.strip()
-        if not value:
-            return default
+def _env(key: str | Iterable[str], default: str | None = None) -> str | None:
+    value = _getenv(key)
+    if value is None:
+        return default
     return value
 
 
-def _env_bool(key: str, default: bool = False) -> bool:
-    return env.bool(key, default=default)
+def _env_bool(key: str | Iterable[str], default: bool = False) -> bool:
+    value = _getenv(key)
+    if value is None:
+        return default
+    normalized = value.lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return default
 
 
-def _env_csv(key: str) -> list[str]:
-    return [item.strip() for item in env.list(key, default=[]) if item.strip()]
+def _env_csv(key: str | Iterable[str]) -> list[str]:
+    value = _getenv(key)
+    if value is None:
+        return []
+    items = [item.strip() for item in str(value).split(",")]
+    return [item for item in items if item]
 
 
-def _env_int(key: str, default: int) -> int:
+def _env_int(key: str | Iterable[str], default: int) -> int:
+    value = _getenv(key)
+    if value is None:
+        return default
     try:
-        return env.int(key, default=default)
+        return int(value)
     except (TypeError, ValueError):
         return default
 
 
-def _env_float(key: str, default: float) -> float:
+def _env_float(key: str | Iterable[str], default: float) -> float:
+    value = _getenv(key)
+    if value is None:
+        return default
     try:
-        return env.float(key, default=default)
+        return float(value)
     except (TypeError, ValueError):
         return default
 
 
-SECRET_KEY = _env("SECRET_KEY", "unsafe-secret-key")
-DEBUG = _env_bool("DEBUG", False)
+SECRET_KEY = _env(("SECRET_KEY", "DJANGO_SECRET_KEY", "SECRET"), "unsafe-secret-key")
+DEBUG = _env_bool(("DEBUG", "DJANGO_DEBUG"), False)
 
 _default_allowed_hosts = ["backendblog.yampi.eu", "localhost", "127.0.0.1"]
-_extra_allowed_hosts = _env_csv("ALLOWED_HOSTS")
+_extra_allowed_hosts = _env_csv(("ALLOWED_HOSTS", "DJANGO_ALLOWED_HOSTS"))
 ALLOWED_HOSTS = list(dict.fromkeys(_default_allowed_hosts + _extra_allowed_hosts))
 
 SITE_ID = 1
@@ -130,7 +164,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "backendblog.wsgi.application"
 
-_DATABASE_URL = _env("DATABASE_URL") or _env("POSTGRES_URL")
+_DATABASE_URL = _env(("DATABASE_URL", "DJANGO_DATABASE_URL", "URL")) or _env(
+    ("POSTGRES_URL", "DJANGO_POSTGRES_URL")
+)
 if _DATABASE_URL:
     parsed = urlparse(_DATABASE_URL)
     DATABASES: Dict[str, Dict[str, object]] = {
@@ -147,16 +183,18 @@ if _DATABASE_URL:
     if query:
         DATABASES["default"]["OPTIONS"] = {key: values[-1] for key, values in query.items() if values}
 else:
-    _env_postgres_host = _env("POSTGRES_HOST")
+    _env_postgres_host = _env(("POSTGRES_HOST", "DJANGO_POSTGRES_HOST"))
     if _env_postgres_host:
         DATABASES = {
             "default": {
                 "ENGINE": "django.db.backends.postgresql",
-                "NAME": _env("POSTGRES_DB", "postgres"),
-                "USER": _env("POSTGRES_USER", "postgres"),
-                "PASSWORD": _env("POSTGRES_PASSWORD", "postgres"),
+                "NAME": _env(("POSTGRES_DB", "DJANGO_POSTGRES_DB"), "postgres"),
+                "USER": _env(("POSTGRES_USER", "DJANGO_POSTGRES_USER"), "postgres"),
+                "PASSWORD": _env(
+                    ("POSTGRES_PASSWORD", "DJANGO_POSTGRES_PASSWORD"), "postgres"
+                ),
                 "HOST": _env_postgres_host,
-                "PORT": str(_env("POSTGRES_PORT", "5432")),
+                "PORT": str(_env(("POSTGRES_PORT", "DJANGO_POSTGRES_PORT"), "5432")),
             }
         }
     else:
@@ -206,11 +244,15 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", False)
+SECURE_SSL_REDIRECT = _env_bool(
+    ("SECURE_SSL_REDIRECT", "DJANGO_SECURE_SSL_REDIRECT"), False
+)
 if SECURE_SSL_REDIRECT:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(_env_csv("CSRF_TRUSTED_ORIGINS")))
+CSRF_TRUSTED_ORIGINS = list(
+    dict.fromkeys(_env_csv(("CSRF_TRUSTED_ORIGINS", "DJANGO_CSRF_TRUSTED_ORIGINS")))
+)
 
 # Orígenes permitidos por defecto para servir el frontend público de CodexTest
 _default_cors_origins = [
@@ -225,7 +267,7 @@ _default_cors_origin_regexes = [
     r"^https://codextest-front(?:-[\w-]+)?\.vercel\.app/?$",
 ]
 
-_raw_cors_origins = _env_csv("CORS_ALLOWED_ORIGINS")
+_raw_cors_origins = _env_csv(("CORS_ALLOWED_ORIGINS", "DJANGO_CORS_ALLOWED_ORIGINS"))
 if _raw_cors_origins:
     _raw_cors_origins.extend(_default_cors_origins)
 else:
@@ -337,9 +379,15 @@ def _clean_openai_value(raw_value: str | None) -> str:
     return value
 
 
-_openai_api_key = _clean_openai_value(_env("OPENAI_API_KEY"))
-_open_ia_key = _clean_openai_value(_env("OPEN_IA_KEY"))
-_vite_openia_key = _clean_openai_value(_env("VITE_OPEN_IA_KEY"))
+_openai_api_key = _clean_openai_value(
+    _env(("OPENAI_API_KEY", "DJANGO_OPENAI_API_KEY"))
+)
+_open_ia_key = _clean_openai_value(
+    _env(("OPEN_IA_KEY", "DJANGO_OPEN_IA_KEY"))
+)
+_vite_openia_key = _clean_openai_value(
+    _env(("VITE_OPEN_IA_KEY", "DJANGO_VITE_OPEN_IA_KEY"))
+)
 
 if _openai_api_key:
     OPENAI_API_KEY = _openai_api_key

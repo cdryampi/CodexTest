@@ -43,6 +43,8 @@ def _api_key() -> str:
     candidates = [
         os.getenv("OPENAI_API_KEY"),
         os.getenv("OPEN_IA_KEY"),
+        os.getenv("DJANGO_OPENAI_API_KEY"),
+        os.getenv("DJANGO_OPEN_IA_KEY"),
         getattr(settings, "OPENAI_API_KEY", None),
         getattr(settings, "OPEN_IA_KEY", None),
         DEFAULT_OPENAI_API_KEY,
