@@ -35,7 +35,7 @@ class OpenAIRequestError(RuntimeError):
 
 
 def _api_key() -> str:
-    value = getattr(settings, "VITE_OPENAI_API_KEY", None)
+    value = getattr(settings, "OPENAI_API_KEY", None)
     if isinstance(value, str):
         value = value.strip()
         if value:
