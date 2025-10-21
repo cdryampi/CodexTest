@@ -7,7 +7,6 @@ from typing import Dict
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.utils.text import slugify
 
 from ...models import Category, Post, Tag
 from ...seed_config import (
@@ -17,6 +16,7 @@ from ...seed_config import (
     get_faker,
     is_seed_allowed,
 )
+from ...utils.i18n import slugify_localized
 
 
 class Command(BaseCommand):
@@ -46,6 +46,14 @@ class Command(BaseCommand):
 
         faker = get_faker()
         default_language = settings.LANGUAGE_CODE
+        available_languages = [
+            code for code, _name in getattr(settings, "LANGUAGES", ())
+        ]
+        if not available_languages:
+            available_languages = [default_language]
+        elif default_language not in available_languages:
+            available_languages.insert(0, default_language)
+
         existing_titles = set(
             Post.objects.language(default_language).values_list("title", flat=True)
         )
@@ -66,7 +74,8 @@ class Command(BaseCommand):
 
         with transaction.atomic():
             tag_lookup = {}
-            for name in TAGS_POOL:
+
+            def _ensure_tag(name: str) -> Tag:
                 tag = (
                     Tag.objects.language(default_language)
                     .filter(name=name)
@@ -74,13 +83,42 @@ class Command(BaseCommand):
                 )
                 if tag is None:
                     tag = Tag()
+
+                base_slug = slugify_localized(name, default_language) or Tag.slug_fallback
+
+                def _save_translation(language_code: str) -> None:
+                    tag.set_current_language(language_code)
+                    if language_code == default_language:
+                        tag.name = name
+                        tag.slug = base_slug
+                    else:
+                        if not tag.name:
+                            tag.name = name
+                        candidate_slug = slugify_localized(name, language_code) or base_slug
+                        if not tag.slug:
+                            tag.slug = candidate_slug
+                    if language_code != default_language:
+                        # Ensure slug never ends up vacío aunque exista pero en blanco
+                        if not tag.slug:
+                            tag.slug = base_slug
+                        if not tag.name:
+                            tag.name = name
+                    tag.save()
+
+                _save_translation(default_language)
+                for language_code in available_languages:
+                    if language_code == default_language:
+                        continue
+                    _save_translation(language_code)
                 tag.set_current_language(default_language)
-                tag.name = name
-                tag.save()
-                tag_lookup[name] = tag
+                return tag
+
+            for name in TAGS_POOL:
+                tag_lookup[name] = _ensure_tag(name)
 
             category_lookup = {}
-            for slug in category_slugs:
+
+            def _ensure_category(slug: str) -> Category:
                 category = (
                     Category.objects.language(default_language)
                     .filter(slug=slug)
@@ -88,11 +126,31 @@ class Command(BaseCommand):
                 )
                 if category is None:
                     category = Category()
+
+                base_name = category_defaults[slug]
+
+                def _save_category_translation(language_code: str) -> None:
+                    category.set_current_language(language_code)
+                    if language_code == default_language:
+                        category.name = base_name
+                        category.slug = slug
+                    else:
+                        if not category.name:
+                            category.name = base_name
+                        if not category.slug:
+                            category.slug = slug
+                    category.save()
+
+                _save_category_translation(default_language)
+                for language_code in available_languages:
+                    if language_code == default_language:
+                        continue
+                    _save_category_translation(language_code)
                 category.set_current_language(default_language)
-                category.name = category_defaults[slug]
-                category.slug = slug
-                category.save()
-                category_lookup[slug] = category
+                return category
+
+            for slug in category_slugs:
+                category_lookup[slug] = _ensure_category(slug)
 
             while created < target and attempts < max_attempts:
                 attempts += 1
@@ -102,9 +160,9 @@ class Command(BaseCommand):
                     continue
 
                 base_slug = (
-                    slugify(title)
-                    or slugify(faker.sentence(nb_words=4))
-                    or "entrada"
+                    slugify_localized(title, default_language)
+                    or slugify_localized(faker.sentence(nb_words=4), default_language)
+                    or Post.slug_fallback
                 )
                 slug = base_slug
                 suffix = 2
@@ -140,6 +198,22 @@ class Command(BaseCommand):
                 post.imageAlt = image_alt
                 post.author = author
                 post.save()
+
+                for language_code in available_languages:
+                    if language_code == default_language:
+                        continue
+                    post.set_current_language(language_code)
+                    if not post.title:
+                        post.title = title
+                    if not post.slug:
+                        post.slug = slug
+                    if not post.excerpt:
+                        post.excerpt = excerpt
+                    if not post.content:
+                        post.content = content
+                    post.save()
+
+                post.set_current_language(default_language)
 
                 post.tags.set(
                     [tag_lookup[name] for name in tags if name in tag_lookup]
