@@ -481,7 +481,10 @@ class OpenAITranslationSerializer(serializers.Serializer):
     )
     target_lang = serializers.CharField()
     source_lang = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    format = serializers.ChoiceField(choices=[("markdown", "markdown"), ("html", "html")], default="markdown")
+    format = serializers.ChoiceField(
+        choices=[("markdown", "markdown"), ("plain", "plain"), ("html", "html")],
+        default="markdown",
+    )
 
     def to_internal_value(self, data):  # type: ignore[override]
         if isinstance(data, dict):
@@ -490,7 +493,12 @@ class OpenAITranslationSerializer(serializers.Serializer):
             if "source_lang" not in data and "sourceLang" in data:
                 data = {**data, "source_lang": data["sourceLang"]}
             if "format" in data and isinstance(data["format"], str):
-                data = {**data, "format": data["format"].strip().lower()}
+                normalized_format = data["format"].strip().lower()
+                if normalized_format in {"plain_text", "plaintext", "text"}:
+                    normalized_format = "plain"
+                elif normalized_format in {"md", "mkdown"}:
+                    normalized_format = "markdown"
+                data = {**data, "format": normalized_format}
         return super().to_internal_value(data)
 
     def validate_text(self, value: str) -> str:

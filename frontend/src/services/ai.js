@@ -15,7 +15,20 @@ const normalizeLang = (value) => (value ? value.toString().trim().toLowerCase() 
 
 const normalizeFormat = (value) => {
   const normalized = (value ?? '').toString().trim().toLowerCase();
-  return normalized === 'html' ? 'html' : 'markdown';
+
+  if (['plain', 'plain_text', 'plaintext', 'text'].includes(normalized)) {
+    return 'plain';
+  }
+
+  if (normalized === 'html') {
+    return 'markdown';
+  }
+
+  if (['markdown', 'md', 'mkdown'].includes(normalized)) {
+    return 'markdown';
+  }
+
+  return 'markdown';
 };
 
 const extractDetailMessage = (status, data) => {

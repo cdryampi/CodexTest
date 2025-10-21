@@ -15,7 +15,8 @@ Este módulo incorpora un flujo de asistencia para traducir posts, categorías y
 2. **Iniciar traducción**: desde los formularios de post, categoría o etiqueta, pulsa el botón "Traducir" para abrir el modal. El asistente detecta el idioma origen (por defecto español) y permite elegir 🇬🇧 `en` o 🇨🇦 `ca` como destino.
 3. **Optimizar tokens**:
    - La opción *Solo título + resumen* reduce el payload a `title` y `excerpt` antes de llamar a OpenAI.
-   - El toggle *Conservar formato Markdown/HTML* mantiene etiquetas y formato original. Desactívalo si prefieres texto plano.
+   - El toggle *Mantener formato Markdown* solicita al modelo que respete listas, enlaces y etiquetas HTML. Desactívalo para
+     recibir texto plano.
 4. **Revisión**: cada campo aparece en una pestaña con la versión original (solo lectura) y la propuesta editable. Las respuestas se almacenan en caché por sesión (`entityType+lang+hash`) para evitar llamadas repetidas.
 5. **Insertar en formulario**: al confirmar, el asistente reemplaza temporalmente los inputs locales para permitir ajustes manuales antes de guardar.
 6. **Guardar en backend**: envía un `PUT` a `/api/<entity>/?lang=<destino>` con los campos traducidos (`title`, `excerpt`, `content`, `slug` para posts; `name`, `description`, `slug` para categorías; `name`, `slug` para etiquetas).
