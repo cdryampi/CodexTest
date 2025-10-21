@@ -7,6 +7,7 @@ from typing import Iterable, Optional
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.utils.encoding import smart_str
 from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
 
@@ -79,6 +80,50 @@ class _TranslationAwareSerializer(TranslatableModelSerializer):
                     for field_name in translated_fields
                 }
         return result
+
+
+class TranslatableSlugRelatedField(serializers.SlugRelatedField):
+    """Slug field that resolves matches using language-aware fallbacks."""
+
+    def _language_candidates(self) -> list[str]:
+        request = self.context.get("request")
+        candidates: list[str] = []
+        if request is not None and hasattr(request, "LANGUAGE_CODE"):
+            candidates.append(request.LANGUAGE_CODE)
+        language_code = self.context.get("language_code")
+        if language_code and language_code not in candidates:
+            candidates.append(language_code)
+        default_language = getattr(settings, "LANGUAGE_CODE", None)
+        if default_language and default_language not in candidates:
+            candidates.append(default_language)
+        for code, _name in getattr(settings, "LANGUAGES", ()):
+            if code not in candidates:
+                candidates.append(code)
+        return [code for code in candidates if code]
+
+    def to_internal_value(self, data):  # type: ignore[override]
+        queryset = self.get_queryset()
+        if queryset is None:
+            raise AssertionError("TranslatableSlugRelatedField requires a queryset")
+
+        slug_value = smart_str(data)
+        filter_kwargs = {self.slug_field: slug_value}
+
+        for language_code in self._language_candidates():
+            match = (
+                queryset.filter(translations__language_code=language_code)
+                .filter(**filter_kwargs)
+                .order_by("pk")
+                .first()
+            )
+            if match is not None:
+                return match
+
+        match = queryset.filter(**filter_kwargs).order_by("pk").first()
+        if match is not None:
+            return match
+
+        self.fail("does_not_exist", slug_name=self.slug_field, value=slug_value)
 
 
 class _TranslatedCRUDSerializer(_TranslationAwareSerializer):
@@ -346,7 +391,7 @@ class PostDetailSerializer(
     excerpt = serializers.CharField()
     content = serializers.CharField()
     tags = TagNameField(many=True, slug_field="name", queryset=Tag.objects.all())
-    categories = serializers.SlugRelatedField(
+    categories = TranslatableSlugRelatedField(
         many=True,
         slug_field="slug",
         queryset=Category.objects.all(),
