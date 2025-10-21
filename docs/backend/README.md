@@ -59,17 +59,17 @@ Rutas clave del repositorio:
 - **Python 3.12**.
 - Dependencias listadas en `backend/requirements.txt` (Django 5, djangorestframework, django-filter, drf-spectacular, whitenoise, gunicorn, jazzmin, faker, psycopg[binary], etc.).
 
-Variables de entorno mínimas:
+Variables de entorno mínimas (puedes usar los nombres estándar o las variantes `SECRET`/`URL` y prefijos `DJANGO_` que espera Dokploy):
 
 | Variable | Descripción | Ejemplo |
 | --- | --- | --- |
-| `SECRET_KEY` | Clave criptográfica de Django. | `django-insecure-...` |
-| `DEBUG` | Activa modo debug (solo en desarrollo). | `true` |
-| `ALLOWED_HOSTS` | Lista CSV de hosts adicionales. | `backend.local,api.example.com` |
-| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos (admite rutas específicas). | `https://cdryampi.github.io/CodexTest/` |
-| `CSRF_TRUSTED_ORIGINS` | Orígenes confiables para CSRF. | `https://backendblog.yampi.eu` |
-| `DATABASE_URL` | URL Postgres (se prioriza sobre variables `POSTGRES_*`). | `postgres://user:pass@db:5432/blog` |
-| `POSTGRES_*` | Parámetros individuales si no hay `DATABASE_URL`. | `POSTGRES_DB=blog` |
+| `SECRET_KEY` (`SECRET`, `DJANGO_SECRET_KEY`) | Clave criptográfica de Django. | `django-insecure-...` |
+| `DEBUG` (`DJANGO_DEBUG`) | Activa modo debug (solo en desarrollo). | `true` |
+| `ALLOWED_HOSTS` (`DJANGO_ALLOWED_HOSTS`) | Lista CSV de hosts adicionales. | `backend.local,api.example.com` |
+| `CORS_ALLOWED_ORIGINS` (`DJANGO_CORS_ALLOWED_ORIGINS`) | Orígenes permitidos (admite rutas específicas). | `https://cdryampi.github.io/CodexTest/` |
+| `CSRF_TRUSTED_ORIGINS` (`DJANGO_CSRF_TRUSTED_ORIGINS`) | Orígenes confiables para CSRF. | `https://backendblog.yampi.eu` |
+| `DATABASE_URL` (`URL`, `DJANGO_DATABASE_URL`) | URL Postgres (se prioriza sobre variables `POSTGRES_*`). | `postgres://user:pass@db:5432/blog` |
+| `POSTGRES_*` (`DJANGO_POSTGRES_*`) | Parámetros individuales si no hay `DATABASE_URL`. | `POSTGRES_DB=blog` |
 | `GUNICORN_WORKERS` | Número de workers en producción. | `4` |
 | `GUNICORN_THREADS` | Hilos por worker. | `2` |
 | `GUNICORN_TIMEOUT` | Timeout en segundos. | `120` |

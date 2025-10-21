@@ -6,15 +6,15 @@ El módulo de deploy ya incluye los artefactos necesarios para contenedizar el b
 - `deploy/backend.Dockerfile`: imagen basada en `python:3.12-alpine` que instala dependencias de sistema (para `psycopg2`), copia `backend/`, instala `requirements.txt` y arranca Gunicorn (`backendblog.wsgi:application`).
 - `deploy/docker-compose.yml`: define los servicios `postgres` y `backend` preparados para Dokploy.
   - `postgres`: imagen oficial `postgres:16`, variables (`POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`) recibidas del entorno y volumen nombrado `pgdata` para persistencia en `/var/lib/postgresql/data`. Incluye healthcheck con `pg_isready`.
-  - `backend`: construye usando `deploy/backend.Dockerfile`, hereda variables (`SECRET`, `DJANGO_DEBUG`, `DJANGO_SECURE_SSL_REDIRECT`, `DATABASE_URL` o `POSTGRES_*`, `GUNICORN_WORKERS`, etc.), depende del servicio de base de datos hasta que esté `healthy`, expone el puerto interno `8000` y lo publica en el host `8001` para evitar conflictos locales (Dokploy lo publicará tras el proxy HTTPS).
+  - `backend`: construye usando `deploy/backend.Dockerfile`, hereda variables (`SECRET_KEY`, `DEBUG`, `SECURE_SSL_REDIRECT`, `DATABASE_URL` o `POSTGRES_*`, `GUNICORN_WORKERS`, etc.), depende del servicio de base de datos hasta que esté `healthy`, expone el puerto interno `8000` y lo publica en el host `8001` para evitar conflictos locales (Dokploy lo publicará tras el proxy HTTPS).
 
 ## Configuración y seguridad
-- `ALLOWED_HOSTS` ya considera `backendblog.yampi.eu`, `localhost` y `127.0.0.1`; se pueden añadir extras vía `DJANGO_ALLOWED_HOSTS`.
-- HTTPS tras Dokploy: `SECURE_PROXY_SSL_HEADER` y `SECURE_SSL_REDIRECT` se controlan con `DJANGO_SECURE_SSL_REDIRECT`.
+- `ALLOWED_HOSTS` ya considera `backendblog.yampi.eu`, `localhost` y `127.0.0.1`; se pueden añadir extras vía `ALLOWED_HOSTS`.
+- HTTPS tras Dokploy: `SECURE_PROXY_SSL_HEADER` y `SECURE_SSL_REDIRECT` se controlan con la variable `SECURE_SSL_REDIRECT`.
 - CORS y CSRF configurados para `https://cdryampi.github.io/CodexTest/`, `https://backendblog.yampi.eu` y `https://cdryampi.github.io`.
 
 ## Variables de entorno
-Se leen con `python-decouple`. Dokploy/Codex ya proveen ejemplos (`URL`, `SECRET`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`). Si se expone `DATABASE_URL`, tiene prioridad sobre los campos individuales. Revisa `backend/.env.example` para conocer todas las claves esperadas.
+Se leen con `django-environ`. Dokploy/Codex ya proveen ejemplos (`SECRET_KEY`, `DEBUG`, `SECURE_SSL_REDIRECT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`) y ahora también se aceptan automáticamente las variantes `SECRET`, `URL` y cualquier clave con prefijo `DJANGO_` (por ejemplo `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_POSTGRES_HOST`). Si se expone `DATABASE_URL`, tiene prioridad sobre los campos individuales: en Dokploy asígnala directamente desde el proyecto con `DATABASE_URL=${{project.DATABASE_URL}}` (o su alias `DJANGO_DATABASE_URL`) para reutilizar la URL administrada por la plataforma. Revisa `backend/.env.example` para conocer todas las claves esperadas.
 
 ## Flujo de despliegue con Dokploy
 1. Construir y publicar la imagen del backend usando `deploy/backend.Dockerfile` (Dokploy puede construirla automáticamente desde el repo o desde GHCR).
