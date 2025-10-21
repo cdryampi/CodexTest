@@ -5,17 +5,16 @@ services:
     image: postgres:16
     restart: always
     environment:
-      POSTGRES_DB: "${POSTGRES_DB}"
-      POSTGRES_USER: "${POSTGRES_USER}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: ${{project.POSTGRES_DB}}
+      POSTGRES_USER: ${{project.POSTGRES_USER}}
+      POSTGRES_PASSWORD: ${{project.POSTGRES_PASSWORD}}
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
       backend_net:
-        aliases:
-          - postgres
+        aliases: [postgres]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,28 +29,35 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      SECRET_KEY: "${SECRET_KEY}"
-      DEBUG: "${DEBUG:-False}"
-      SECURE_SSL_REDIRECT: "${SECURE_SSL_REDIRECT:-True}"
-      ALLOWED_HOSTS: "${ALLOWED_HOSTS:-}"
-      CSRF_TRUSTED_ORIGINS: "${CSRF_TRUSTED_ORIGINS:-}"
-      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-}"
-      DATABASE_URL: "${DATABASE_URL:-}"
-      # En Dokploy define DATABASE_URL=${{project.POSTGRES_URL}} para reutilizar la cadena provista por el proyecto
-      POSTGRES_DB: "${POSTGRES_DB:-}"
-      POSTGRES_USER: "${POSTGRES_USER:-}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-}"
-      POSTGRES_HOST: "${POSTGRES_HOST:-postgres}"
-      POSTGRES_PORT: "${POSTGRES_PORT:-5432}"
-      GUNICORN_WORKERS: "${GUNICORN_WORKERS:-3}"
-      GUNICORN_THREADS: "${GUNICORN_THREADS:-1}"
-      GUNICORN_TIMEOUT: "${GUNICORN_TIMEOUT:-120}"
-      DB_MAX_RETRIES: "${DB_MAX_RETRIES:-30}"
-      DB_RETRY_DELAY: "${DB_RETRY_DELAY:-1}"
+      # Django (nombres que lees en settings.py con os.getenv)
+      SECRET: ${{project.SECRET}}
+      DJANGO_DEBUG: ${{project.DJANGO_DEBUG}}
+      DJANGO_SECURE_SSL_REDIRECT: ${{project.DJANGO_SECURE_SSL_REDIRECT}}
+      DJANGO_ALLOWED_HOSTS: ${{project.DJANGO_ALLOWED_HOSTS}}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${{project.DJANGO_CSRF_TRUSTED_ORIGINS}}
+      DJANGO_CORS_ALLOWED_ORIGINS: ${{project.DJANGO_CORS_ALLOWED_ORIGINS}}
+
+      # Base de datos (elige una de dos: URL o campos sueltos)
+      DATABASE_URL: ${{project.DATABASE_URL}}
+      POSTGRES_DB: ${{project.POSTGRES_DB}}
+      POSTGRES_USER: ${{project.POSTGRES_USER}}
+      POSTGRES_PASSWORD: ${{project.POSTGRES_PASSWORD}}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+
+      # Claves extra (si las usas)
+      OPENAI_API_KEY: ${{project.OPENAI_API_KEY}}
+      OPEN_IA_KEY: ${{project.OPEN_IA_KEY}}
+
+      # Tuning opcional
+      GUNICORN_WORKERS: "3"
+      GUNICORN_THREADS: "1"
+      GUNICORN_TIMEOUT: "120"
+      DB_MAX_RETRIES: "30"
+      DB_RETRY_DELAY: "1"
     networks:
       backend_net:
-        aliases:
-          - backend
+        aliases: [backend]
     ports:
       - "8001:8000"
     volumes:
