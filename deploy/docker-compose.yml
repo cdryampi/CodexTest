@@ -1,5 +1,7 @@
 services:
   postgres:
+    env_file:
+      - path: .env
     image: postgres:16
     restart: always
     volumes:
@@ -13,7 +15,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
-
   backend:
     build:
       context: ..
@@ -38,6 +39,8 @@ services:
       - "8001:8000"
     volumes:
       - media:/app/media
+    env_file:
+      - path: .env
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/admin/login/ || exit 1"]
       interval: 30s
