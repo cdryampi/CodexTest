@@ -22,11 +22,13 @@ services:
   backend:
     build:
       context: ..
-      dockerfile: deploy/backend/Dockerfile
+      dockerfile: deploy/backend.Dockerfile
     restart: always
     depends_on:
       postgres:
         condition: service_healthy
+    env_file:
+      - path: .env
     # Variables técnicas no sensibles puedes dejarlas aquí.
     environment:
       POSTGRES_HOST: "postgres"
