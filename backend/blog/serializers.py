@@ -81,9 +81,33 @@ class _TranslationAwareSerializer(TranslatableModelSerializer):
         return result
 
 
-class CategorySerializer(_TranslationAwareSerializer):
+class _TranslatedCRUDSerializer(_TranslationAwareSerializer):
+    """Helper serializer adding translated create/update helpers."""
+
+    def _persist_translation(self, instance, validated_data):
+        language_code = self._language_code()
+        with set_parler_language(language_code):
+            if hasattr(instance, "set_current_language"):
+                instance.set_current_language(language_code)
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+        return instance
+
+    def create(self, validated_data):  # type: ignore[override]
+        model_cls = getattr(self.Meta, "model")  # type: ignore[attr-defined]
+        instance = model_cls()  # type: ignore[call-arg]
+        return self._persist_translation(instance, validated_data)
+
+    def update(self, instance, validated_data):  # type: ignore[override]
+        return self._persist_translation(instance, validated_data)
+
+
+class CategorySerializer(_TranslatedCRUDSerializer):
     """Public representation of a blog category."""
 
+    name = serializers.CharField()
+    description = serializers.CharField(allow_blank=True, required=False)
     post_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -127,9 +151,10 @@ class CategorySerializer(_TranslationAwareSerializer):
         return 0
 
 
-class TagSerializer(_TranslationAwareSerializer):
+class TagSerializer(_TranslatedCRUDSerializer):
     """Public representation of a tag with optional post counts."""
 
+    name = serializers.CharField()
     post_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -167,28 +192,41 @@ class TagSerializer(_TranslationAwareSerializer):
 class TagNameField(serializers.SlugRelatedField):
     """Slug field that creates tags on demand when writing."""
 
+    def _language_code(self) -> str:
+        request = self.context.get("request")
+        if request is not None and hasattr(request, "LANGUAGE_CODE"):
+            return request.LANGUAGE_CODE
+        return self.context.get("language_code", settings.LANGUAGE_CODE)
+
+    def _lookup_kwargs(self, value: str) -> dict[str, str]:
+        slug_field = getattr(self, "slug_field", None)
+        if not slug_field:
+            raise AssertionError("TagNameField.slug_field must be defined.")
+        return {f"{slug_field}__iexact": value}
+
+    def _find_existing(self, queryset, value: str, language_code: str):
+        lookup = self._lookup_kwargs(value)
+        if language_code and hasattr(queryset, "language"):
+            localized = queryset.language(language_code).filter(**lookup).first()
+            if localized is not None:
+                return localized
+        return queryset.filter(**lookup).order_by("pk").first()
+
     def to_internal_value(self, data):  # type: ignore[override]
-        try:
+        if not isinstance(data, str):
             return super().to_internal_value(data)
-        except serializers.ValidationError:
-            if not isinstance(data, str):
-                raise
 
         value = data.strip()
         if not value:
             raise serializers.ValidationError("Este campo no puede estar vacío.")
 
-        request = self.context.get("request")
-        if request is not None and hasattr(request, "LANGUAGE_CODE"):
-            language_code = request.LANGUAGE_CODE
-        else:
-            language_code = self.context.get("language_code", settings.LANGUAGE_CODE)
-        existing = (
-            Tag.objects.language(language_code)
-            .filter(name__iexact=value)
-            .first()
-        )
-        if existing:
+        queryset = self.get_queryset()
+        if queryset is None:
+            raise AssertionError("TagNameField requires a queryset.")
+
+        language_code = self._language_code()
+        existing = self._find_existing(queryset, value, language_code)
+        if existing is not None:
             return existing
 
         tag = Tag()
