@@ -14,16 +14,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env()
 
-_env_file = BASE_DIR / ".env"
-if _env_file.exists():
-    environ.Env.read_env(_env_file)
+_ENV_FILES = [
+    BASE_DIR.parent / ".env",  # Prefer the monorepo root when running via Dokploy
+    BASE_DIR / ".env",  # Fallback to the legacy backend-specific .env
+]
+
+for _env_file in _ENV_FILES:
+    if _env_file.exists():
+        environ.Env.read_env(_env_file)
+        break
 
 def _env(key: str, default: str | None = None) -> str | None:
     value = env(key, default=default)
     if isinstance(value, str):
         value = value.strip()
         if not value:
-            value = default
+            return default
     return value
 
 

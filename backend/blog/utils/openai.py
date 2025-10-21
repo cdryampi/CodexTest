@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Dict, Optional
 
 import requests
@@ -40,6 +41,8 @@ class OpenAIRequestError(RuntimeError):
 
 def _api_key() -> str:
     candidates = [
+        os.getenv("OPENAI_API_KEY"),
+        os.getenv("OPEN_IA_KEY"),
         getattr(settings, "OPENAI_API_KEY", None),
         getattr(settings, "OPEN_IA_KEY", None),
         DEFAULT_OPENAI_API_KEY,
