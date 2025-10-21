@@ -1,0 +1,46 @@
+# Dockerfile.backend.template
+# Construye imagen Django + Gunicorn basada en python:3.12-alpine.
+
+FROM python:3.12-alpine AS base
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Paquetes del sistema
+RUN apk add --no-cache \
+    build-base \
+    libffi-dev \
+    postgresql-dev \
+    jpeg-dev \
+    zlib-dev \
+    curl
+
+WORKDIR /app
+
+# Instala dependencias
+COPY backend/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt && \
+    rm -rf /root/.cache/pip
+
+# Copia el código
+COPY backend /app
+
+# Crear directorios y usuario no root
+RUN mkdir -p /app/staticfiles /app/media && \
+    addgroup -S app && adduser -S app -G app && \
+    chown -R app:app /app
+
+USER app
+
+EXPOSE 8000
+
+# Entry point: opcionalmente ejecuta migraciones antes de gunicorn.
+# Ajusta según tu política de CI/CD.
+ENTRYPOINT ["/bin/sh", "-c", "\
+  python manage.py migrate --noinput && \
+  python manage.py collectstatic --noinput && \
+  if [ \"$SEED_ON_STARTUP\" = \"1\" ]; then python manage.py seed_categories; fi && \
+  exec gunicorn ${DJANGO_WSGI_MODULE:-backendblog.wsgi:application} \
+    --bind 0.0.0.0:8000 \
+    --workers ${GUNICORN_WORKERS:-3} \
+    --threads ${GUNICORN_THREADS:-1} \
+    --timeout ${GUNICORN_TIMEOUT:-120}"]

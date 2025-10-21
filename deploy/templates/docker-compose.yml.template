@@ -1,0 +1,93 @@
+# docker-compose.yml.template
+# Copia este archivo y reemplaza las variables ${...} según tu proyecto.
+# Compatible con Docker Compose v1 y v2.
+
+services:
+  frontend:
+    image: ghcr.io/${GITHUB_OWNER}/${REPO_NAME}-frontend:${TAG:-latest}
+    restart: always
+    environment:
+      # URL base del backend. Ej: https://api.example.com
+      VITE_API_BASE_URL: "${VITE_API_BASE_URL}"
+      # Claves sensibles deben inyectarse vía env_file o secrets de Dokploy.
+      VITE_OPEN_IA_KEY: "${VITE_OPEN_IA_KEY}"
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    volumes:
+      # Monta solo si necesitas servir assets personalizados.
+      # - ./frontend/dist:/usr/share/nginx/html:ro
+    networks:
+      - edge_net
+
+  backend:
+    image: ghcr.io/${GITHUB_OWNER}/${REPO_NAME}-backend:${TAG:-latest}
+    restart: always
+    env_file:
+      - .env
+    environment:
+      # Variables adicionales no versionadas
+      POSTGRES_HOST: "${POSTGRES_HOST:-postgres}"
+      POSTGRES_PORT: "${POSTGRES_PORT:-5432}"
+      GUNICORN_WORKERS: "${GUNICORN_WORKERS:-3}"
+      GUNICORN_THREADS: "${GUNICORN_THREADS:-1}"
+      GUNICORN_TIMEOUT: "${GUNICORN_TIMEOUT:-120}"
+      DB_MAX_RETRIES: "${DB_MAX_RETRIES:-30}"
+      DB_RETRY_DELAY: "${DB_RETRY_DELAY:-1}"
+      SEED_ON_STARTUP: "${SEED_ON_STARTUP:-0}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-8001}:8000"
+    volumes:
+      - media:/app/media
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/admin/login/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend_net
+      - edge_net
+
+  postgres:
+    image: postgres:16
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-backend}"
+      POSTGRES_USER: "${POSTGRES_USER:-backend}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-change-me}"
+    ports:
+      # Exponer a la máquina host solo en desarrollo
+      # - "${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+networks:
+  backend_net:
+    driver: bridge
+  edge_net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  media:
