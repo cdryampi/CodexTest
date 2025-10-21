@@ -81,9 +81,33 @@ class _TranslationAwareSerializer(TranslatableModelSerializer):
         return result
 
 
-class CategorySerializer(_TranslationAwareSerializer):
+class _TranslatedCRUDSerializer(_TranslationAwareSerializer):
+    """Helper serializer adding translated create/update helpers."""
+
+    def _persist_translation(self, instance, validated_data):
+        language_code = self._language_code()
+        with set_parler_language(language_code):
+            if hasattr(instance, "set_current_language"):
+                instance.set_current_language(language_code)
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+        return instance
+
+    def create(self, validated_data):  # type: ignore[override]
+        model_cls = getattr(self.Meta, "model")  # type: ignore[attr-defined]
+        instance = model_cls()  # type: ignore[call-arg]
+        return self._persist_translation(instance, validated_data)
+
+    def update(self, instance, validated_data):  # type: ignore[override]
+        return self._persist_translation(instance, validated_data)
+
+
+class CategorySerializer(_TranslatedCRUDSerializer):
     """Public representation of a blog category."""
 
+    name = serializers.CharField()
+    description = serializers.CharField(allow_blank=True, required=False)
     post_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -127,9 +151,10 @@ class CategorySerializer(_TranslationAwareSerializer):
         return 0
 
 
-class TagSerializer(_TranslationAwareSerializer):
+class TagSerializer(_TranslatedCRUDSerializer):
     """Public representation of a tag with optional post counts."""
 
+    name = serializers.CharField()
     post_count = serializers.SerializerMethodField()
 
     class Meta:

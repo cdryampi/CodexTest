@@ -10,7 +10,7 @@ from parler.utils.context import switch_language
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from blog.models import Post, Tag
+from blog.models import Category, Post, Tag
 
 
 class BaseI18nAPITestCase(APITestCase):
@@ -182,6 +182,49 @@ class I18nAPITestCase(BaseI18nAPITestCase):
         created_slug = response.data["slug"]
         stored = Post.objects.language("en").get(slug=created_slug)
         self.assertEqual(stored.safe_translation_getter("title", language_code="en"), payload["title"])
+
+    def test_update_category_translation(self) -> None:
+        """PUT requests should persist category translations using `?lang=`."""
+
+        category = Category.objects.create(name="Frontend", description="Noticias UI")
+        url = reverse(
+            "blog:categories-detail",
+            kwargs={"slug": category.safe_translation_getter("slug")},
+        )
+        self._authenticate()
+
+        payload = {"name": "Front-end", "description": "News about UI"}
+
+        response = self.client.put(f"{url}?lang=en", payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["Content-Language"], "en")
+        category.refresh_from_db()
+        with switch_language(category, "en"):
+            self.assertEqual(category.name, payload["name"])
+            self.assertEqual(category.description, payload["description"])
+        self.assertEqual(response.data["name"], payload["name"])
+
+    def test_update_tag_translation(self) -> None:
+        """PUT requests should persist tag translations using `?lang=`."""
+
+        tag = Tag.objects.create(name="Backend")
+        url = reverse(
+            "blog:tags-detail",
+            kwargs={"slug": tag.safe_translation_getter("slug")},
+        )
+        self._authenticate()
+
+        payload = {"name": "Back-end"}
+
+        response = self.client.put(f"{url}?lang=en", payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["Content-Language"], "en")
+        tag.refresh_from_db()
+        with switch_language(tag, "en"):
+            self.assertEqual(tag.name, payload["name"])
+        self.assertEqual(response.data["name"], payload["name"])
 
     def test_update_translation_with_lang_parameter(self) -> None:
         """PUT requests using `?lang=` must update that translation without touching the default."""
