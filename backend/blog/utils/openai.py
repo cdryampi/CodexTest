@@ -39,6 +39,13 @@ class OpenAIRequestError(RuntimeError):
         self.status_code = status_code
 
 
+def _clean_candidate(candidate: Optional[str]) -> str:
+    if not isinstance(candidate, str):
+        return ""
+    value = candidate.strip().strip("'\"")
+    return value.strip()
+
+
 def _api_key() -> str:
     candidates = [
         os.getenv("OPENAI_API_KEY"),
@@ -52,10 +59,9 @@ def _api_key() -> str:
     ]
 
     for candidate in candidates:
-        if isinstance(candidate, str):
-            value = candidate.strip()
-            if value:
-                return value
+        value = _clean_candidate(candidate)
+        if value:
+            return value
 
     return ""
 

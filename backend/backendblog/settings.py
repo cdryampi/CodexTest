@@ -17,12 +17,24 @@ def _normalize_keys(key_or_keys: str | Iterable[str]) -> tuple[str, ...]:
     return tuple(str(key) for key in key_or_keys)
 
 
+def _sanitize_env_value(value: str) -> str:
+    """Strip whitespace and surrounding quotes from an environment value."""
+
+    sanitized = value.strip()
+    if not sanitized:
+        return ""
+    # Remove surrounding quotes that may come from .env files ("value" or 'value').
+    sanitized = sanitized.strip("'\"")
+    return sanitized.strip()
+
+
 def _getenv(key_or_keys: str | Iterable[str]) -> str | None:
     for key in _normalize_keys(key_or_keys):
         value = os.getenv(key)
         if value is None:
             continue
-        value = value.strip() if isinstance(value, str) else value
+        if isinstance(value, str):
+            value = _sanitize_env_value(value)
         if isinstance(value, str) and not value:
             continue
         return value
@@ -87,6 +99,28 @@ def _env_float(key: str | Iterable[str], default: float) -> float:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def _env_optional_int(
+    key: str | Iterable[str], default: int | None = None
+) -> int | None:
+    """Return an optional integer honouring "none"/"null" sentinels."""
+
+    value = _getenv(key)
+    if value is None:
+        return default
+
+    normalized = str(value).strip().lower()
+    if not normalized or normalized in {"default"}:
+        return default
+    if normalized in {"none", "null"}:
+        return None
+
+    try:
+        parsed = int(normalized)
+    except (TypeError, ValueError):
+        return default
+    return max(parsed, 0)
 
 
 SECRET_KEY = _env(("SECRET_KEY", "DJANGO_SECRET_KEY", "SECRET"), "unsafe-secret-key")
@@ -204,6 +238,29 @@ else:
                 "NAME": BASE_DIR / "db.sqlite3",
             }
         }
+
+_conn_max_age = _env_optional_int(
+    (
+        "DATABASE_CONN_MAX_AGE",
+        "DJANGO_DATABASE_CONN_MAX_AGE",
+        "CONN_MAX_AGE",
+        "DJANGO_CONN_MAX_AGE",
+    )
+)
+if _conn_max_age is not None:
+    DATABASES["default"]["CONN_MAX_AGE"] = _conn_max_age
+
+_conn_health_checks = _env_bool(
+    (
+        "DATABASE_CONN_HEALTH_CHECKS",
+        "DJANGO_DATABASE_CONN_HEALTH_CHECKS",
+        "CONN_HEALTH_CHECKS",
+        "DJANGO_CONN_HEALTH_CHECKS",
+    ),
+    False,
+)
+if _conn_health_checks:
+    DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -375,8 +432,7 @@ OPENAI_API_URL = _env("OPENAI_API_URL", "https://api.openai.com/v1/responses") o
 def _clean_openai_value(raw_value: str | None) -> str:
     if raw_value is None:
         return ""
-    value = str(raw_value).strip()
-    return value
+    return _sanitize_env_value(str(raw_value))
 
 
 _openai_api_key = _clean_openai_value(
