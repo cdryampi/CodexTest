@@ -100,6 +100,15 @@ def _build_prompt(*, text: str, target_language: str, source_language: Optional[
     )
 
 
+def _text_format(fmt: Optional[str]) -> str:
+    """Return the requested OpenAI text format, defaulting to Markdown."""
+
+    normalized = (fmt or "").strip().lower()
+    if normalized in {"markdown", "plain"}:
+        return normalized
+    return "markdown"
+
+
 def _extract_translation(payload: Dict[str, Any]) -> str:
     if not isinstance(payload, dict):
         return ""
@@ -161,7 +170,7 @@ def translate_text(
             source_language=source_language,
             fmt=fmt,
         ),
-        "response_format": {"type": "text"},
+        "text": {"format": _text_format(fmt)},
     }
 
     headers = {
