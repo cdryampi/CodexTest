@@ -468,6 +468,27 @@ class PostViewSet(
             queryset = queryset.filter(categories__slug__iexact=category_slug)
         return self.apply_language(queryset)
 
+    def get_object(self):  # type: ignore[override]
+        try:
+            return super().get_object()
+        except Http404:
+            lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+            lookup_value = self.kwargs.get(lookup_url_kwarg)
+
+            if not lookup_value or self.lookup_field != "slug":
+                raise
+
+            base_queryset = super().get_queryset().distinct()
+            fallback_queryset = base_queryset.untranslated().filter(
+                translations__slug__iexact=lookup_value
+            )
+            fallback = fallback_queryset.first()
+            if fallback is None:
+                raise
+
+            self.check_object_permissions(self.request, fallback)
+            return fallback
+
     def filter_queryset(self, queryset):  # type: ignore[override]
         queryset = super().filter_queryset(queryset)
         search_term = (self.request.query_params.get("search") or "").strip()
