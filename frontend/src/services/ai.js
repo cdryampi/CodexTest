@@ -1,6 +1,6 @@
 import { toast } from 'sonner';
 
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+const OPENAI_API_URL = 'https://api.openai.com/v1/responses';
 const DEFAULT_MODEL = 'gpt-4o-mini';
 const MAX_TEXT_LENGTH = 2000;
 const SYSTEM_PROMPT =
@@ -23,9 +23,41 @@ const buildUserPrompt = ({ text, targetLang, sourceLang, format }) => {
     `Idioma destino: ${normalizedTarget}.`,
     `Formato a conservar: ${normalizedFormat}.`,
     'Traduce el siguiente contenido sin añadir comentarios ni notas adicionales.',
+    'Devuelve únicamente el texto traducido sin comillas ni observaciones.',
     'Texto:',
     text
   ].join('\n');
+};
+
+const extractTranslation = (payload) => {
+  if (!payload || typeof payload !== 'object') {
+    return '';
+  }
+
+  if (typeof payload.output_text === 'string' && payload.output_text.trim()) {
+    return payload.output_text.trim();
+  }
+
+  if (Array.isArray(payload.output)) {
+    for (const block of payload.output) {
+      const contents = Array.isArray(block?.content) ? block.content : [];
+      for (const item of contents) {
+        const text = item?.text;
+        if (typeof text === 'string' && text.trim()) {
+          return text.trim();
+        }
+      }
+    }
+  }
+
+  if (Array.isArray(payload.choices)) {
+    const message = payload.choices[0]?.message?.content;
+    if (typeof message === 'string' && message.trim()) {
+      return message.trim();
+    }
+  }
+
+  return '';
 };
 
 const handleApiError = async (response) => {
@@ -85,18 +117,14 @@ export async function translateText({
   const payload = {
     model: DEFAULT_MODEL,
     temperature: 0.2,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      {
-        role: 'user',
-        content: buildUserPrompt({
-          text: normalizedText,
-          targetLang: normalizedTarget,
-          sourceLang,
-          format
-        })
-      }
-    ]
+    instructions: SYSTEM_PROMPT,
+    input: buildUserPrompt({
+      text: normalizedText,
+      targetLang: normalizedTarget,
+      sourceLang,
+      format
+    }),
+    response_format: { type: 'text' }
   };
 
   let response;
@@ -129,7 +157,7 @@ export async function translateText({
     throw new Error(message);
   }
 
-  const translated = data?.choices?.[0]?.message?.content;
+  const translated = extractTranslation(data);
   if (!translated) {
     const message = 'El servicio de traducción no devolvió un resultado.';
     toast.error(message);
