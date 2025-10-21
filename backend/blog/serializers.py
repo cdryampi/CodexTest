@@ -127,6 +127,43 @@ class CategorySerializer(_TranslationAwareSerializer):
         return 0
 
 
+class TagSerializer(_TranslationAwareSerializer):
+    """Public representation of a tag with optional post counts."""
+
+    post_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Tag
+        fields = [
+            "name",
+            "slug",
+            "post_count",
+            "translations",
+        ]
+        read_only_fields = ["slug", "post_count", "translations"]
+
+    def get_post_count(self, obj: Tag) -> int:
+        """Return the number of posts associated with the tag when available."""
+
+        annotated_value = getattr(obj, "post_count", None)
+        try:
+            if annotated_value is not None:
+                return int(annotated_value)
+        except (TypeError, ValueError):
+            pass
+
+        if hasattr(obj, "_prefetched_objects_cache"):
+            cached = obj._prefetched_objects_cache.get("posts")
+            if cached is not None:
+                return len(cached)
+
+        related_posts = getattr(obj, "posts", None)
+        if hasattr(related_posts, "count"):
+            return related_posts.count()
+
+        return 0
+
+
 class TagNameField(serializers.SlugRelatedField):
     """Slug field that creates tags on demand when writing."""
 
