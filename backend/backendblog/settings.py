@@ -23,7 +23,7 @@ def _env(key: str, default: str | None = None) -> str | None:
     if isinstance(value, str):
         value = value.strip()
         if not value:
-            return default
+            value = default
     return value
 
 
