@@ -5,9 +5,9 @@ services:
     image: postgres:16
     restart: always
     environment:
-      POSTGRES_DB: ${{project.POSTGRES_DB}}
-      POSTGRES_USER: ${{project.POSTGRES_USER}}
-      POSTGRES_PASSWORD: ${{project.POSTGRES_PASSWORD}}
+      POSTGRES_DB: "$${{project.POSTGRES_DB}}"
+      POSTGRES_USER: "$${{project.POSTGRES_USER}}"
+      POSTGRES_PASSWORD: "$${{project.POSTGRES_PASSWORD}}"
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
@@ -29,25 +29,25 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      # Django (nombres que lees en settings.py con os.getenv)
-      SECRET: ${{project.SECRET}}
-      DJANGO_DEBUG: ${{project.DJANGO_DEBUG}}
-      DJANGO_SECURE_SSL_REDIRECT: ${{project.DJANGO_SECURE_SSL_REDIRECT}}
-      DJANGO_ALLOWED_HOSTS: ${{project.DJANGO_ALLOWED_HOSTS}}
-      DJANGO_CSRF_TRUSTED_ORIGINS: ${{project.DJANGO_CSRF_TRUSTED_ORIGINS}}
-      DJANGO_CORS_ALLOWED_ORIGINS: ${{project.DJANGO_CORS_ALLOWED_ORIGINS}}
+      # Django (las lees en settings.py con os.getenv)
+      SECRET: "$${{project.SECRET}}"
+      DJANGO_DEBUG: "$${{project.DJANGO_DEBUG}}"
+      DJANGO_SECURE_SSL_REDIRECT: "$${{project.DJANGO_SECURE_SSL_REDIRECT}}"
+      DJANGO_ALLOWED_HOSTS: "$${{project.DJANGO_ALLOWED_HOSTS}}"
+      DJANGO_CSRF_TRUSTED_ORIGINS: "$${{project.DJANGO_CSRF_TRUSTED_ORIGINS}}"
+      DJANGO_CORS_ALLOWED_ORIGINS: "$${{project.DJANGO_CORS_ALLOWED_ORIGINS}}"
 
-      # Base de datos (elige una de dos: URL o campos sueltos)
-      DATABASE_URL: ${{project.DATABASE_URL}}
-      POSTGRES_DB: ${{project.POSTGRES_DB}}
-      POSTGRES_USER: ${{project.POSTGRES_USER}}
-      POSTGRES_PASSWORD: ${{project.POSTGRES_PASSWORD}}
-      POSTGRES_HOST: postgres
+      # Base de datos (puedes usar URL o campos sueltos)
+      DATABASE_URL: "$${{project.DATABASE_URL}}"
+      POSTGRES_DB: "$${{project.POSTGRES_DB}}"
+      POSTGRES_USER: "$${{project.POSTGRES_USER}}"
+      POSTGRES_PASSWORD: "$${{project.POSTGRES_PASSWORD}}"
+      POSTGRES_HOST: "postgres"
       POSTGRES_PORT: "5432"
 
       # Claves extra (si las usas)
-      OPENAI_API_KEY: ${{project.OPENAI_API_KEY}}
-      OPEN_IA_KEY: ${{project.OPEN_IA_KEY}}
+      OPENAI_API_KEY: "$${{project.OPENAI_API_KEY}}"
+      OPEN_IA_KEY: "$${{project.OPEN_IA_KEY}}"
 
       # Tuning opcional
       GUNICORN_WORKERS: "3"
