@@ -86,26 +86,31 @@ class Command(BaseCommand):
 
                 base_slug = slugify_localized(name, default_language) or Tag.slug_fallback
 
-                def _save_translation(language_code: str) -> None:
+                def _save_translation(language_code: str, *, force: bool = False) -> None:
+                    translation = tag._get_translated_model(
+                        language_code, auto_create=True
+                    )
+
                     tag.set_current_language(language_code)
-                    if language_code == default_language:
+
+                    current_name = getattr(translation, "name", "") or ""
+                    current_slug = getattr(translation, "slug", "") or ""
+
+                    candidate_slug = (
+                        slugify_localized(name, language_code) or base_slug
+                    )
+
+                    if force or not current_name.strip():
                         tag.name = name
+                    if force or not current_slug.strip():
+                        tag.slug = candidate_slug or base_slug
+
+                    if not tag.slug:
                         tag.slug = base_slug
-                    else:
-                        if not tag.name:
-                            tag.name = name
-                        candidate_slug = slugify_localized(name, language_code) or base_slug
-                        if not tag.slug:
-                            tag.slug = candidate_slug
-                    if language_code != default_language:
-                        # Ensure slug never ends up vacío aunque exista pero en blanco
-                        if not tag.slug:
-                            tag.slug = base_slug
-                        if not tag.name:
-                            tag.name = name
+
                     tag.save()
 
-                _save_translation(default_language)
+                _save_translation(default_language, force=True)
                 for language_code in available_languages:
                     if language_code == default_language:
                         continue
@@ -129,19 +134,31 @@ class Command(BaseCommand):
 
                 base_name = category_defaults[slug]
 
-                def _save_category_translation(language_code: str) -> None:
+                def _save_category_translation(language_code: str, *, force: bool = False) -> None:
+                    current_name = category.safe_translation_getter(
+                        "name",
+                        language_code=language_code,
+                        any_language=False,
+                    )
+                    current_slug = category.safe_translation_getter(
+                        "slug",
+                        language_code=language_code,
+                        any_language=False,
+                    )
+
                     category.set_current_language(language_code)
-                    if language_code == default_language:
+
+                    if force or not current_name:
                         category.name = base_name
+                    if force or not current_slug:
                         category.slug = slug
-                    else:
-                        if not category.name:
-                            category.name = base_name
-                        if not category.slug:
-                            category.slug = slug
+
+                    if not category.slug:
+                        category.slug = slug
+
                     category.save()
 
-                _save_category_translation(default_language)
+                _save_category_translation(default_language, force=True)
                 for language_code in available_languages:
                     if language_code == default_language:
                         continue
@@ -202,15 +219,25 @@ class Command(BaseCommand):
                 for language_code in available_languages:
                     if language_code == default_language:
                         continue
+
+                    translation = post._get_translated_model(
+                        language_code, auto_create=True
+                    )
+
+                    if not (translation.title or "").strip():
+                        translation.title = title
+                    if not (translation.slug or "").strip():
+                        translation.slug = slug
+                    if not (translation.excerpt or "").strip():
+                        translation.excerpt = excerpt
+                    if not (translation.content or "").strip():
+                        translation.content = content
+
                     post.set_current_language(language_code)
-                    if not post.title:
-                        post.title = title
+
                     if not post.slug:
                         post.slug = slug
-                    if not post.excerpt:
-                        post.excerpt = excerpt
-                    if not post.content:
-                        post.content = content
+
                     post.save()
 
                 post.set_current_language(default_language)

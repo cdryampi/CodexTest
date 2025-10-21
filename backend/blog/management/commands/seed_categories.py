@@ -82,22 +82,36 @@ class Command(BaseCommand):
 
                 category.is_active = is_active
 
-                def _save_translation(language_code: str) -> None:
+                def _save_translation(language_code: str, *, force: bool = False) -> None:
+                    translation = category._get_translated_model(
+                        language_code, auto_create=True
+                    )
+
+                    base_slug = (
+                        slugify_localized(name, language_code)
+                        or slug_value
+                        or Category.slug_fallback
+                    )
+
+                    current_name = getattr(translation, "name", "") or ""
+                    current_description = getattr(translation, "description", "") or ""
+                    current_slug = getattr(translation, "slug", "") or ""
+
                     category.set_current_language(language_code)
-                    if not category.name:
+
+                    if force or not current_name.strip():
                         category.name = name
-                    if not category.description:
+                    if force or not current_description.strip():
                         category.description = description
+                    if force or not current_slug.strip():
+                        category.slug = base_slug
+
                     if not category.slug:
-                        category.slug = slug_value
-                    # Ensure canonical language matches fixture values
-                    if language_code == entry_language:
-                        category.name = name
-                        category.description = description
-                        category.slug = slug_value
+                        category.slug = base_slug
+
                     category.save()
 
-                _save_translation(entry_language)
+                _save_translation(entry_language, force=True)
 
                 for language_code in available_languages:
                     if language_code == entry_language:
