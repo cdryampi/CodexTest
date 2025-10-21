@@ -49,6 +49,22 @@ class OpenAITranslationAPITests(APITestCase):
             fmt="markdown",
         )
 
+    @override_settings(OPENAI_API_KEY="test-key")
+    def test_accepts_plain_text_alias(self) -> None:
+        self.client.force_authenticate(self.user)
+        payload = {**self.payload, "format": "plain_text"}
+
+        with patch("blog.views.translate_text", return_value="Hello world") as mock_translate:
+            response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_translate.assert_called_once_with(
+            text="Hola mundo",
+            target_language="en",
+            source_language="es",
+            fmt="plain",
+        )
+
     def test_handles_configuration_errors(self) -> None:
         self.client.force_authenticate(self.user)
         with patch(

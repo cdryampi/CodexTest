@@ -65,6 +65,18 @@ class OpenAIUtilsTests(SimpleTestCase):
         kwargs = mock_post.call_args.kwargs
         self.assertEqual(kwargs["json"]["text"], {"format": "markdown"})
 
+    @override_settings(OPENAI_API_KEY="test-key")
+    def test_translate_text_uses_plain_format(self) -> None:
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"output_text": "Hello world"}
+
+        with patch("blog.utils.openai.requests.post", return_value=mock_response) as mock_post:
+            translate_text(text="Hola", target_language="en", fmt="plain")
+
+        kwargs = mock_post.call_args.kwargs
+        self.assertEqual(kwargs["json"]["text"], {"format": "plain"})
+
     @override_settings(
         OPENAI_API_KEY="",
         OPEN_IA_KEY="open-ia-key",

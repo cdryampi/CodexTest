@@ -136,6 +136,11 @@ function TranslateModal({
     return `ai-translate:${entityType}:${targetLang}:${hashText(JSON.stringify(payload))}`;
   }, [entityType, idOrSlug, targetLang, preserveFormatting, includeFullContent, buildEntries]);
 
+  const hasMarkup = useMemo(() => {
+    const entries = buildEntries();
+    return entries.some(([, value]) => detectHtml(value));
+  }, [buildEntries]);
+
   const handleTranslate = useCallback(
     async (force = false) => {
       setErrorMessage('');
@@ -162,7 +167,7 @@ function TranslateModal({
         return;
       }
 
-      const format = preserveFormatting && entries.some(([, value]) => detectHtml(value)) ? 'html' : 'markdown';
+      const format = preserveFormatting ? 'markdown' : 'plain';
 
       setLoading(true);
       setNeedsLargeConfirm(false);
@@ -341,9 +346,9 @@ function TranslateModal({
                             checked={preserveFormatting}
                             onChange={(event) => setPreserveFormatting(Boolean(event.target.checked))}
                             className="h-4 w-4 rounded border-slate-300 text-sky-500 focus:ring-sky-500"
-                            aria-label="Conservar formato Markdown o HTML"
+                            aria-label="Mantener formato Markdown"
                           />
-                          <span>Conservar formato Markdown/HTML</span>
+                          <span>Mantener formato Markdown</span>
                         </label>
                         {entityType === 'post' ? (
                           <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300">
@@ -363,6 +368,19 @@ function TranslateModal({
                         Por defecto se traduce únicamente título y resumen para optimizar el uso de tokens.
                       </p>
                     ) : null}
+
+                    <div className="flex flex-col gap-1 text-xs text-slate-500 dark:text-slate-400">
+                      {preserveFormatting ? (
+                        <p>El modelo intentará respetar el formato Markdown, incluyendo listas, enlaces y etiquetas HTML.</p>
+                      ) : (
+                        <p>La traducción devolverá texto plano sin formato.</p>
+                      )}
+                      {!preserveFormatting && hasMarkup ? (
+                        <p className="text-amber-600 dark:text-amber-400">
+                          Se detectó HTML en el contenido original; al convertirlo a texto plano podrías perder etiquetas o estilos.
+                        </p>
+                      ) : null}
+                    </div>
 
                     {fieldOrder.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
