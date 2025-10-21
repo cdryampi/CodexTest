@@ -5,7 +5,10 @@ import json
 from pathlib import Path
 from typing import Dict
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.db import transaction
+from django.db.models import Q
 from django.utils.text import slugify
 
 from ...models import Category
@@ -37,28 +40,44 @@ class Command(BaseCommand):
         created = 0
         updated = 0
 
-        for entry in payload:
-            fields = entry.get("fields", {})
-            name = fields.get("name")
-            if not name:
-                continue
+        default_language = settings.LANGUAGE_CODE
 
-            slug = fields.get("slug") or slugify(name)
-            description = fields.get("description", "")
-            is_active = bool(fields.get("is_active", True))
+        with transaction.atomic():
+            for entry in payload:
+                fields = entry.get("fields", {})
+                name = fields.get("name")
+                if not name:
+                    continue
 
-            category, created_flag = Category.objects.update_or_create(
-                slug=slug,
-                defaults={
-                    "name": name,
-                    "description": description,
-                    "is_active": is_active,
-                },
-            )
-            if created_flag:
-                created += 1
-            else:
-                updated += 1
+                description = fields.get("description", "")
+                is_active = bool(fields.get("is_active", True))
+                language_code = fields.get("language_code") or default_language
+
+                slug_value = fields.get("slug") or slugify(name)
+
+                language_manager = Category.objects.language(language_code)
+                category = language_manager.filter(
+                    Q(slug=slug_value) | Q(name=name)
+                ).first()
+
+                if category is None:
+                    category = Category()
+                    created_flag = True
+                else:
+                    created_flag = False
+
+                category.set_current_language(language_code)
+                category.name = name
+                category.description = description
+                category.is_active = is_active
+                if slug_value:
+                    category.slug = slug_value
+                category.save()
+
+                if created_flag:
+                    created += 1
+                else:
+                    updated += 1
 
         self.stdout.write(
             self.style.SUCCESS(
