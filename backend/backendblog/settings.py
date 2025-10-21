@@ -8,7 +8,11 @@ from pathlib import Path
 from typing import Dict
 from urllib.parse import parse_qs, urlparse
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / ".env")
 
 def _env(key: str, default: str | None = None) -> str | None:
     value = os.getenv(key)

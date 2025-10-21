@@ -15,5 +15,6 @@ requests
 gunicorn
 psycopg2-binary
 python-decouple
+python-dotenv
 whitenoise
 Faker>=20
