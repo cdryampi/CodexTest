@@ -478,11 +478,22 @@ class PostViewSet(
             if not lookup_value or self.lookup_field != "slug":
                 raise
 
-            base_queryset = super().get_queryset().distinct()
-            fallback_queryset = base_queryset.filter(
-                translations__slug__iexact=lookup_value
+            base_queryset = self.filter_queryset(super().get_queryset()).distinct()
+
+            translations_field = Post._meta.get_field("translations")
+            translations_model = getattr(translations_field, "related_model", None)
+            if translations_model is None:
+                raise
+
+            translation = (
+                translations_model._default_manager.filter(slug__iexact=lookup_value)
+                .order_by("master_id")
+                .first()
             )
-            fallback = fallback_queryset.first()
+            if translation is None:
+                raise
+
+            fallback = base_queryset.filter(pk=translation.master_id).first()
             if fallback is None:
                 raise
 
