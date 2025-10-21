@@ -4,7 +4,13 @@ from __future__ import annotations
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import CategoryViewSet, CommentViewSet, PostViewSet, TagViewSet
+from .views import (
+    CategoryViewSet,
+    CommentViewSet,
+    OpenAITranslationViewSet,
+    PostViewSet,
+    TagViewSet,
+)
 
 app_name = "blog"
 
@@ -12,6 +18,7 @@ router = DefaultRouter()
 router.register("posts", PostViewSet, basename="posts")
 router.register("categories", CategoryViewSet, basename="categories")
 router.register("tags", TagViewSet, basename="tags")
+router.register("ai/translations", OpenAITranslationViewSet, basename="ai-translations")
 
 comment_list = CommentViewSet.as_view({
     "get": "list",

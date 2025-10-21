@@ -30,6 +30,26 @@ def _env_csv(key: str) -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
+def _env_int(key: str, default: int) -> int:
+    value = os.getenv(key)
+    if value is None:
+        return default
+    try:
+        return int(value.strip())
+    except (TypeError, ValueError):
+        return default
+
+
+def _env_float(key: str, default: float) -> float:
+    value = os.getenv(key)
+    if value is None:
+        return default
+    try:
+        return float(value.strip())
+    except (TypeError, ValueError):
+        return default
+
+
 SECRET_KEY = _env("SECRET_KEY", "unsafe-secret-key")
 DEBUG = _env_bool("DEBUG", False)
 
@@ -253,6 +273,7 @@ REST_FRAMEWORK = {
         "anon": "200/day",
         "user": "1000/day",
         "reactions": "30/min",
+        "openai": _env("OPENAI_THROTTLE", "20/min"),
     },
 }
 
@@ -300,6 +321,19 @@ DEFAULT_FROM_EMAIL = _env(
     "DEFAULT_FROM_EMAIL",
     "CodexTest Blog <no-reply@codextest.local>",
 )
+
+OPENAI_API_URL = _env("OPENAI_API_URL", "https://api.openai.com/v1/responses") or "https://api.openai.com/v1/responses"
+OPENAI_API_KEY = _env("VITE_OPEN_IA_KEY", "") or ""
+OPENAI_DEFAULT_MODEL = _env("OPENAI_DEFAULT_MODEL", "gpt-4o-mini") or "gpt-4o-mini"
+OPENAI_SYSTEM_PROMPT = _env(
+    "OPENAI_SYSTEM_PROMPT",
+    (
+        "Eres un asistente de traducción para un blog técnico. Conserva formato "
+        "Markdown/HTML, respeta enlaces y código, no inventes contenido."
+    ),
+)
+OPENAI_REQUEST_TIMEOUT = _env_float("OPENAI_REQUEST_TIMEOUT", 15.0)
+OPENAI_MAX_TEXT_LENGTH = _env_int("OPENAI_MAX_TEXT_LENGTH", 2000)
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "CodexTest Blog API",

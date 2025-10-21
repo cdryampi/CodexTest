@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from django.conf import settings
 from django.db.models import Count, F, Q
 from django.http import Http404
@@ -25,6 +27,8 @@ from .models import Category, Comment, Post, Reaction, Tag
 from .serializers import (
     CategorySerializer,
     CommentSerializer,
+    OpenAITranslationResponseSerializer,
+    OpenAITranslationSerializer,
     PostDetailSerializer,
     PostListSerializer,
     TagSerializer,
@@ -32,6 +36,14 @@ from .serializers import (
     ReactionToggleSerializer,
 )
 from .utils.i18n import get_active_language, set_parler_language
+from .utils.openai import (
+    OpenAIConfigurationError,
+    OpenAIRequestError,
+    translate_text,
+)
+
+
+logger = logging.getLogger(__name__)
 
 
 class LanguageNegotiationMixin:
@@ -242,6 +254,118 @@ POST_DETAIL_EXPANDED_EXAMPLE = OpenApiExample(
 TRANSLATED_RESPONSE_DESCRIPTION = (
     "Respuesta localizada. El header `Content-Language` indica el idioma servido."
 )
+
+OPENAI_TRANSLATION_REQUEST_EXAMPLE = OpenApiExample(
+    "Solicitud de traducción",
+    value={
+        "text": "<p>Hola mundo</p>",
+        "target_lang": "en",
+        "source_lang": "es",
+        "format": "html",
+    },
+    request_only=True,
+)
+
+OPENAI_TRANSLATION_RESPONSE_EXAMPLE = OpenApiExample(
+    "Respuesta de traducción",
+    value={
+        "translation": "<p>Hello world</p>",
+        "target_lang": "en",
+        "source_lang": "es",
+        "format": "html",
+    },
+    response_only=True,
+)
+
+
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            LANGUAGE_QUERY_PARAMETER,
+            EXPAND_TRANSLATIONS_PARAMETER,
+            ACCEPT_LANGUAGE_HEADER,
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=TagSerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+    retrieve=extend_schema(
+        parameters=[
+            LANGUAGE_QUERY_PARAMETER,
+            EXPAND_TRANSLATIONS_PARAMETER,
+            ACCEPT_LANGUAGE_HEADER,
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=TagSerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+    create=extend_schema(
+        parameters=[LANGUAGE_QUERY_PARAMETER, ACCEPT_LANGUAGE_HEADER],
+        responses={
+            201: OpenApiResponse(
+                response=TagSerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+    update=extend_schema(
+        parameters=[LANGUAGE_QUERY_PARAMETER, ACCEPT_LANGUAGE_HEADER],
+        responses={
+            200: OpenApiResponse(
+                response=TagSerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+    partial_update=extend_schema(
+        parameters=[LANGUAGE_QUERY_PARAMETER, ACCEPT_LANGUAGE_HEADER],
+        responses={
+            200: OpenApiResponse(
+                response=TagSerializer,
+                description=TRANSLATED_RESPONSE_DESCRIPTION,
+            )
+        },
+    ),
+)
+class TagViewSet(
+    LanguageNegotiationMixin,
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Expose tags with optional post counters for editorial tools."""
+
+    serializer_class = TagSerializer
+    lookup_field = "slug"
+    lookup_url_kwarg = "slug"
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    ordering = ["name"]
+
+    def get_queryset(self):
+        queryset = self.apply_language(Tag.objects.all())
+        params = self.request.query_params
+        search_term = params.get("q")
+        if search_term:
+            search_term = search_term.strip()
+            if search_term:
+                queryset = queryset.filter(name__icontains=search_term)
+                queryset = queryset.filter(
+                    translations__language_code=self.language_code
+                )
+
+        with_counts = params.get("with_counts")
+        if with_counts is not None and with_counts.lower() in {"1", "true", "yes"}:
+            queryset = queryset.annotate(post_count=Count("posts", distinct=True))
+
+        return queryset.order_by(*self.ordering).distinct()
 
 
 @extend_schema_view(
@@ -726,3 +850,73 @@ class CommentViewSet(
 
     def perform_create(self, serializer):  # type: ignore[override]
         serializer.save(post=self._get_post())
+
+
+@extend_schema(
+    request=OpenAITranslationSerializer,
+    responses={
+        200: OpenApiResponse(
+            response=OpenAITranslationResponseSerializer,
+            description="Traducción generada correctamente.",
+        ),
+        400: OpenApiResponse(description="Solicitud inválida."),
+        401: OpenApiResponse(description="Autenticación requerida."),
+        502: OpenApiResponse(description="Error al contactar con OpenAI."),
+        503: OpenApiResponse(description="Servicio de traducción no configurado."),
+    },
+    examples=[
+        OPENAI_TRANSLATION_REQUEST_EXAMPLE,
+        OPENAI_TRANSLATION_RESPONSE_EXAMPLE,
+    ],
+)
+class OpenAITranslationViewSet(viewsets.ViewSet):
+    """Proxy interno para solicitar traducciones a OpenAI."""
+
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    throttle_scope = "openai"
+
+    def create(self, request):  # type: ignore[override]
+        serializer = OpenAITranslationSerializer(
+            data=request.data, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+
+        if not request.user or not request.user.is_authenticated:
+            return Response(
+                {"detail": "Autenticación requerida para solicitar traducciones."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        payload = serializer.validated_data
+
+        try:
+            translation = translate_text(
+                text=payload["text"],
+                target_language=payload["target_lang"],
+                source_language=payload.get("source_lang"),
+                fmt=payload["format"],
+            )
+        except OpenAIConfigurationError as exc:
+            logger.warning("OpenAI configuration error: %s", exc)
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except OpenAIRequestError as exc:
+            detail = str(exc) or "No fue posible completar la traducción."
+            status_code = exc.status_code or status.HTTP_502_BAD_GATEWAY
+            if status_code < 400:
+                status_code = status.HTTP_502_BAD_GATEWAY
+            logger.warning(
+                "OpenAI request failed with status %s: %s", status_code, detail
+            )
+            return Response({"detail": detail}, status=status_code)
+
+        response_payload = {
+            "translation": translation,
+            "target_lang": payload["target_lang"],
+            "source_lang": payload.get("source_lang"),
+            "format": payload["format"],
+        }
+        output_serializer = OpenAITranslationResponseSerializer(response_payload)
+        return Response(output_serializer.data, status=status.HTTP_200_OK)

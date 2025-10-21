@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from datetime import date as date_cls, datetime
-from typing import Iterable
+from typing import Iterable, Optional
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -470,4 +470,55 @@ class ReactionSummarySerializer(serializers.Serializer):
         allow_null=True,
         required=False,
     )
+
+
+class OpenAITranslationSerializer(serializers.Serializer):
+    """Validate payloads for the OpenAI translation proxy endpoint."""
+
+    text = serializers.CharField(
+        trim_whitespace=False,
+        max_length=getattr(settings, "OPENAI_MAX_TEXT_LENGTH", 2000),
+    )
+    target_lang = serializers.CharField()
+    source_lang = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    format = serializers.ChoiceField(choices=[("markdown", "markdown"), ("html", "html")], default="markdown")
+
+    def to_internal_value(self, data):  # type: ignore[override]
+        if isinstance(data, dict):
+            if "target_lang" not in data and "targetLang" in data:
+                data = {**data, "target_lang": data["targetLang"]}
+            if "source_lang" not in data and "sourceLang" in data:
+                data = {**data, "source_lang": data["sourceLang"]}
+            if "format" in data and isinstance(data["format"], str):
+                data = {**data, "format": data["format"].strip().lower()}
+        return super().to_internal_value(data)
+
+    def validate_text(self, value: str) -> str:
+        if not value or not value.strip():
+            raise serializers.ValidationError("Debes proporcionar un texto para traducir.")
+        return value
+
+    def validate_target_lang(self, value: str) -> str:
+        cleaned = value.strip().lower()
+        if not cleaned:
+            raise serializers.ValidationError("Debes indicar un idioma de destino válido.")
+        return cleaned
+
+    def validate_source_lang(self, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = value.strip().lower()
+        return cleaned or None
+
+    def validate_format(self, value: str) -> str:
+        return value.strip().lower()
+
+
+class OpenAITranslationResponseSerializer(serializers.Serializer):
+    """Serialized representation of the translation response."""
+
+    translation = serializers.CharField()
+    target_lang = serializers.CharField()
+    source_lang = serializers.CharField(allow_null=True, required=False)
+    format = serializers.CharField()
 
