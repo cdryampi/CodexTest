@@ -2,15 +2,15 @@
 from __future__ import annotations
 
 import random
-from typing import Dict, List
+from typing import Dict
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils.text import slugify
 
 from ...models import Category, Post, Tag
 from ...seed_config import (
-    BULK_BATCH_SIZE,
     POST_COUNT,
     CATEGORIES_POOL,
     TAGS_POOL,
@@ -45,11 +45,13 @@ class Command(BaseCommand):
             return {"created": 0, "skipped": 0, "target": 0}
 
         faker = get_faker()
-        existing_titles = set(Post.objects.values_list("title", flat=True))
-        existing_slugs = set(Post.objects.values_list("slug", flat=True))
-        posts_to_create: List[Post] = []
-        post_tags: Dict[str, List[str]] = {}
-        post_categories: Dict[str, List[str]] = {}
+        default_language = settings.LANGUAGE_CODE
+        existing_titles = set(
+            Post.objects.language(default_language).values_list("title", flat=True)
+        )
+        existing_slugs = set(
+            Post.objects.language(default_language).values_list("slug", flat=True)
+        )
         category_slugs = [entry["slug"] for entry in CATEGORIES_POOL]
         category_defaults = {
             entry["slug"]: entry["name"] for entry in CATEGORIES_POOL
@@ -63,17 +65,34 @@ class Command(BaseCommand):
         self.stdout.write(f"Generando hasta {target} posts...")
 
         with transaction.atomic():
-            Tag.objects.bulk_create(
-                [Tag(name=name) for name in TAGS_POOL],
-                ignore_conflicts=True,
-            )
-            Category.objects.bulk_create(
-                [
-                    Category(name=category_defaults[slug], slug=slug)
-                    for slug in category_slugs
-                ],
-                ignore_conflicts=True,
-            )
+            tag_lookup = {}
+            for name in TAGS_POOL:
+                tag = (
+                    Tag.objects.language(default_language)
+                    .filter(name=name)
+                    .first()
+                )
+                if tag is None:
+                    tag = Tag()
+                tag.set_current_language(default_language)
+                tag.name = name
+                tag.save()
+                tag_lookup[name] = tag
+
+            category_lookup = {}
+            for slug in category_slugs:
+                category = (
+                    Category.objects.language(default_language)
+                    .filter(slug=slug)
+                    .first()
+                )
+                if category is None:
+                    category = Category()
+                category.set_current_language(default_language)
+                category.name = category_defaults[slug]
+                category.slug = slug
+                category.save()
+                category_lookup[slug] = category
 
             while created < target and attempts < max_attempts:
                 attempts += 1
@@ -109,57 +128,33 @@ class Command(BaseCommand):
                     k=random.randint(1, min(3, len(category_slugs))),
                 )
 
-                posts_to_create.append(
-                    Post(
-                        title=title,
-                        slug=slug,
-                        excerpt=excerpt,
-                        content=content,
-                        date=publish_date,
-                        image=image_url,
-                        thumb=thumb_url,
-                        imageAlt=image_alt,
-                        author=author,
-                    )
+                post = Post()
+                post.set_current_language(default_language)
+                post.title = title
+                post.slug = slug
+                post.excerpt = excerpt
+                post.content = content
+                post.date = publish_date
+                post.image = image_url
+                post.thumb = thumb_url
+                post.imageAlt = image_alt
+                post.author = author
+                post.save()
+
+                post.tags.set(
+                    [tag_lookup[name] for name in tags if name in tag_lookup]
                 )
-                post_tags[slug] = tags
-                post_categories[slug] = categories
-                existing_titles.add(title)
-                existing_slugs.add(slug)
-                created += 1
-
-            if not posts_to_create:
-                self.stdout.write("No se encontraron posts nuevos para crear.")
-                return {"created": 0, "skipped": skipped, "target": target}
-
-            Post.objects.bulk_create(
-                posts_to_create,
-                batch_size=BULK_BATCH_SIZE,
-            )
-
-            tag_lookup = {
-                tag.name: tag for tag in Tag.objects.filter(name__in=TAGS_POOL)
-            }
-            category_lookup = {
-                category.slug: category
-                for category in Category.objects.filter(slug__in=category_slugs)
-            }
-            created_posts = {
-                post.slug: post
-                for post in Post.objects.filter(slug__in=list(post_tags.keys()))
-            }
-            for slug, tag_names in post_tags.items():
-                post = created_posts.get(slug)
-                if not post:
-                    continue
-                post.tags.set([tag_lookup[name] for name in tag_names if name in tag_lookup])
                 post.categories.set(
                     [
                         category_lookup[category_slug]
-                        for category_slug in post_categories.get(slug, [])
+                        for category_slug in categories
                         if category_slug in category_lookup
                     ]
                 )
+
+                existing_titles.add(post.title)
+                existing_slugs.add(post.slug)
+                created += 1
 
         if attempts >= max_attempts and created < target:
             self.stdout.write(
@@ -170,11 +165,11 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Posts creados: {len(posts_to_create)}. Omitidos por títulos repetidos: {skipped}."
+                f"Posts creados: {created}. Omitidos por títulos repetidos: {skipped}."
             )
         )
         return {
-            "created": len(posts_to_create),
+            "created": created,
             "skipped": skipped,
             "target": target,
         }
