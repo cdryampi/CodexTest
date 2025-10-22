@@ -6,7 +6,7 @@ import re
 from datetime import timedelta
 from pathlib import Path
 from typing import Dict, Iterable
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import ParseResult, parse_qs, urlparse
 
 import environ
 
@@ -201,19 +201,26 @@ WSGI_APPLICATION = "backendblog.wsgi.application"
 _DATABASE_URL = _env(("DATABASE_URL", "DJANGO_DATABASE_URL", "URL")) or _env(
     ("POSTGRES_URL", "DJANGO_POSTGRES_URL")
 )
+_parsed_database_url: ParseResult | None = None
 if _DATABASE_URL:
-    parsed = urlparse(_DATABASE_URL)
+    candidate_url = str(_DATABASE_URL).strip()
+    if "://" in candidate_url:
+        parsed_candidate = urlparse(candidate_url)
+        if parsed_candidate.scheme in {"postgres", "postgresql", "postgresql+psycopg2"}:
+            _parsed_database_url = parsed_candidate
+
+if _parsed_database_url:
     DATABASES: Dict[str, Dict[str, object]] = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": parsed.path.lstrip("/") or "postgres",
-            "USER": parsed.username or "",
-            "PASSWORD": parsed.password or "",
-            "HOST": parsed.hostname or "",
-            "PORT": str(parsed.port or ""),
+            "NAME": _parsed_database_url.path.lstrip("/") or "postgres",
+            "USER": _parsed_database_url.username or "",
+            "PASSWORD": _parsed_database_url.password or "",
+            "HOST": _parsed_database_url.hostname or "",
+            "PORT": str(_parsed_database_url.port or ""),
         }
     }
-    query = parse_qs(parsed.query)
+    query = parse_qs(_parsed_database_url.query)
     if query:
         DATABASES["default"]["OPTIONS"] = {key: values[-1] for key, values in query.items() if values}
 else:
@@ -351,10 +358,11 @@ CORS_ALLOWED_ORIGIN_REGEXES = list(dict.fromkeys(CORS_ALLOWED_ORIGIN_REGEXES))
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.BasicAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ],
     "DEFAULT_PAGINATION_CLASS": "blog.pagination.DefaultPageNumberPagination",
     "PAGE_SIZE": 10,
@@ -472,6 +480,16 @@ SPECTACULAR_SETTINGS = {
         {"url": "https://backendblog.yampi.eu", "description": "Producción"},
         {"url": "http://127.0.0.1:8000", "description": "Local"},
     ],
+    "SECURITY": [{"BearerAuth": []}],
+    "COMPONENTS": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+            }
+        }
+    },
 }
 
 JAZZMIN_SETTINGS = {

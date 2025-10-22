@@ -13,7 +13,7 @@ class TagAPITestCase(APITestCase):
 
     def setUp(self) -> None:
         self.list_url = reverse("blog:tags-list")
-        self.user = get_user_model().objects.create_user(
+        self.user = get_user_model().objects.create_superuser(
             username="editor",
             email="editor@example.com",
             password="strong-pass-123",
@@ -38,6 +38,7 @@ class TagAPITestCase(APITestCase):
             thumb="https://example.com/post-thumb.png",
             imageAlt="Texto alternativo",
             author="Codex",
+            status=Post.Status.PUBLISHED,
         )
         post.tags.add(tag)
 

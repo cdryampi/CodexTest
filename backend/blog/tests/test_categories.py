@@ -15,7 +15,7 @@ class CategoryAPITestCase(APITestCase):
 
     def setUp(self) -> None:
         self.list_url = reverse("blog:categories-list")
-        self.user = get_user_model().objects.create_user(
+        self.user = get_user_model().objects.create_superuser(
             username="tester",
             email="tester@example.com",
             password="strong-pass-123",
@@ -45,6 +45,7 @@ class CategoryAPITestCase(APITestCase):
             thumb="https://example.com/thumb.png",
             imageAlt="Texto alternativo",
             author="Codex",
+            status=Post.Status.PUBLISHED,
         ).categories.add(Category.objects.get(slug=created_slug))
 
         list_response = self.client.get(self.list_url, {"with_counts": "true"})
@@ -68,6 +69,7 @@ class CategoryAPITestCase(APITestCase):
             thumb="https://example.com/a-thumb.png",
             imageAlt="Alt",
             author="Codex",
+            status=Post.Status.PUBLISHED,
         )
         post_b = Post.objects.create(
             title="Backend sólido",
@@ -77,6 +79,7 @@ class CategoryAPITestCase(APITestCase):
             thumb="https://example.com/b-thumb.png",
             imageAlt="Alt",
             author="Codex",
+            status=Post.Status.PUBLISHED,
         )
         post_a.categories.add(frontend)
         post_b.categories.add(backend)

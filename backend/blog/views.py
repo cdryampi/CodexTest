@@ -16,14 +16,16 @@ from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
 )
-from rest_framework import mixins, status, viewsets
+from rest_framework import exceptions, mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.views import APIView
 
 from .filters import PostFilterSet
 from .models import Category, Comment, Post, Reaction, Tag
+from . import rbac
 from .serializers import (
     CategorySerializer,
     CommentSerializer,
@@ -34,6 +36,15 @@ from .serializers import (
     TagSerializer,
     ReactionSummarySerializer,
     ReactionToggleSerializer,
+    MeSerializer,
+    AssignRoleSerializer,
+)
+from .permissions import (
+    CanModerateComments,
+    IsAdmin,
+    IsAdminOrEditorOrReadOnly,
+    IsAdminOrReadOnly,
+    IsEditorOrAuthorCanEditOwnDraft,
 )
 from .utils.i18n import get_active_language, set_parler_language
 from .utils.openai import (
@@ -346,7 +357,7 @@ class TagViewSet(
     serializer_class = TagSerializer
     lookup_field = "slug"
     lookup_url_kwarg = "slug"
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminOrEditorOrReadOnly]
     ordering = ["name"]
 
     def get_queryset(self):
@@ -403,7 +414,9 @@ class TagViewSet(
             201: OpenApiResponse(
                 response=PostDetailSerializer,
                 description=TRANSLATED_RESPONSE_DESCRIPTION,
-            )
+            ),
+            401: OpenApiResponse(description="Autenticación requerida."),
+            403: OpenApiResponse(description="Permisos insuficientes."),
         },
     ),
     update=extend_schema(
@@ -412,7 +425,9 @@ class TagViewSet(
             200: OpenApiResponse(
                 response=PostDetailSerializer,
                 description=TRANSLATED_RESPONSE_DESCRIPTION,
-            )
+            ),
+            401: OpenApiResponse(description="Autenticación requerida."),
+            403: OpenApiResponse(description="Permisos insuficientes."),
         },
     ),
     partial_update=extend_schema(
@@ -421,7 +436,9 @@ class TagViewSet(
             200: OpenApiResponse(
                 response=PostDetailSerializer,
                 description=TRANSLATED_RESPONSE_DESCRIPTION,
-            )
+            ),
+            401: OpenApiResponse(description="Autenticación requerida."),
+            403: OpenApiResponse(description="Permisos insuficientes."),
         },
     ),
 )
@@ -452,7 +469,23 @@ class PostViewSet(
     ]
     ordering_fields = ["date", "created_at", "title"]
     ordering = ["-date"]
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsEditorOrAuthorCanEditOwnDraft]
+
+    def get_permissions(self):  # type: ignore[override]
+        """Customize permissions for auxiliary actions without tightening writes."""
+
+        action = getattr(self, "action", None)
+        if action == "react":
+            return [AllowAny()]
+        return [permission() for permission in self.permission_classes]
+
+    def permission_denied(self, request, message=None, code=None):  # type: ignore[override]
+        """Ensure unauthenticated users receive HTTP 401 instead of 403."""
+
+        user = getattr(request, "user", None)
+        if not user or not getattr(user, "is_authenticated", False):
+            raise exceptions.NotAuthenticated(detail=message, code=code)
+        return super().permission_denied(request, message=message, code=code)
 
     def get_throttles(self):  # type: ignore[override]
         if getattr(self, "action", None) in {"reactions", "react"}:
@@ -463,10 +496,26 @@ class PostViewSet(
 
     def get_queryset(self):
         queryset = super().get_queryset().distinct()
+
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_authenticated", False):
+            queryset = queryset.filter(status__in=rbac.PUBLIC_POST_STATUSES)
+        elif rbac.user_has_role(user, rbac.Role.ADMIN) or rbac.user_has_role(user, rbac.Role.EDITOR):
+            pass
+        elif rbac.user_has_role(user, rbac.Role.AUTHOR):
+            queryset = queryset.filter(
+                Q(created_by=user) | Q(status__in=rbac.PUBLIC_POST_STATUSES)
+            )
+        elif rbac.user_has_role(user, rbac.Role.REVIEWER):
+            queryset = queryset.filter(status__in=rbac.REVIEWER_VISIBLE_STATUSES)
+        else:
+            queryset = queryset.filter(status__in=rbac.PUBLIC_POST_STATUSES)
+
         category_slug = self.request.query_params.get("category")
         if category_slug:
             queryset = queryset.filter(categories__slug__iexact=category_slug)
-        return self.apply_language(queryset)
+
+        return self.apply_language(queryset.distinct())
 
     def get_object(self):  # type: ignore[override]
         try:
@@ -532,6 +581,40 @@ class PostViewSet(
         if self.action == "list":
             return PostListSerializer
         return PostDetailSerializer
+
+
+    @extend_schema(
+        responses={
+            201: OpenApiResponse(response=CommentSerializer, description="Comentario creado."),
+            400: OpenApiResponse(description="Solicitud inválida."),
+            401: OpenApiResponse(description="Autenticación requerida."),
+            403: OpenApiResponse(description="Permisos insuficientes."),
+        }
+    )
+    def create(self, request, *args, **kwargs):  # type: ignore[override]
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        responses={
+            204: OpenApiResponse(description="Comentario eliminado."),
+            401: OpenApiResponse(description="Autenticación requerida."),
+            403: OpenApiResponse(description="Permisos insuficientes."),
+        }
+    )
+    def destroy(self, request, *args, **kwargs):  # type: ignore[override]
+        return super().destroy(request, *args, **kwargs)
+
+    def perform_create(self, serializer):  # type: ignore[override]
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_authenticated", False):
+            user = None
+        serializer.save(created_by=user, modified_by=user)
+
+    def perform_update(self, serializer):  # type: ignore[override]
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_authenticated", False):
+            user = None
+        serializer.save(modified_by=user)
 
     def _get_reaction_queryset(self, post: Post):
         return Reaction.objects.for_instance(post)
@@ -741,7 +824,7 @@ class CategoryViewSet(
     serializer_class = CategorySerializer
     lookup_field = "slug"
     lookup_url_kwarg = "slug"
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminOrEditorOrReadOnly]
     ordering = ["name"]
 
     def get_queryset(self):
@@ -775,11 +858,13 @@ class CommentViewSet(
     LanguageNegotiationMixin,
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
+    mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
     """Manage comments nested under posts."""
 
     serializer_class = CommentSerializer
+    permission_classes = [CanModerateComments]
     search_fields = ["content", "author_name"]
     ordering_fields = ["created_at"]
     ordering = ["-created_at"]
@@ -811,8 +896,106 @@ class CommentViewSet(
             .order_by("-created_at", "-id")
         )
 
+
+    @extend_schema(
+        responses={
+            201: OpenApiResponse(response=CommentSerializer, description="Comentario creado."),
+            400: OpenApiResponse(description="Solicitud inválida."),
+            401: OpenApiResponse(description="Autenticación requerida."),
+            403: OpenApiResponse(description="Permisos insuficientes."),
+        }
+    )
+    def create(self, request, *args, **kwargs):  # type: ignore[override]
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        responses={
+            204: OpenApiResponse(description="Comentario eliminado."),
+            401: OpenApiResponse(description="Autenticación requerida."),
+            403: OpenApiResponse(description="Permisos insuficientes."),
+        }
+    )
+    def destroy(self, request, *args, **kwargs):  # type: ignore[override]
+        return super().destroy(request, *args, **kwargs)
+
     def perform_create(self, serializer):  # type: ignore[override]
         serializer.save(post=self._get_post())
+
+
+
+
+
+class MeView(APIView):
+    """Return information about the authenticated user."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(response=MeSerializer, description="Perfil del usuario autenticado."),
+            401: OpenApiResponse(description="Autenticación requerida."),
+        }
+    )
+    def get(self, request):
+        serializer = MeSerializer(request.user, context={"request": request})
+        return Response(serializer.data)
+
+
+class RoleManagementViewSet(viewsets.ViewSet):
+    """Allow administrators to inspect and assign role groups."""
+
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(
+                response={
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "label": {"type": "string"},
+                            "permissions": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                        },
+                    },
+                },
+                description="Listado de roles disponibles con sus permisos.",
+            ),
+            403: OpenApiResponse(description="Permisos insuficientes."),
+        }
+    )
+    def list(self, request):
+        data = [
+            {
+                "name": role,
+                "label": rbac.ROLE_LABELS.get(role, role),
+                "permissions": sorted(rbac.ROLE_PERMISSIONS.get(role, set())),
+            }
+            for role in rbac.ROLES
+        ]
+        return Response(data)
+
+    @extend_schema(
+        request=AssignRoleSerializer,
+        responses={
+            200: OpenApiResponse(
+                response=MeSerializer,
+                description="Roles asignados correctamente.",
+            ),
+            400: OpenApiResponse(description="Solicitud inválida."),
+            403: OpenApiResponse(description="Permisos insuficientes."),
+        },
+    )
+    def create(self, request):
+        serializer = AssignRoleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        payload = MeSerializer(user, context={"request": request})
+        return Response(payload.data)
 
 
 @extend_schema(
