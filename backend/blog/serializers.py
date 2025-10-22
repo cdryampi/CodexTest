@@ -12,6 +12,7 @@ from parler_rest.serializers import TranslatableModelSerializer
 from rest_framework import serializers
 
 from .models import Category, Comment, Post, Reaction, Tag
+from . import rbac
 from .utils.i18n import set_parler_language, slugify_localized
 from parler.utils.context import switch_language
 
@@ -292,6 +293,77 @@ class UserPublicSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+
+
+
+class MeSerializer(serializers.ModelSerializer):
+    """Authenticated user payload including roles and permissions."""
+
+    roles = serializers.SerializerMethodField()
+    permissions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = get_user_model()
+        fields = [
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "roles",
+            "permissions",
+        ]
+        read_only_fields = fields
+
+    def get_roles(self, obj):
+        return sorted(rbac.user_roles(obj))
+
+    def get_permissions(self, obj):
+        return sorted(obj.get_all_permissions())
+
+
+class AssignRoleSerializer(serializers.Serializer):
+    """Serializer used by administrators to assign role groups to users."""
+
+    user_id = serializers.IntegerField()
+    roles = serializers.ListField(child=serializers.CharField(), allow_empty=False)
+
+    def validate_roles(self, value):
+        cleaned: list[str] = []
+        invalid: list[str] = []
+        for raw in value:
+            role = str(raw).strip().lower()
+            if not role:
+                continue
+            if role not in rbac.ROLES:
+                invalid.append(role)
+            else:
+                cleaned.append(role)
+        if invalid:
+            raise serializers.ValidationError(
+                "Roles desconocidos: %s" % ", ".join(sorted(set(invalid)))
+            )
+        if not cleaned:
+            raise serializers.ValidationError("Debes indicar al menos un rol válido.")
+        return cleaned
+
+    def validate(self, attrs):
+        user_model = get_user_model()
+        try:
+            user = user_model.objects.get(pk=attrs["user_id"])
+        except user_model.DoesNotExist as exc:
+            raise serializers.ValidationError({"user_id": "Usuario no encontrado."}) from exc
+        attrs["user"] = user
+        return attrs
+
+    def save(self, **kwargs):
+        user = self.validated_data["user"]
+        roles = self.validated_data["roles"]
+        rbac.assign_roles(user, roles)
+        user.refresh_from_db()
+        return user
+
+
 class _PostCategoryRepresentationMixin:
     """Mixin to ensure category arrays are always present in API payloads."""
 
@@ -336,6 +408,7 @@ class PostListSerializer(
         many=True, read_only=True, slug_field="slug"
     )
     categories_detail = CategorySerializer(source="categories", many=True, read_only=True)
+    status = serializers.CharField(read_only=True)
     created_at = serializers.SerializerMethodField()
 
     class Meta:
@@ -348,6 +421,7 @@ class PostListSerializer(
             "tags",
             "categories",
             "categories_detail",
+            "status",
             "created_at",
             "image",
             "translations",
@@ -355,6 +429,7 @@ class PostListSerializer(
         read_only_fields = [
             "id",
             "slug",
+            "status",
             "created_at",
             "image",
             "categories",
@@ -400,6 +475,9 @@ class PostDetailSerializer(
     categories_detail = CategorySerializer(source="categories", many=True, read_only=True)
     created_at = serializers.SerializerMethodField()
     updated_at = serializers.SerializerMethodField()
+    status = serializers.ChoiceField(choices=Post.Status.choices, required=False)
+    created_by = UserPublicSerializer(read_only=True)
+    modified_by = UserPublicSerializer(read_only=True)
     date = serializers.DateField(write_only=True, required=False)
 
     class Meta:
@@ -415,6 +493,9 @@ class PostDetailSerializer(
             "categories_detail",
             "created_at",
             "updated_at",
+            "status",
+            "created_by",
+            "modified_by",
             "image",
             "thumb",
             "imageAlt",
@@ -428,6 +509,8 @@ class PostDetailSerializer(
             "created_at",
             "updated_at",
             "categories_detail",
+            "created_by",
+            "modified_by",
             "translations",
         ]
 
@@ -457,10 +540,24 @@ class PostDetailSerializer(
             raise serializers.ValidationError("El título debe tener al menos 5 caracteres.")
         return value
 
-    def validate_content(self, value: str) -> str:
-        if len(value.strip()) < 20:
+    def validate_status(self, value: str) -> str:
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+
+        if not user or not user.is_authenticated:
+            return value
+
+        if value == Post.Status.PUBLISHED or value == Post.Status.ARCHIVED:
+            if not user.has_perm("blog.can_publish_post"):
+                raise serializers.ValidationError(
+                    "No tienes permisos para publicar o archivar entradas."
+                )
+        if value == Post.Status.IN_REVIEW and not (
+            user.has_perm("blog.can_approve_post")
+            or user.has_perm("blog.change_post")
+        ):
             raise serializers.ValidationError(
-                "El contenido debe tener al menos 20 caracteres para ser publicado."
+                "No tienes permisos para enviar entradas a revisión."
             )
         return value
 

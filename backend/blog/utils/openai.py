@@ -8,15 +8,6 @@ from typing import Any, Dict, Optional
 import requests
 from django.conf import settings
 
-try:  # pragma: no cover - defensive fallback when settings import changes
-    from backend.backendblog.settings import (
-        OPENAI_API_KEY as DEFAULT_OPENAI_API_KEY,
-        OPEN_IA_KEY as DEFAULT_OPEN_IA_KEY,
-    )
-except ImportError:  # pragma: no cover - during setup the project settings are always available
-    DEFAULT_OPENAI_API_KEY = ""
-    DEFAULT_OPEN_IA_KEY = ""
-
 logger = logging.getLogger(__name__)
 
 DEFAULT_OPENAI_URL = "https://api.openai.com/v1/responses"
@@ -55,8 +46,6 @@ def _api_key() -> str:
         os.getenv("DJANGO_OPEN_IA_KEY"),
         getattr(settings, "OPENAI_API_KEY", None),
         getattr(settings, "OPEN_IA_KEY", None),
-        DEFAULT_OPENAI_API_KEY,
-        DEFAULT_OPEN_IA_KEY,
     ]
 
     for candidate in candidates:

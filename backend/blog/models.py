@@ -298,6 +298,12 @@ class Post(TranslatableSlugMixin, TranslatableModel):
         excerpt=models.TextField("Resumen"),
         content=models.TextField("Contenido"),
     )
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Borrador"
+        IN_REVIEW = "in_review", "En revisión"
+        PUBLISHED = "published", "Publicado"
+        ARCHIVED = "archived", "Archivado"
+
     date = models.DateField("Fecha", default=timezone.now)
     image = models.URLField("Imagen")
     thumb = models.URLField("Miniatura")
@@ -310,6 +316,28 @@ class Post(TranslatableSlugMixin, TranslatableModel):
         verbose_name="Categorías",
         blank=True,
     )
+    status = models.CharField(
+        "Estado",
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DRAFT,
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_posts",
+        verbose_name="Creado por",
+    )
+    modified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="modified_posts",
+        verbose_name="Modificado por",
+    )
 
     objects = TranslationAwareManager()
 
@@ -317,6 +345,10 @@ class Post(TranslatableSlugMixin, TranslatableModel):
         ordering = ["-date", "-id"]
         verbose_name = "Entrada"
         verbose_name_plural = "Entradas"
+        permissions = [
+            ("can_approve_post", "Puede aprobar publicaciones"),
+            ("can_publish_post", "Puede publicar publicaciones"),
+        ]
 
     def __str__(self) -> str:
         return self.title
@@ -351,6 +383,7 @@ class Comment(models.Model):
         ordering = ["-created_at", "-id"]
         verbose_name = "Comentario"
         verbose_name_plural = "Comentarios"
+        permissions = [("can_moderate_comment", "Puede moderar comentarios")]
 
     def __str__(self) -> str:
         author = self.author_name or "Anónimo"

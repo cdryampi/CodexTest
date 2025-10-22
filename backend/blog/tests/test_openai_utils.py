@@ -28,7 +28,8 @@ class OpenAIUtilsTests(SimpleTestCase):
 
     @override_settings(OPENAI_API_KEY="", OPEN_IA_KEY="")
     def test_is_configured_when_key_missing(self) -> None:
-        self.assertFalse(is_configured())
+        with patch.dict(os.environ, {"VITE_OPEN_IA_KEY": ""}):
+            self.assertFalse(is_configured())
 
     @override_settings(
         OPENAI_API_KEY="test-key",
@@ -109,8 +110,9 @@ class OpenAIUtilsTests(SimpleTestCase):
 
     @override_settings(OPENAI_API_KEY="", OPEN_IA_KEY="")
     def test_translate_text_requires_configuration(self) -> None:
-        with self.assertRaises(OpenAIConfigurationError):
-            translate_text(text="Hola", target_language="en")
+        with patch.dict(os.environ, {"VITE_OPEN_IA_KEY": ""}):
+            with self.assertRaises(OpenAIConfigurationError):
+                translate_text(text="Hola", target_language="en")
 
     @override_settings(OPENAI_API_KEY="test-key")
     def test_translate_text_http_error(self) -> None:

@@ -33,6 +33,7 @@ class ReactionAPITestCase(APITestCase):
             thumb="https://example.com/thumb.png",
             imageAlt="Texto alternativo",
             author="Codex",
+            status=Post.Status.PUBLISHED,
         )
         self.reactions_url = reverse("blog:posts-reactions", kwargs={"slug": self.post.slug})
         self.react_url = reverse("blog:posts-react", kwargs={"slug": self.post.slug})

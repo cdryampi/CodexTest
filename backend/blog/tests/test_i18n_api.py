@@ -5,16 +5,23 @@ from datetime import date
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.urls import reverse
 from parler.utils.context import switch_language
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from blog import rbac
 from blog.models import Category, Post, Tag
 
 
 class BaseI18nAPITestCase(APITestCase):
     """Shared helpers for i18n API tests."""
+
+    @classmethod
+    def setUpTestData(cls):  # type: ignore[override]
+        super().setUpTestData()
+        call_command("seed_roles")
 
     def setUp(self) -> None:
         super().setUp()
@@ -37,6 +44,7 @@ class BaseI18nAPITestCase(APITestCase):
             thumb="https://example.com/thumb.png",
             imageAlt=f"Alt {es_title}",
             author="Codex",
+            status=Post.Status.PUBLISHED,
         )
         post.tags.add(tag)
         if en_title:
@@ -55,6 +63,7 @@ class BaseI18nAPITestCase(APITestCase):
             email="translator@example.com",
             password="pass-1234",
         )
+        rbac.assign_roles(user, [rbac.Role.EDITOR])
         self.client.force_authenticate(user=user)
 
     def _build_payload(self, **overrides) -> dict:

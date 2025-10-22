@@ -29,6 +29,7 @@ class PostAPITestCase(APITestCase):
             thumb="https://example.com/thumb.png",
             imageAlt="Texto alternativo",
             author="Codex",
+            status=Post.Status.PUBLISHED,
         )
         post.tags.add(tag)
         return post
@@ -37,7 +38,7 @@ class PostAPITestCase(APITestCase):
         """Authenticate the API client using a JWT token for a test user."""
 
         user_model = get_user_model()
-        user = user_model.objects.create_user(
+        user = user_model.objects.create_superuser(
             username="editor",
             email="editor@example.com",
             password="test-pass-123",
@@ -230,8 +231,14 @@ class CommentAPITestCase(APITestCase):
             thumb="https://example.com/post-thumb.png",
             imageAlt="Alt",
             author="Codex",
+            status=Post.Status.PUBLISHED,
         )
         self.post.tags.add(Tag.objects.create(name="Testing"))
+        self.user = get_user_model().objects.create_superuser(
+            username="commenter",
+            email="commenter@example.com",
+            password="test-pass-123",
+        )
         self.comments_url = reverse("blog:post-comments-list", kwargs={"slug_pk": self.post.slug})
 
     def test_list_comments_for_post(self) -> None:
@@ -262,6 +269,7 @@ class CommentAPITestCase(APITestCase):
 
         payload = {"author_name": "Carlos", "content": "Gran post, gracias!"}
 
+        self.client.force_authenticate(self.user)
         response = self.client.post(self.comments_url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -272,6 +280,7 @@ class CommentAPITestCase(APITestCase):
 
         payload = {"author_name": "", "content": "Hola"}
 
+        self.client.force_authenticate(self.user)
         response = self.client.post(self.comments_url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -292,6 +301,7 @@ class CommentAPITestCase(APITestCase):
 
         payload = {"author_name": "Laura", "content": "Me encantó este contenido"}
 
+        self.client.force_authenticate(self.user)
         response = self.client.post(
             f"/api/posts/{self.post.slug}/comments/",
             payload,

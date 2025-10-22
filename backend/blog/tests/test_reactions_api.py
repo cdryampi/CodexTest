@@ -32,6 +32,7 @@ class PostReactionsAPITestCase(APITestCase):
             thumb="https://example.com/thumb.png",
             imageAlt="Texto alternativo",
             author="Codex",
+            status=Post.Status.PUBLISHED,
         )
 
     def reactions_url(self) -> str:
