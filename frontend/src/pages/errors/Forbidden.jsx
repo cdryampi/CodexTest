@@ -4,13 +4,15 @@ import { Button } from 'flowbite-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShieldExclamationIcon, ArrowLeftIcon, HomeIcon } from '@heroicons/react/24/outline';
+import { useTranslation } from 'react-i18next';
 
 function Forbidden() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const alertRef = useRef(null);
+  const headingRef = useRef(null);
 
   useEffect(() => {
-    const node = alertRef.current;
+    const node = headingRef.current;
     if (!node || typeof node.focus !== 'function') {
       return;
     }
@@ -24,12 +26,10 @@ function Forbidden() {
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4 py-12">
       <Helmet>
-        <title>Acceso restringido</title>
+        <title>{t('errors.forbidden')}</title>
       </Helmet>
       <motion.div
-        ref={alertRef}
         role="alert"
-        tabIndex={-1}
         aria-live="assertive"
         className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white/90 p-10 text-center shadow-xl outline-none backdrop-blur dark:border-slate-800 dark:bg-slate-900/70"
         initial={{ opacity: 0, y: 16 }}
@@ -44,21 +44,28 @@ function Forbidden() {
         >
           <ShieldExclamationIcon className="h-10 w-10" aria-hidden="true" />
         </motion.div>
-        <h1 className="mt-8 text-3xl font-semibold text-slate-900 dark:text-slate-50">
-          No tienes permisos para ver esta sección
+        <h1
+          ref={headingRef}
+          tabIndex={-1}
+          className="mt-8 text-3xl font-semibold text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:text-slate-50"
+        >
+          {t('errors.forbidden')}
         </h1>
         <p className="mt-4 text-base text-slate-600 dark:text-slate-400">
-          Tu sesión es válida, pero tus permisos actuales no incluyen acceso a este panel. Si crees que se trata de un error,
-          contacta al equipo administrador para solicitar ayuda.
+          {t('errors.forbiddenDescription')}
         </p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-          <Button color="dark" onClick={() => navigate('/dashboard')} className="inline-flex items-center gap-2">
+          <Button
+            color="dark"
+            onClick={() => navigate('/dashboard')}
+            className="inline-flex items-center gap-2"
+          >
             <ArrowLeftIcon className="h-5 w-5" aria-hidden="true" />
-            Volver al Dashboard
+            {t('actions.goDashboard')}
           </Button>
           <Button color="light" onClick={() => navigate('/')} className="inline-flex items-center gap-2">
             <HomeIcon className="h-5 w-5" aria-hidden="true" />
-            Ir al Home
+            {t('actions.goHome')}
           </Button>
         </div>
       </motion.div>

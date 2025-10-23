@@ -29,11 +29,13 @@ import {
 import { shallow } from 'zustand/shallow';
 import useAuthStore from '../../store/auth.js';
 import Can from '../rbac/Can.jsx';
+import { getLoadingPermissionsMessage, getPermissionRequirementMessage, getRoleRequirementMessage } from '../../utils/notifications.js';
 import {
   canCreatePost,
   canEditPost,
   canPublishPost,
-  getAuthorRestrictionMessage
+  getAuthorRestrictionMessage,
+  getScheduleRestrictionMessage
 } from '../../utils/rbac.js';
 
 const LANGUAGE_TABS = [
@@ -169,7 +171,7 @@ const normalizeCollection = (payload) => {
 };
 
 function PostForm({ mode, slug, onCancel, onSuccess }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     control,
     handleSubmit,
@@ -219,24 +221,27 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
   const authorRestrictionMessage = isEditMode ? getAuthorRestrictionMessage(authContext, postRecord) : null;
   const lockFields = isEditMode && authReady && !canEditPost(authContext, postRecord);
   const fieldsReadOnly = lockFields || permissionsLoading;
+  const loadingPermissionsMessage = useMemo(() => getLoadingPermissionsMessage(), [i18n.language]);
+  const creationRequirement = useMemo(() => getRoleRequirementMessage(['author', 'editor', 'admin']), [i18n.language]);
+  const scheduleRestrictionMessage = useMemo(() => getScheduleRestrictionMessage(), [i18n.language]);
   const publishAllowed = authReady && canPublishPost(authContext);
   const publishDisabledReason = permissionsLoading
-    ? 'Cargando permisos...'
+    ? loadingPermissionsMessage
     : publishAllowed
       ? null
-      : 'Solo editores o administradores pueden programar publicaciones.';
+      : scheduleRestrictionMessage;
   const saveDisabledReason = useMemo(() => {
     if (permissionsLoading) {
-      return 'Cargando permisos...';
+      return loadingPermissionsMessage;
     }
     if (!canSubmit) {
       if (isEditMode) {
-        return authorRestrictionMessage ?? 'No tienes permisos para editar este post.';
+        return authorRestrictionMessage ?? getPermissionRequirementMessage(t('actions.edit'));
       }
-      return 'No tienes permisos para crear posts.';
+      return creationRequirement;
     }
     return null;
-  }, [authorRestrictionMessage, canSubmit, isEditMode, permissionsLoading]);
+  }, [authorRestrictionMessage, canSubmit, creationRequirement, isEditMode, loadingPermissionsMessage, permissionsLoading, t]);
   const restrictionNotice = useMemo(() => {
     if (!isEditMode) {
       return null;
@@ -248,10 +253,10 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
       return authorRestrictionMessage;
     }
     if (!canSubmit) {
-      return 'Este post es de solo lectura para tu rol.';
+      return getPermissionRequirementMessage(t('actions.edit'));
     }
     return null;
-  }, [authorRestrictionMessage, canSubmit, isEditMode, permissionsLoading]);
+  }, [authorRestrictionMessage, canSubmit, isEditMode, permissionsLoading, t]);
 
   const renderSaveButton = (reason, forceDisabled = false, tooltipId = saveTooltipId) => {
     const button = (
@@ -459,7 +464,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
       throw new Error('Debes guardar el post antes de enviar traducciones al backend.');
     }
     if (!canSubmit) {
-      throw new Error('No tienes permisos para editar este post.');
+      throw new Error(getPermissionRequirementMessage(t('actions.edit')));
     }
     const postSlug = (slug ?? slugValue ?? '').trim();
     if (!postSlug) {
@@ -515,7 +520,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
 
   const onSubmit = async (values) => {
     if (!canSubmit) {
-      toast.error('No tienes permisos para guardar este post.');
+      toast.error(getPermissionRequirementMessage(t('actions.saveChanges')));
       return;
     }
     const payload = {
@@ -857,7 +862,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
           <Can
             roles={['admin', 'editor', 'author']}
             permissions={['posts.add_post', 'posts.change_post', 'posts.manage_posts']}
-            fallback={renderSaveButton('No tienes permisos para gestionar posts.', true, fallbackSaveTooltipId)}
+            fallback={renderSaveButton(getPermissionRequirementMessage(t('actions.edit')), true, fallbackSaveTooltipId)}
           >
             {renderSaveButton(saveDisabledReason)}
           </Can>

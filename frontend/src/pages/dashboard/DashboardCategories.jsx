@@ -27,6 +27,7 @@ import ConfirmModal from '../../components/backoffice/ConfirmModal.jsx';
 import { shallow } from 'zustand/shallow';
 import useAuthStore from '../../store/auth.js';
 import { canManageTaxonomies } from '../../utils/rbac.js';
+import { getLoadingPermissionsMessage, getRoleRequirementMessage } from '../../utils/notifications.js';
 
 const TRANSLATION_FIELD_MAP = {
   en: { name: 'name_en', description: 'description_en', slug: 'slug_en' },
@@ -91,7 +92,7 @@ function GuardedIconButton({ icon: Icon, label, onClick, disabledReason, classNa
 }
 
 function DashboardCategories() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { setHeader } = useDashboardLayout();
   const categoriesState = useDashboardStore(selectCategoriesState);
   const setCategoriesSearch = useDashboardStore((state) => state.setCategoriesSearch);
@@ -136,9 +137,12 @@ function DashboardCategories() {
   const canManage = authReady && canManageTaxonomies(authContext);
   const createTooltipId = useId();
 
+  const loadingPermissionsMessage = useMemo(() => getLoadingPermissionsMessage(), [i18n.language]);
+  const editorAdminRequirement = useMemo(() => getRoleRequirementMessage(['editor', 'admin']), [i18n.language]);
+
   const openCreateModal = useCallback(() => {
     if (!authReady || !canManage) {
-      toast.error('Necesitas rol Editor o Admin.');
+      toast.error(editorAdminRequirement);
       return;
     }
     setModalState({
@@ -156,17 +160,17 @@ function DashboardCategories() {
       description_ca: '',
       slug_ca: ''
     });
-  }, [authReady, canManage]);
+  }, [authReady, canManage, editorAdminRequirement]);
 
   const createDisabledReason = useMemo(() => {
     if (!authReady) {
-      return 'Cargando permisos...';
+      return loadingPermissionsMessage;
     }
     if (canManage) {
       return null;
     }
-    return 'Necesitas rol Editor o Admin.';
-  }, [authReady, canManage]);
+    return editorAdminRequirement;
+  }, [authReady, canManage, editorAdminRequirement, loadingPermissionsMessage]);
 
   const headerActions = useMemo(() => {
     const createButton = (
@@ -232,7 +236,7 @@ function DashboardCategories() {
 
   const openEditModal = (category) => {
     if (!authReady || !canManage) {
-      toast.error('No tienes permisos para gestionar categorías.');
+      toast.error(editorAdminRequirement);
       return;
     }
     const translations = category?.translations ?? {};
@@ -352,7 +356,7 @@ function DashboardCategories() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!authReady || !canManage) {
-      toast.error('No tienes permisos para gestionar categorías.');
+      toast.error(editorAdminRequirement);
       return;
     }
     const name = modalState.name.trim();
@@ -416,7 +420,7 @@ function DashboardCategories() {
       return;
     }
     if (!authReady || !canManage) {
-      toast.error('No tienes permisos para gestionar categorías.');
+      toast.error(editorAdminRequirement);
       setDeleteState({ open: false, slug: null, name: '', loading: false });
       return;
     }

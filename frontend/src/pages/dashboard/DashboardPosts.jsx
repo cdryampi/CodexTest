@@ -4,6 +4,7 @@ import Select from 'react-select';
 import { toast } from 'sonner';
 import { Eye, Pencil, Trash2, Plus } from 'lucide-react';
 import { Tooltip } from 'flowbite-react';
+import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 import DataTable from '../../components/backoffice/DataTable.jsx';
 import ConfirmModal from '../../components/backoffice/ConfirmModal.jsx';
@@ -26,6 +27,7 @@ import {
   canDeletePost,
   getAuthorRestrictionMessage
 } from '../../utils/rbac.js';
+import { getLoadingPermissionsMessage, getPermissionRequirementMessage, getRoleRequirementMessage } from '../../utils/notifications.js';
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Todos' },
@@ -137,6 +139,7 @@ function GuardedIconButton({ icon: Icon, label, onClick, disabledReason, variant
 }
 
 function DashboardPosts() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { setHeader } = useDashboardLayout();
   const postsState = useDashboardStore(selectPostsState);
@@ -179,6 +182,13 @@ function DashboardPosts() {
   const authReady = authStatus === 'ready';
   const canCreate = authReady && canCreatePost(authContext);
   const createTooltipId = useId();
+
+  const loadingPermissionsMessage = useMemo(() => getLoadingPermissionsMessage(), [i18n.language]);
+  const editorAdminRequirement = useMemo(() => getRoleRequirementMessage(['editor', 'admin']), [i18n.language]);
+  const authorEditorAdminRequirement = useMemo(
+    () => getRoleRequirementMessage(['author', 'editor', 'admin']),
+    [i18n.language]
+  );
 
   const isDarkMode = useMemo(
     () => (typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : false),
@@ -275,7 +285,7 @@ function DashboardPosts() {
       return;
     }
     if (!authReady || !canDeletePost(authContext, confirmState.post)) {
-      toast.error('No tienes permisos para eliminar este post.');
+      toast.error(getPermissionRequirementMessage(t('actions.delete')));
       setConfirmState({ open: false, slug: null, title: '', loading: false, post: null });
       return;
     }
@@ -289,25 +299,25 @@ function DashboardPosts() {
       toast.error(error?.message ?? 'No se pudo eliminar el post.');
       setConfirmState({ open: false, slug: null, title: '', loading: false, post: null });
     }
-  }, [authContext, authReady, confirmState.post, confirmState.slug, fetchPosts]);
+  }, [authContext, authReady, confirmState.post, confirmState.slug, fetchPosts, t]);
 
   const pageIndex = postsState.page - 1;
 
   const createDisabledReason = useMemo(() => {
     if (!authReady) {
-      return 'Cargando permisos...';
+      return loadingPermissionsMessage;
     }
     if (canCreate) {
       return null;
     }
-    return 'Necesitas rol Autor, Editor o Admin.';
-  }, [authReady, canCreate]);
+    return authorEditorAdminRequirement;
+  }, [authReady, authorEditorAdminRequirement, canCreate, loadingPermissionsMessage]);
 
   const headerActions = useMemo(() => {
     const createButton = (
       <Button type="button" size="sm" onClick={handleCreate} disabled={Boolean(createDisabledReason)}>
         <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-        Nuevo post
+        {t('actions.createPost')}
       </Button>
     );
 
@@ -455,15 +465,15 @@ function DashboardPosts() {
           const canEdit = authReady && canEditPost(authContext, post);
           const canRemove = authReady && canDeletePost(authContext, post);
           const editDisabledReason = !authReady
-            ? 'Cargando permisos...'
+            ? loadingPermissionsMessage
             : canEdit
               ? null
-              : authorRestriction ?? 'Necesitas rol Editor o Admin.';
+              : authorRestriction ?? editorAdminRequirement;
           const deleteDisabledReason = !authReady
-            ? 'Cargando permisos...'
+            ? loadingPermissionsMessage
             : canRemove
               ? null
-              : 'Solo editores o administradores pueden eliminar posts.';
+              : editorAdminRequirement;
 
           return (
             <div className="flex items-center justify-end gap-2">

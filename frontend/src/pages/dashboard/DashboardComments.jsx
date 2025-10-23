@@ -12,9 +12,11 @@ import {
 } from '../../store/dashboard.js';
 import { listPosts, listComments, deleteComment } from '../../services/api.js';
 import { Tooltip } from 'flowbite-react';
+import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 import useAuthStore from '../../store/auth.js';
 import { canModerateComments } from '../../utils/rbac.js';
+import { getLoadingPermissionsMessage, getPermissionRequirementMessage, getRoleRequirementMessage } from '../../utils/notifications.js';
 
 const truncate = (value, length = 80) => {
   if (!value) return '';
@@ -53,6 +55,7 @@ function GuardedIconButton({ label, onClick, disabledReason, className }) {
 }
 
 function DashboardComments() {
+  const { t, i18n } = useTranslation();
   const { setHeader } = useDashboardLayout();
   const commentsState = useDashboardStore(selectCommentsState);
   const setCommentsFilters = useDashboardStore((state) => state.setCommentsFilters);
@@ -77,15 +80,18 @@ function DashboardComments() {
   const authReady = authStatus === 'ready';
   const canModerate = authReady && canModerateComments({ roles, permissions });
 
+  const loadingPermissionsMessage = useMemo(() => getLoadingPermissionsMessage(), [i18n.language]);
+  const moderatorRequirement = useMemo(() => getRoleRequirementMessage(['editor', 'admin']), [i18n.language]);
+
   const deleteDisabledReason = useMemo(() => {
     if (!authReady) {
-      return 'Cargando permisos...';
+      return loadingPermissionsMessage;
     }
     if (canModerate) {
       return null;
     }
-    return 'Solo editores o administradores pueden moderar comentarios.';
-  }, [authReady, canModerate]);
+    return moderatorRequirement;
+  }, [authReady, canModerate, loadingPermissionsMessage, moderatorRequirement]);
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -238,7 +244,7 @@ function DashboardComments() {
       return;
     }
     if (!authReady || !canModerate) {
-      toast.error('Solo editores o administradores pueden moderar comentarios.');
+      toast.error(getPermissionRequirementMessage(t('actions.moderate')));
       setDeleteState({ open: false, id: null, loading: false, preview: '' });
       return;
     }
@@ -256,7 +262,7 @@ function DashboardComments() {
       }
       setDeleteState({ open: false, id: null, loading: false, preview: '' });
     }
-  }, [authReady, canModerate, deleteState.id, fetchComments]);
+  }, [authReady, canModerate, deleteState.id, fetchComments, t]);
 
   const pageIndex = commentsState.page - 1;
 

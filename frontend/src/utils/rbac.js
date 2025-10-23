@@ -1,3 +1,12 @@
+import i18n from '../i18n/index.js';
+
+const translate = (key, options = {}) => {
+  if (!i18n || typeof i18n.t !== 'function') {
+    return key;
+  }
+  return i18n.t(key, options);
+};
+
 const toList = (value) => {
   if (!value) {
     return [];
@@ -260,14 +269,17 @@ export const getAuthorRestrictionMessage = (auth, post) => {
   const userId = getUserId(auth.user);
   const ownerId = getPostOwnerId(post);
   if (userId && ownerId && userId !== ownerId) {
-    return 'Solo la persona autora original puede editar este post.';
+    return translate('notices.onlyOwnerCanEditDraft');
   }
   const status = getPostStatus(post);
   if (status && !AUTHOR_ALLOWED_STATUSES.has(status)) {
-    return 'Los autores solo pueden editar posts en borrador o en revisión.';
+    return translate('notices.editLockedByStatus');
   }
   return null;
 };
+
+export const getScheduleRestrictionMessage = () =>
+  translate('notices.scheduleRequiresEditorial');
 
 export default {
   normalizeRoles,
@@ -284,5 +296,6 @@ export default {
   canManageTaxonomies,
   canModerateComments,
   getAuthorRestrictionMessage,
+  getScheduleRestrictionMessage,
   isAuthorRoleOnly
 };

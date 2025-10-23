@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 
 const ROLE_STYLES = {
@@ -8,14 +9,6 @@ const ROLE_STYLES = {
   author: 'bg-emerald-100 text-emerald-700 ring-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/40',
   reviewer: 'bg-sky-100 text-sky-700 ring-sky-500/40 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/40',
   reader: 'bg-slate-200 text-slate-700 ring-slate-500/30 dark:bg-slate-700/20 dark:text-slate-200 dark:ring-slate-500/30'
-};
-
-const ROLE_LABELS = {
-  admin: 'Administrador',
-  editor: 'Editor',
-  author: 'Autor',
-  reviewer: 'Revisor',
-  reader: 'Lector'
 };
 
 const ROLE_PRIORITY = {
@@ -37,6 +30,7 @@ function normalizeRole(input) {
 }
 
 const RoleBadge = memo(function RoleBadge({ role, className }) {
+  const { t } = useTranslation();
   const normalized = useMemo(() => normalizeRole(role), [role]);
 
   if (!normalized) {
@@ -44,7 +38,7 @@ const RoleBadge = memo(function RoleBadge({ role, className }) {
   }
 
   const key = normalized.toLowerCase();
-  const label = ROLE_LABELS[key] ?? normalized;
+  const label = t(`roles.${key}`, { defaultValue: normalized });
   const style = ROLE_STYLES[key] ?? 'bg-slate-200 text-slate-700 ring-slate-500/30 dark:bg-slate-700/20 dark:text-slate-200 dark:ring-slate-500/30';
 
   return (
@@ -54,7 +48,7 @@ const RoleBadge = memo(function RoleBadge({ role, className }) {
         style,
         className
       )}
-      aria-label={`Rol: ${label}`}
+      aria-label={t('rbac.roleBadgeLabel', { role: label })}
       data-role-priority={ROLE_PRIORITY[key] ?? 99}
     >
       <span className="inline-block h-2 w-2 rounded-full bg-current" aria-hidden="true" />
