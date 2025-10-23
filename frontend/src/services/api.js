@@ -1,5 +1,6 @@
 import axios from 'axios';
 import slugify from 'slugify';
+import { showForbiddenToast, showUnauthorizedToast } from '../utils/notifications.js';
 import { API_BASE_URL } from '../utils/apiBase.js';
 import postsMock from '../data/posts.json';
 import commentsMock from '../data/comments.json';
@@ -26,6 +27,106 @@ const enforceExplicitCredentials = (config) => {
 let refreshPromise = null;
 
 const isBrowser = typeof window !== 'undefined';
+
+const ROUTES = {
+  login: '/login',
+  forbidden: '/forbidden'
+};
+
+const resolveRouterBase = () => {
+  if (typeof import.meta !== 'undefined' && import.meta.env && typeof import.meta.env.BASE_URL === 'string') {
+    const base = import.meta.env.BASE_URL;
+    if (base && typeof base === 'string') {
+      return base || '/';
+    }
+  }
+  return '/';
+};
+
+const ensureLeadingSlash = (path) => (path.startsWith('/') ? path : `/${path}`);
+
+const trimTrailingSlash = (value) => {
+  if (value === '/') {
+    return '';
+  }
+  return value.endsWith('/') ? value.slice(0, -1) : value;
+};
+
+const buildAppPath = (path) => {
+  const base = resolveRouterBase();
+  const normalizedBase = trimTrailingSlash(base ?? '/');
+  const normalizedPath = ensureLeadingSlash(path ?? '/');
+  return `${normalizedBase}${normalizedPath}` || normalizedPath;
+};
+
+const getCurrentPath = () => {
+  if (!isBrowser) {
+    return null;
+  }
+  return window.location.pathname;
+};
+
+let loginRedirectInProgress = false;
+let forbiddenRedirectInProgress = false;
+
+const resetRedirectGuards = () => {
+  if (!isBrowser) {
+    return;
+  }
+  const current = getCurrentPath();
+  const loginTarget = buildAppPath(ROUTES.login);
+  const forbiddenTarget = buildAppPath(ROUTES.forbidden);
+
+  if (loginRedirectInProgress && current !== loginTarget) {
+    loginRedirectInProgress = false;
+  }
+
+  if (forbiddenRedirectInProgress && current !== forbiddenTarget) {
+    forbiddenRedirectInProgress = false;
+  }
+};
+
+const notifyUnauthorized = () => {
+  if (!isBrowser) {
+    return;
+  }
+  showUnauthorizedToast();
+};
+
+const notifyForbidden = () => {
+  if (!isBrowser) {
+    return;
+  }
+  showForbiddenToast();
+};
+
+const handleUnauthorizedRedirect = () => {
+  resetRedirectGuards();
+  notifyUnauthorized();
+  if (!isBrowser) {
+    return;
+  }
+  const target = buildAppPath(ROUTES.login);
+  if (getCurrentPath() === target || loginRedirectInProgress) {
+    return;
+  }
+  loginRedirectInProgress = true;
+  window.location.replace(target);
+};
+
+const handleForbiddenRedirect = () => {
+  resetRedirectGuards();
+  notifyForbidden();
+  if (!isBrowser) {
+    return;
+  }
+  const target = buildAppPath(ROUTES.forbidden);
+  if (getCurrentPath() === target || forbiddenRedirectInProgress) {
+    return;
+  }
+  forbiddenRedirectInProgress = true;
+  window.location.replace(target);
+};
 
 const emitEvent = (name, detail = null) => {
   if (!isBrowser) return;
@@ -104,18 +205,31 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (response.status !== 401) {
+    if (response.status === 403) {
+      handleForbiddenRedirect();
       return Promise.reject(error);
     }
 
     const originalRequest = config ?? {};
+
+    if (response.status !== 401) {
+      return Promise.reject(error);
+    }
+
     const isAuthRequest = typeof originalRequest.url === 'string' && (
       originalRequest.url.includes('auth/login') ||
       originalRequest.url.includes('auth/registration') ||
       originalRequest.url.includes('auth/token/refresh')
     );
 
-    if (isAuthRequest || originalRequest._retry) {
+    if (isAuthRequest) {
+      return Promise.reject(error);
+    }
+
+    if (originalRequest._retry) {
+      clearStoredTokens();
+      emitEvent('auth:logout');
+      handleUnauthorizedRedirect();
       return Promise.reject(error);
     }
 
@@ -125,6 +239,7 @@ api.interceptors.response.use(
     if (!refresh) {
       clearStoredTokens();
       emitEvent('auth:logout');
+      handleUnauthorizedRedirect();
       return Promise.reject(error);
     }
 
@@ -140,6 +255,7 @@ api.interceptors.response.use(
     } catch (refreshError) {
       clearStoredTokens();
       emitEvent('auth:logout');
+      handleUnauthorizedRedirect();
       return Promise.reject(refreshError);
     }
   }
@@ -166,6 +282,34 @@ const toApiError = (error) => {
   normalizedError.original = error;
   return normalizedError;
 };
+
+export async function getMe(options = {}) {
+  const { signal, withCredentials, params, headers, ...rest } = options ?? {};
+  const config = { ...rest };
+
+  if (signal) {
+    config.signal = signal;
+  }
+
+  if (typeof withCredentials === 'boolean') {
+    config.withCredentials = withCredentials;
+  }
+
+  if (params) {
+    config.params = params;
+  }
+
+  if (headers) {
+    config.headers = headers;
+  }
+
+  try {
+    const response = await api.get('me/', config);
+    return response.data ?? null;
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
 
 const paramsSerializer = (params = {}) => {
   const searchParams = new URLSearchParams();

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Modal, ToggleSwitch } from 'flowbite-react';
+import { useCallback, useEffect, useMemo, useState, useId } from 'react';
+import { Modal, ToggleSwitch, Tooltip } from 'flowbite-react';
 import slugify from 'slugify';
 import { toast } from 'sonner';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
@@ -24,6 +24,10 @@ import LanguageFlags from '../../components/ai-translate/LanguageFlags.jsx';
 import { Input } from '../../components/ui/input.jsx';
 import { Textarea } from '../../components/ui/textarea.jsx';
 import ConfirmModal from '../../components/backoffice/ConfirmModal.jsx';
+import { shallow } from 'zustand/shallow';
+import useAuthStore from '../../store/auth.js';
+import { canManageTaxonomies } from '../../utils/rbac.js';
+import { getLoadingPermissionsMessage, getRoleRequirementMessage } from '../../utils/notifications.js';
 
 const TRANSLATION_FIELD_MAP = {
   en: { name: 'name_en', description: 'description_en', slug: 'slug_en' },
@@ -57,8 +61,38 @@ const dedupeCategories = (categories) => {
   return Array.from(map.values()).sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'es'));
 };
 
+function GuardedIconButton({ icon: Icon, label, onClick, disabledReason, className }) {
+  const tooltipId = useId();
+  const button = (
+    <Button
+      type="button"
+      size="icon"
+      variant="ghost"
+      className={className}
+      onClick={onClick}
+      aria-label={label}
+      disabled={Boolean(disabledReason)}
+      tabIndex={disabledReason ? -1 : undefined}
+    >
+      <Icon className="h-4 w-4" aria-hidden="true" />
+    </Button>
+  );
+
+  if (!disabledReason) {
+    return button;
+  }
+
+  return (
+    <Tooltip content={<span id={tooltipId}>{disabledReason}</span>} trigger="hover" placement="top" style="dark">
+      <span aria-describedby={tooltipId} className="inline-flex cursor-not-allowed">
+        {button}
+      </span>
+    </Tooltip>
+  );
+}
+
 function DashboardCategories() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { setHeader } = useDashboardLayout();
   const categoriesState = useDashboardStore(selectCategoriesState);
   const setCategoriesSearch = useDashboardStore((state) => state.setCategoriesSearch);
@@ -85,39 +119,88 @@ function DashboardCategories() {
   const [deleteState, setDeleteState] = useState({ open: false, slug: null, name: '', loading: false });
   const [translateModalState, setTranslateModalState] = useState({ open: false, identifier: null, targetLang: 'en' });
 
+  const { status: authStatus, roles, permissions } = useAuthStore(
+    (state) => ({
+      status: state.status,
+      roles: state.roles,
+      permissions: state.permissions
+    }),
+    shallow
+  );
+
+  const authContext = useMemo(
+    () => ({ roles, permissions }),
+    [permissions, roles]
+  );
+
+  const authReady = authStatus === 'ready';
+  const canManage = authReady && canManageTaxonomies(authContext);
+  const createTooltipId = useId();
+
+  const loadingPermissionsMessage = useMemo(() => getLoadingPermissionsMessage(), [i18n.language]);
+  const editorAdminRequirement = useMemo(() => getRoleRequirementMessage(['editor', 'admin']), [i18n.language]);
+
+  const openCreateModal = useCallback(() => {
+    if (!authReady || !canManage) {
+      toast.error(editorAdminRequirement);
+      return;
+    }
+    setModalState({
+      open: true,
+      mode: 'create',
+      id: null,
+      slug: null,
+      name: '',
+      description: '',
+      isActive: true,
+      name_en: '',
+      description_en: '',
+      slug_en: '',
+      name_ca: '',
+      description_ca: '',
+      slug_ca: ''
+    });
+  }, [authReady, canManage, editorAdminRequirement]);
+
+  const createDisabledReason = useMemo(() => {
+    if (!authReady) {
+      return loadingPermissionsMessage;
+    }
+    if (canManage) {
+      return null;
+    }
+    return editorAdminRequirement;
+  }, [authReady, canManage, editorAdminRequirement, loadingPermissionsMessage]);
+
+  const headerActions = useMemo(() => {
+    const createButton = (
+      <Button type="button" size="sm" onClick={openCreateModal} disabled={Boolean(createDisabledReason)}>
+        <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+        {t('dashboard.categories.new')}
+      </Button>
+    );
+
+    if (!createDisabledReason) {
+      return createButton;
+    }
+
+    return (
+      <Tooltip content={<span id={createTooltipId}>{createDisabledReason}</span>} trigger="hover" placement="top" style="dark">
+        <span aria-describedby={createTooltipId} className="inline-flex cursor-not-allowed">
+          {createButton}
+        </span>
+      </Tooltip>
+    );
+  }, [createDisabledReason, createTooltipId, openCreateModal, t]);
+
   useEffect(() => {
     setHeader({
       title: t('dashboard.categories.title'),
       description: t('dashboard.categories.description'),
       showSearch: false,
-      actions: (
-        <Button
-          type="button"
-          size="sm"
-          onClick={() =>
-            setModalState({
-              open: true,
-              mode: 'create',
-              id: null,
-              slug: null,
-              name: '',
-              description: '',
-              isActive: true,
-              name_en: '',
-              description_en: '',
-              slug_en: '',
-              name_ca: '',
-              description_ca: '',
-              slug_ca: ''
-            })
-          }
-        >
-          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-          {t('dashboard.categories.new')}
-        </Button>
-      )
+      actions: headerActions
     });
-  }, [setHeader, t]);
+  }, [headerActions, setHeader, t]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -152,6 +235,10 @@ function DashboardCategories() {
   }, [categories, categoriesState.search]);
 
   const openEditModal = (category) => {
+    if (!authReady || !canManage) {
+      toast.error(editorAdminRequirement);
+      return;
+    }
     const translations = category?.translations ?? {};
     setModalState({
       open: true,
@@ -268,6 +355,10 @@ function DashboardCategories() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (!authReady || !canManage) {
+      toast.error(editorAdminRequirement);
+      return;
+    }
     const name = modalState.name.trim();
     if (!name) {
       toast.error(t('dashboard.categories.errors.requiredName'));
@@ -326,6 +417,11 @@ function DashboardCategories() {
 
   const confirmDelete = async () => {
     if (!deleteState.slug) {
+      return;
+    }
+    if (!authReady || !canManage) {
+      toast.error(editorAdminRequirement);
+      setDeleteState({ open: false, slug: null, name: '', loading: false });
       return;
     }
     setDeleteState((prev) => ({ ...prev, loading: true }));
@@ -429,19 +525,20 @@ function DashboardCategories() {
                     <td className="px-6 py-3 text-sm text-slate-500 dark:text-slate-400">{category.post_count ?? 0}</td>
                     <td className="px-6 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button type="button" size="icon" variant="ghost" onClick={() => openEditModal(category)} aria-label={t('actions.editItem', { name: category.name })}>
-                          <Pencil className="h-4 w-4" aria-hidden="true" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
+                        <GuardedIconButton
+                          icon={Pencil}
+                          label={t('actions.editItem', { name: category.name })}
+                          onClick={() => openEditModal(category)}
+                          disabledReason={createDisabledReason}
+                          className="h-9 w-9"
+                        />
+                        <GuardedIconButton
+                          icon={Trash2}
+                          label={t('actions.deleteItem', { name: category.name })}
                           onClick={() => setDeleteState({ open: true, slug: category.slug, name: category.name, loading: false })}
-                          aria-label={t('actions.deleteItem', { name: category.name })}
-                        >
-                          <Trash2 className="h-4 w-4" aria-hidden="true" />
-                        </Button>
+                          disabledReason={createDisabledReason}
+                          className="h-9 w-9 text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
+                        />
                       </div>
                     </td>
                   </tr>

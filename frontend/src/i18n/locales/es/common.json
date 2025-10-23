@@ -7,7 +7,14 @@
     "resetFilters": "Restablecer filtros",
     "editItem": "Editar {{name}}",
     "deleteItem": "Eliminar {{name}}",
-    "translateAI": "Traducir con IA"
+    "translateAI": "Traducir con IA",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "publish": "Publicar",
+    "approve": "Aprobar",
+    "moderate": "Moderar",
+    "goDashboard": "Volver al Dashboard",
+    "goHome": "Ir al Inicio"
   },
   "ai": {
     "configureKey": "Inicia sesión para habilitar el asistente de traducción."
@@ -24,6 +31,7 @@
     "categories": "Categorías",
     "tags": "Etiquetas",
     "comments": "Comentarios",
+    "users": "Usuarios",
     "login": "Iniciar sesión",
     "logout": "Cerrar sesión",
     "search": "Buscar...",
@@ -222,6 +230,33 @@
         "created": "Etiqueta creada.",
         "deleted": "Etiqueta eliminada."
       }
+    },
+    "posts": {
+      "editTitle": "Editar post",
+      "editDescription": "Actualiza los datos del post y controla su publicación."
     }
+  },
+  "roles": {
+    "admin": "Administrador",
+    "editor": "Editor",
+    "author": "Autor",
+    "reviewer": "Revisor",
+    "reader": "Lector"
+  },
+  "errors": {
+    "forbidden": "Acceso restringido",
+    "unauthorized": "Sesión expirada",
+    "forbiddenDescription": "Tu sesión es válida, pero tus permisos actuales no incluyen acceso a este panel. Si crees que se trata de un error, contacta al equipo administrador para solicitar ayuda."
+  },
+  "rbac": {
+    "missingPermission": "Necesitas permiso para {{permission}}.",
+    "roleRequired": "Necesitas uno de los siguientes roles: {{roles}}.",
+    "loadingPermissions": "Cargando permisos...",
+    "roleBadgeLabel": "Rol: {{role}}"
+  },
+  "notices": {
+    "onlyOwnerCanEditDraft": "Solo la persona autora original puede editar este post.",
+    "editLockedByStatus": "Los autores solo pueden editar posts en borrador o en revisión.",
+    "scheduleRequiresEditorial": "Solo editores o administradores pueden programar publicaciones."
   }
 }

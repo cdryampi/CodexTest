@@ -28,6 +28,9 @@ export function useDashboardLayout() {
   return context;
 }
 
+const DASHBOARD_ALLOWED_ROLES = ['admin', 'editor', 'author', 'reviewer'];
+const ADMIN_ONLY_ROLES = ['admin'];
+
 const NAVIGATION_ITEMS = [
   {
     key: 'overview',
@@ -38,7 +41,8 @@ const NAVIGATION_ITEMS = [
     icon: LayoutDashboard,
     match: (pathname) => pathname === '/dashboard',
     showSearch: false,
-    searchPlaceholder: 'Buscar en el panel'
+    searchPlaceholder: 'Buscar en el panel',
+    allowedRoles: DASHBOARD_ALLOWED_ROLES
   },
   {
     key: 'posts',
@@ -49,7 +53,8 @@ const NAVIGATION_ITEMS = [
     icon: FileText,
     match: (pathname) => pathname.startsWith('/dashboard/posts'),
     showSearch: true,
-    searchPlaceholder: 'Buscar posts por título, tag o categoría'
+    searchPlaceholder: 'Buscar posts por título, tag o categoría',
+    allowedRoles: DASHBOARD_ALLOWED_ROLES
   },
   {
     key: 'tags',
@@ -60,7 +65,8 @@ const NAVIGATION_ITEMS = [
     icon: Tags,
     match: (pathname) => pathname.startsWith('/dashboard/tags'),
     showSearch: true,
-    searchPlaceholder: 'Buscar etiquetas por nombre'
+    searchPlaceholder: 'Buscar etiquetas por nombre',
+    allowedRoles: DASHBOARD_ALLOWED_ROLES
   },
   {
     key: 'categories',
@@ -71,7 +77,8 @@ const NAVIGATION_ITEMS = [
     icon: Layers,
     match: (pathname) => pathname.startsWith('/dashboard/categories'),
     showSearch: true,
-    searchPlaceholder: 'Buscar categorías por nombre'
+    searchPlaceholder: 'Buscar categorías por nombre',
+    allowedRoles: DASHBOARD_ALLOWED_ROLES
   },
   {
     key: 'comments',
@@ -82,7 +89,8 @@ const NAVIGATION_ITEMS = [
     icon: MessageSquare,
     match: (pathname) => pathname.startsWith('/dashboard/comments'),
     showSearch: true,
-    searchPlaceholder: 'Buscar comentarios por autor o contenido'
+    searchPlaceholder: 'Buscar comentarios por autor o contenido',
+    allowedRoles: DASHBOARD_ALLOWED_ROLES
   },
   {
     key: 'users',
@@ -93,7 +101,8 @@ const NAVIGATION_ITEMS = [
     icon: Users,
     match: (pathname) => pathname.startsWith('/dashboard/users'),
     showSearch: false,
-    searchPlaceholder: 'Buscar en el panel'
+    searchPlaceholder: 'Buscar en el panel',
+    allowedRoles: ADMIN_ONLY_ROLES
   },
   {
     key: 'settings',
@@ -104,7 +113,8 @@ const NAVIGATION_ITEMS = [
     icon: Settings,
     match: (pathname) => pathname.startsWith('/dashboard/settings'),
     showSearch: false,
-    searchPlaceholder: 'Buscar en el panel'
+    searchPlaceholder: 'Buscar en el panel',
+    allowedRoles: DASHBOARD_ALLOWED_ROLES
   }
 ];
 

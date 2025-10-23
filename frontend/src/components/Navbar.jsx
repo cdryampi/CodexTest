@@ -20,7 +20,9 @@ import {
   UserPlus,
   X
 } from 'lucide-react';
+import { shallow } from 'zustand/shallow';
 import { useAuth } from '../context/AuthContext.jsx';
+import useAuthStore from '../store/auth.js';
 import { useUIStore, selectIsDark, selectSearch } from '../store/useUI';
 import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList } from './ui/navigation-menu.jsx';
 import ThemeToggle from './ui/theme-toggle.jsx';
@@ -38,6 +40,10 @@ import {
   DropdownMenuTrigger
 } from './ui/dropdown-menu.jsx';
 import { cn } from '../lib/utils';
+import RoleBadge from './rbac/RoleBadge.jsx';
+import Can from './rbac/Can.jsx';
+
+const DASHBOARD_ALLOWED_ROLES = ['admin', 'editor', 'author', 'reviewer'];
 
 const MAIN_LINKS = [
   {
@@ -57,38 +63,66 @@ const DASHBOARD_LINKS = [
     to: '/dashboard',
     labelKey: 'navbar.panel',
     icon: LayoutDashboard,
-    match: (path) => path === '/dashboard'
+    match: (path) => path === '/dashboard',
+    allowedRoles: DASHBOARD_ALLOWED_ROLES
   },
   {
     to: '/dashboard/posts',
     labelKey: 'navbar.posts',
     icon: NotebookPen,
-    match: (path) => path.startsWith('/dashboard/posts')
+    match: (path) => path.startsWith('/dashboard/posts'),
+    allowedRoles: DASHBOARD_ALLOWED_ROLES
   },
   {
     to: '/dashboard/categories',
     labelKey: 'navbar.categories',
     icon: LayoutList,
-    match: (path) => path.startsWith('/dashboard/categories')
+    match: (path) => path.startsWith('/dashboard/categories'),
+    allowedRoles: DASHBOARD_ALLOWED_ROLES
   },
   {
     to: '/dashboard/tags',
     labelKey: 'navbar.tags',
     icon: Tags,
-    match: (path) => path.startsWith('/dashboard/tags')
+    match: (path) => path.startsWith('/dashboard/tags'),
+    allowedRoles: DASHBOARD_ALLOWED_ROLES
   },
   {
     to: '/dashboard/comments',
     labelKey: 'navbar.comments',
     icon: MessageSquare,
-    match: (path) => path.startsWith('/dashboard/comments')
+    match: (path) => path.startsWith('/dashboard/comments'),
+    allowedRoles: DASHBOARD_ALLOWED_ROLES
+  },
+  {
+    to: '/dashboard/users',
+    labelKey: 'navbar.users',
+    icon: User,
+    match: (path) => path.startsWith('/dashboard/users'),
+    allowedRoles: ['admin']
   }
 ];
+
+const ROLE_PRIORITY = {
+  admin: 1,
+  editor: 2,
+  author: 3,
+  reviewer: 4,
+  reader: 5
+};
 
 function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { status: authStatus, roles, fetchMe } = useAuthStore(
+    (state) => ({
+      status: state.status,
+      roles: state.roles,
+      fetchMe: state.fetchMe
+    }),
+    shallow
+  );
   const globalSearch = useUIStore(selectSearch);
   const setSearch = useUIStore((state) => state.setSearch);
   const resetFilters = useUIStore((state) => state.resetFilters);
@@ -138,6 +172,16 @@ function Navbar() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isMobileMenuOpen]);
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    if (authStatus === 'idle') {
+      fetchMe().catch(() => {});
+    }
+  }, [authStatus, fetchMe, isAuthenticated]);
+
   const displayName = useMemo(() => {
     if (!user) return '';
     if (user.first_name || user.last_name) {
@@ -151,6 +195,39 @@ function Navbar() {
     const base = displayName || user?.email || '?';
     return base.slice(0, 2).toUpperCase();
   }, [displayName, user?.email]);
+
+  const normalizedRoles = useMemo(
+    () => (Array.isArray(roles) ? roles.map((role) => `${role}`.trim()).filter(Boolean) : []),
+    [roles]
+  );
+
+  const normalizedRolesLower = useMemo(
+    () => normalizedRoles.map((role) => role.toLowerCase()),
+    [normalizedRoles]
+  );
+
+  const primaryRole = useMemo(() => {
+    if (!normalizedRoles.length) {
+      return null;
+    }
+    const sorted = [...normalizedRoles].sort((a, b) => {
+      const rankA = ROLE_PRIORITY[a.toLowerCase()] ?? 99;
+      const rankB = ROLE_PRIORITY[b.toLowerCase()] ?? 99;
+      return rankA - rankB;
+    });
+    return sorted[0] ?? null;
+  }, [normalizedRoles]);
+
+  const accessibleDashboardLinks = useMemo(
+    () =>
+      dashboardLinks.filter((link) => {
+        if (!Array.isArray(link.allowedRoles) || link.allowedRoles.length === 0) {
+          return true;
+        }
+        return link.allowedRoles.some((role) => normalizedRolesLower.includes(role));
+      }),
+    [dashboardLinks, normalizedRolesLower]
+  );
 
   const handleLogout = async () => {
     await logout();
@@ -179,12 +256,14 @@ function Navbar() {
   };
 
   const quickActions = isAuthenticated ? (
-    <Button asChild className="hidden lg:inline-flex" size="sm">
-      <Link to="/dashboard/posts" className="flex items-center gap-2">
-        <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
-        {t('navbar.panel')}
-      </Link>
-    </Button>
+    <Can roles={DASHBOARD_ALLOWED_ROLES}>
+      <Button asChild className="hidden lg:inline-flex" size="sm">
+        <Link to="/dashboard/posts" className="flex items-center gap-2">
+          <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+          {t('navbar.panel')}
+        </Link>
+      </Button>
+    </Can>
   ) : null;
 
   const authContent = isAuthenticated ? (
@@ -206,10 +285,11 @@ function Navbar() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-60" align="end" sideOffset={12}>
-        <DropdownMenuLabel className="flex flex-col gap-0.5">
+        <DropdownMenuLabel className="flex flex-col gap-1.5">
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t('navbar.activeSession')}</span>
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-100">{displayName || t('navbar.userFallback')}</span>
           {user?.email ? <span className="text-xs text-slate-400 dark:text-slate-500">{user.email}</span> : null}
+          {primaryRole ? <RoleBadge role={primaryRole} /> : null}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
@@ -219,7 +299,7 @@ function Navbar() {
               {t('navbar.profile')}
             </Link>
           </DropdownMenuItem>
-          {dashboardLinks.map((link) => {
+          {accessibleDashboardLinks.map((link) => {
             const Icon = link.icon;
             return (
               <DropdownMenuItem key={link.to} asChild>
@@ -255,19 +335,18 @@ function Navbar() {
     </div>
   );
 
-  const mobileLinks = [
-    ...mainLinks,
-    ...(isAuthenticated
-      ? [
-          { to: '/profile', label: t('navbar.profile'), icon: UserCircle2 },
-          ...dashboardLinks,
-          { to: '/logout', label: t('navbar.logout'), icon: LogOut, action: handleLogout }
-        ]
-      : [
-          { to: '/login', label: t('navbar.login'), icon: LogIn },
-          { to: '/register', label: t('navbar.register'), icon: UserPlus }
-        ])
-  ];
+  const mobileLinks = isAuthenticated
+    ? [
+        ...mainLinks,
+        { to: '/profile', label: t('navbar.profile'), icon: UserCircle2 },
+        ...accessibleDashboardLinks,
+        { to: '/logout', label: t('navbar.logout'), icon: LogOut, action: handleLogout }
+      ]
+    : [
+        ...mainLinks,
+        { to: '/login', label: t('navbar.login'), icon: LogIn },
+        { to: '/register', label: t('navbar.register'), icon: UserPlus }
+      ];
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/60 bg-white/80 backdrop-blur-lg transition-colors duration-200 dark:border-slate-800/60 dark:bg-slate-950/70">
@@ -310,6 +389,7 @@ function Navbar() {
           {quickActions}
           <LanguageSwitcher className="hidden lg:inline-flex" />
           <ThemeToggle className="hidden lg:inline-flex" />
+          {primaryRole ? <RoleBadge role={primaryRole} className="hidden lg:inline-flex" /> : null}
           {isLoading ? null : authContent}
           <Button
             type="button"
@@ -346,6 +426,7 @@ function Navbar() {
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.25, ease: 'easeOut' }}
             >
+              {primaryRole ? <RoleBadge role={primaryRole} className="mb-4" /> : null}
               <form
                 role="search"
                 className="mb-5 flex flex-col gap-3"

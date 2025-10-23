@@ -7,7 +7,14 @@
     "resetFilters": "Reset filters",
     "editItem": "Edit {{name}}",
     "deleteItem": "Delete {{name}}",
-    "translateAI": "Translate with AI"
+    "translateAI": "Translate with AI",
+    "edit": "Edit",
+    "delete": "Delete",
+    "publish": "Publish",
+    "approve": "Approve",
+    "moderate": "Moderate",
+    "goDashboard": "Return to Dashboard",
+    "goHome": "Go to Home"
   },
   "ai": {
     "configureKey": "Sign in to enable the translation assistant."
@@ -24,6 +31,7 @@
     "categories": "Categories",
     "tags": "Tags",
     "comments": "Comments",
+    "users": "Users",
     "login": "Log in",
     "logout": "Log out",
     "search": "Search...",
@@ -222,6 +230,33 @@
         "created": "Tag created.",
         "deleted": "Tag deleted."
       }
+    },
+    "posts": {
+      "editTitle": "Edit post",
+      "editDescription": "Update the post details and manage its publication."
     }
+  },
+  "roles": {
+    "admin": "Admin",
+    "editor": "Editor",
+    "author": "Author",
+    "reviewer": "Reviewer",
+    "reader": "Reader"
+  },
+  "errors": {
+    "forbidden": "Restricted access",
+    "unauthorized": "Session expired",
+    "forbiddenDescription": "Your session is valid, but your current permissions do not include access to this area. If you believe this is a mistake, contact the admin team for support."
+  },
+  "rbac": {
+    "missingPermission": "You need permission to {{permission}}.",
+    "roleRequired": "You need one of the following roles: {{roles}}.",
+    "loadingPermissions": "Loading permissions...",
+    "roleBadgeLabel": "Role: {{role}}"
+  },
+  "notices": {
+    "onlyOwnerCanEditDraft": "Only the original author can edit this post.",
+    "editLockedByStatus": "Authors can only edit posts in draft or in review.",
+    "scheduleRequiresEditorial": "Only editors or admins can schedule publications."
   }
 }
