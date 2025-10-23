@@ -1,11 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import api, {
-  clearStoredTokens,
-  getStoredTokens,
-  requestTokenRefresh,
-  storeTokens
-} from '../services/api.js';
+import api, { getStoredTokens, requestTokenRefresh, storeTokens } from '../services/api.js';
+import useAuthStore from '../store/auth.js';
 
 const AuthContext = createContext(null);
 
@@ -42,11 +38,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
-    clearStoredTokens();
+    useAuthStore.getState().logout();
     applyLogoutState();
-    if (isBrowser) {
-      window.dispatchEvent(new Event('auth:logout'));
-    }
   }, [applyLogoutState]);
 
   const refreshTokens = useCallback(async () => {
@@ -67,15 +60,11 @@ export function AuthProvider({ children }) {
   }, [logout]);
 
   const fetchCurrentUser = useCallback(async () => {
-    try {
-      const response = await api.get('auth/user/');
-      setUser(response.data);
-      return response.data;
-    } catch (error) {
-      await logout();
-      throw error;
-    }
-  }, [logout]);
+    const { fetchMe } = useAuthStore.getState();
+    const profile = await fetchMe({ force: true });
+    setUser(profile);
+    return profile;
+  }, []);
 
   const login = useCallback(
     async ({ email, password }) => {
@@ -89,6 +78,12 @@ export function AuthProvider({ children }) {
         currentUser = await fetchCurrentUser();
       } else {
         setUser(currentUser);
+        const { setUser: setStoreUser } = useAuthStore.getState();
+        setStoreUser(currentUser, {
+          roles: currentUser.roles,
+          permissions: currentUser.permissions,
+          status: 'ready'
+        });
       }
 
       return currentUser;

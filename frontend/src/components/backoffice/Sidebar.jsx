@@ -4,6 +4,7 @@ import { NavLink } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { Button } from '../ui/button.jsx';
+import IfRole from '../rbac/IfRole.jsx';
 
 function Sidebar({ items, collapsed, onToggleCollapse, mobileOpen, onCloseMobile, activePath }) {
   const desktopWidth = collapsed ? 88 : 280;
@@ -22,24 +23,25 @@ function Sidebar({ items, collapsed, onToggleCollapse, mobileOpen, onCloseMobile
       {navItems.map((item) => {
         const Icon = item.icon;
         return (
-          <NavLink
-            key={item.key}
-            to={item.to}
-            onClick={isMobile ? onCloseMobile : undefined}
-            className={({ isActive }) =>
-              [
-                'group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950',
-                isActive
-                  ? 'bg-sky-500/10 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/70 dark:hover:text-white'
-              ].join(' ')
-            }
-            title={collapsed && !isMobile ? item.label : undefined}
-            end
-          >
-            <Icon className="h-4 w-4 flex-none" aria-hidden="true" />
-            <span className={collapsed && !isMobile ? 'sr-only' : 'truncate'}>{item.label}</span>
-          </NavLink>
+          <IfRole key={item.key} roles={item.allowedRoles}>
+            <NavLink
+              to={item.to}
+              onClick={isMobile ? onCloseMobile : undefined}
+              className={({ isActive }) =>
+                [
+                  'group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950',
+                  isActive
+                    ? 'bg-sky-500/10 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300'
+                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/70 dark:hover:text-white'
+                ].join(' ')
+              }
+              title={collapsed && !isMobile ? item.label : undefined}
+              end
+            >
+              <Icon className="h-4 w-4 flex-none" aria-hidden="true" />
+              <span className={collapsed && !isMobile ? 'sr-only' : 'truncate'}>{item.label}</span>
+            </NavLink>
+          </IfRole>
         );
       })}
     </nav>
@@ -134,7 +136,8 @@ Sidebar.propTypes = {
       label: PropTypes.string.isRequired,
       to: PropTypes.string.isRequired,
       icon: PropTypes.elementType.isRequired,
-      match: PropTypes.func.isRequired
+      match: PropTypes.func.isRequired,
+      allowedRoles: PropTypes.arrayOf(PropTypes.string)
     })
   ).isRequired,
   collapsed: PropTypes.bool.isRequired,
