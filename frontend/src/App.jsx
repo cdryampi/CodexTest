@@ -10,7 +10,8 @@ import Timeline from './pages/Timeline.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Profile from './pages/Profile.jsx';
-import ProtectedRoute from './routes/ProtectedRoute.jsx';
+import Forbidden from './pages/errors/Forbidden.jsx';
+import ProtectedRoute from './components/rbac/ProtectedRoute.jsx';
 import DashboardLayout from './layouts/DashboardLayout.jsx';
 import DashboardHome from './pages/dashboard/DashboardHome.jsx';
 import DashboardPosts from './pages/dashboard/DashboardPosts.jsx';
@@ -26,6 +27,7 @@ import { SITE_NAME, SITE_DESCRIPTION, DEFAULT_OG_IMAGE, DEFAULT_TWITTER_CARD } f
 import { Toaster } from 'react-hot-toast';
 
 const TITLE_TEMPLATE = `%s | ${SITE_NAME}`;
+const DASHBOARD_ALLOWED_ROLES = ['admin', 'editor', 'author', 'reviewer'];
 
 function SiteLayout() {
   return (
@@ -63,6 +65,7 @@ function App() {
           <Route path="/post/:slug" element={<Post />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forbidden" element={<Forbidden />} />
           <Route
             path="/profile"
             element={(
@@ -76,7 +79,7 @@ function App() {
         <Route
           path="/dashboard/*"
           element={(
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={DASHBOARD_ALLOWED_ROLES}>
               <DashboardLayout />
             </ProtectedRoute>
           )}
@@ -93,7 +96,14 @@ function App() {
           <Route path="tags" element={<DashboardTags />} />
           <Route path="categories" element={<DashboardCategories />} />
           <Route path="comments" element={<DashboardComments />} />
-          <Route path="users" element={<DashboardUsers />} />
+          <Route
+            path="users"
+            element={(
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardUsers />
+              </ProtectedRoute>
+            )}
+          />
           <Route path="settings" element={<DashboardSettings />} />
           <Route path="*" element={<DashboardHome />} />
         </Route>
