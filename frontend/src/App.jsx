@@ -10,6 +10,7 @@ import Timeline from './pages/Timeline.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Profile from './pages/Profile.jsx';
+import Forbidden from './pages/errors/Forbidden.jsx';
 import ProtectedRoute from './routes/ProtectedRoute.jsx';
 import DashboardLayout from './layouts/DashboardLayout.jsx';
 import DashboardHome from './pages/dashboard/DashboardHome.jsx';
@@ -63,6 +64,7 @@ function App() {
           <Route path="/post/:slug" element={<Post />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forbidden" element={<Forbidden />} />
           <Route
             path="/profile"
             element={(
