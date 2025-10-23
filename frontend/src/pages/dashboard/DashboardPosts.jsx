@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import { toast } from 'sonner';
 import { Eye, Pencil, Trash2, Plus } from 'lucide-react';
+import { Tooltip } from 'flowbite-react';
+import { shallow } from 'zustand/shallow';
 import DataTable from '../../components/backoffice/DataTable.jsx';
 import ConfirmModal from '../../components/backoffice/ConfirmModal.jsx';
 import { Button } from '../../components/ui/button.jsx';
@@ -17,6 +19,13 @@ import {
   listCategories,
   listTags
 } from '../../services/api.js';
+import useAuthStore from '../../store/auth.js';
+import {
+  canCreatePost,
+  canEditPost,
+  canDeletePost,
+  getAuthorRestrictionMessage
+} from '../../utils/rbac.js';
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Todos' },
@@ -97,6 +106,36 @@ const createTagSelectStyles = (isDarkMode) => ({
   })
 });
 
+function GuardedIconButton({ icon: Icon, label, onClick, disabledReason, variant = 'ghost', className }) {
+  const tooltipId = useId();
+  const button = (
+    <Button
+      type="button"
+      size="icon"
+      variant={variant}
+      className={className}
+      onClick={onClick}
+      aria-label={label}
+      disabled={Boolean(disabledReason)}
+      tabIndex={disabledReason ? -1 : undefined}
+    >
+      <Icon className="h-4 w-4" aria-hidden="true" />
+    </Button>
+  );
+
+  if (!disabledReason) {
+    return button;
+  }
+
+  return (
+    <Tooltip content={<span id={tooltipId}>{disabledReason}</span>} trigger="hover" placement="top" style="dark">
+      <span aria-describedby={tooltipId} className="inline-flex cursor-not-allowed">
+        {button}
+      </span>
+    </Tooltip>
+  );
+}
+
 function DashboardPosts() {
   const navigate = useNavigate();
   const { setHeader } = useDashboardLayout();
@@ -112,9 +151,34 @@ function DashboardPosts() {
   const [totalCount, setTotalCount] = useState(0);
   const [pageCount, setPageCount] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  const [confirmState, setConfirmState] = useState({ open: false, slug: null, title: '', loading: false });
+  const [confirmState, setConfirmState] = useState({
+    open: false,
+    slug: null,
+    title: '',
+    loading: false,
+    post: null
+  });
   const [categories, setCategories] = useState([]);
   const [tags, setTags] = useState([]);
+
+  const { status: authStatus, user: authUser, roles, permissions } = useAuthStore(
+    (state) => ({
+      status: state.status,
+      user: state.user,
+      roles: state.roles,
+      permissions: state.permissions
+    }),
+    shallow
+  );
+
+  const authContext = useMemo(
+    () => ({ user: authUser, roles, permissions }),
+    [authUser, permissions, roles]
+  );
+
+  const authReady = authStatus === 'ready';
+  const canCreate = authReady && canCreatePost(authContext);
+  const createTooltipId = useId();
 
   const isDarkMode = useMemo(
     () => (typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : false),
@@ -188,26 +252,6 @@ function DashboardPosts() {
     fetchPosts();
   }, [fetchPosts]);
 
-  useEffect(() => {
-    setHeader({
-      title: 'Posts',
-      description: 'Gestiona el estado de las publicaciones y revisa su actividad.',
-      showSearch: true,
-      searchPlaceholder: 'Buscar posts por título, tag o categoría',
-      actions: (
-        <div className="flex items-center gap-2">
-          <Button type="button" size="sm" onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-            Nuevo post
-          </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={handleRefresh}>
-            Recargar
-          </Button>
-        </div>
-      )
-    });
-  }, [handleCreate, handleRefresh, setHeader]);
-
   const handleView = useCallback(
     (post) => {
       navigate(`/dashboard/posts/${post.slug}`);
@@ -223,26 +267,79 @@ function DashboardPosts() {
   );
 
   const handleDelete = useCallback((post) => {
-    setConfirmState({ open: true, slug: post.slug, title: post.title, loading: false });
+    setConfirmState({ open: true, slug: post.slug, title: post.title, loading: false, post });
   }, []);
 
   const confirmDelete = useCallback(async () => {
     if (!confirmState.slug) {
       return;
     }
+    if (!authReady || !canDeletePost(authContext, confirmState.post)) {
+      toast.error('No tienes permisos para eliminar este post.');
+      setConfirmState({ open: false, slug: null, title: '', loading: false, post: null });
+      return;
+    }
     setConfirmState((prev) => ({ ...prev, loading: true }));
     try {
       await deletePost(confirmState.slug);
       toast.success('El post se eliminó correctamente.');
-      setConfirmState({ open: false, slug: null, title: '', loading: false });
+      setConfirmState({ open: false, slug: null, title: '', loading: false, post: null });
       fetchPosts();
     } catch (error) {
       toast.error(error?.message ?? 'No se pudo eliminar el post.');
-      setConfirmState({ open: false, slug: null, title: '', loading: false });
+      setConfirmState({ open: false, slug: null, title: '', loading: false, post: null });
     }
-  }, [confirmState.slug, fetchPosts]);
+  }, [authContext, authReady, confirmState.post, confirmState.slug, fetchPosts]);
 
   const pageIndex = postsState.page - 1;
+
+  const createDisabledReason = useMemo(() => {
+    if (!authReady) {
+      return 'Cargando permisos...';
+    }
+    if (canCreate) {
+      return null;
+    }
+    return 'Necesitas rol Autor, Editor o Admin.';
+  }, [authReady, canCreate]);
+
+  const headerActions = useMemo(() => {
+    const createButton = (
+      <Button type="button" size="sm" onClick={handleCreate} disabled={Boolean(createDisabledReason)}>
+        <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+        Nuevo post
+      </Button>
+    );
+
+    const guardedCreateButton = createDisabledReason ? (
+      <Tooltip content={<span id={createTooltipId}>{createDisabledReason}</span>} trigger="hover" placement="top" style="dark">
+        <span aria-describedby={createTooltipId} className="inline-flex cursor-not-allowed">
+          {createButton}
+        </span>
+      </Tooltip>
+    ) : (
+      createButton
+    );
+
+    return (
+      <div className="flex items-center gap-2">
+        {guardedCreateButton}
+        <Button type="button" size="sm" variant="ghost" onClick={handleRefresh}>
+          Recargar
+        </Button>
+      </div>
+    );
+  }, [createDisabledReason, createTooltipId, handleCreate, handleRefresh]);
+
+  useEffect(() => {
+    setHeader({
+      title: 'Posts',
+      description: 'Gestiona el estado de las publicaciones y revisa su actividad.',
+      showSearch: true,
+      searchPlaceholder: 'Buscar posts por título, tag o categoría',
+      actions: headerActions
+    });
+  }, [headerActions, setHeader]);
 
   const columns = useMemo(
     () => [
@@ -352,43 +449,54 @@ function DashboardPosts() {
         id: 'actions',
         header: () => <span className="sr-only">Acciones</span>,
         enableSorting: false,
-        cell: ({ row }) => (
-          <div className="flex items-center justify-end gap-2">
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="h-9 w-9"
-              onClick={() => handleView(row.original)}
-              aria-label={`Ver post ${row.original.title}`}
-            >
-              <Eye className="h-4 w-4" aria-hidden="true" />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="h-9 w-9"
-              onClick={() => handleEdit(row.original)}
-              aria-label={`Editar post ${row.original.title}`}
-            >
-              <Pencil className="h-4 w-4" aria-hidden="true" />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="h-9 w-9 text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
-              onClick={() => handleDelete(row.original)}
-              aria-label={`Eliminar post ${row.original.title}`}
-            >
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
-            </Button>
-          </div>
-        )
+        cell: ({ row }) => {
+          const post = row.original;
+          const authorRestriction = authReady ? getAuthorRestrictionMessage(authContext, post) : null;
+          const canEdit = authReady && canEditPost(authContext, post);
+          const canRemove = authReady && canDeletePost(authContext, post);
+          const editDisabledReason = !authReady
+            ? 'Cargando permisos...'
+            : canEdit
+              ? null
+              : authorRestriction ?? 'Necesitas rol Editor o Admin.';
+          const deleteDisabledReason = !authReady
+            ? 'Cargando permisos...'
+            : canRemove
+              ? null
+              : 'Solo editores o administradores pueden eliminar posts.';
+
+          return (
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-9 w-9"
+                onClick={() => handleView(post)}
+                aria-label={`Ver post ${post.title}`}
+              >
+                <Eye className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <GuardedIconButton
+                icon={Pencil}
+                label={`Editar post ${post.title}`}
+                onClick={() => handleEdit(post)}
+                disabledReason={editDisabledReason}
+                className="h-9 w-9"
+              />
+              <GuardedIconButton
+                icon={Trash2}
+                label={`Eliminar post ${post.title}`}
+                onClick={() => handleDelete(post)}
+                disabledReason={deleteDisabledReason}
+                className="h-9 w-9 text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
+              />
+            </div>
+          );
+        }
       }
     ],
-    [handleDelete, handleEdit, handleView]
+    [authContext, authReady, handleDelete, handleEdit, handleView]
   );
 
   const toggleTagFilter = (tagValue) => {
@@ -539,7 +647,7 @@ function DashboardPosts() {
         description={confirmState.title ? `Se eliminará "${confirmState.title}" del backoffice.` : null}
         confirmLabel="Eliminar"
         cancelLabel="Cancelar"
-        onCancel={() => setConfirmState({ open: false, slug: null, title: '', loading: false })}
+        onCancel={() => setConfirmState({ open: false, slug: null, title: '', loading: false, post: null })}
         onConfirm={confirmDelete}
         tone="danger"
         loading={confirmState.loading}

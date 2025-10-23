@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useId } from 'react';
 import PropTypes from 'prop-types';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -17,6 +17,7 @@ import { Button } from '../ui/button.jsx';
 import TranslateButton from '../ai-translate/TranslateButton.jsx';
 import TranslateModal from '../ai-translate/TranslateModal.jsx';
 import LanguageFlags from '../ai-translate/LanguageFlags.jsx';
+import { Tooltip } from 'flowbite-react';
 import {
   listCategories,
   listTags,
@@ -25,6 +26,15 @@ import {
   updatePost,
   updatePostTranslation
 } from '../../services/api.js';
+import { shallow } from 'zustand/shallow';
+import useAuthStore from '../../store/auth.js';
+import Can from '../rbac/Can.jsx';
+import {
+  canCreatePost,
+  canEditPost,
+  canPublishPost,
+  getAuthorRestrictionMessage
+} from '../../utils/rbac.js';
 
 const LANGUAGE_TABS = [
   { code: 'es', label: 'Español', flag: '🇪🇸' },
@@ -180,6 +190,92 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
   const [contentError, setContentError] = useState(null);
   const [translateModalOpen, setTranslateModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('es');
+  const [postRecord, setPostRecord] = useState(null);
+
+  const saveTooltipId = useId();
+  const fallbackSaveTooltipId = useId();
+
+  const { status: authStatus, user: authUser, roles, permissions } = useAuthStore(
+    (state) => ({
+      status: state.status,
+      user: state.user,
+      roles: state.roles,
+      permissions: state.permissions
+    }),
+    shallow
+  );
+
+  const authContext = useMemo(
+    () => ({ user: authUser, roles, permissions }),
+    [authUser, permissions, roles]
+  );
+
+  const authReady = authStatus === 'ready';
+  const permissionsLoading = authStatus === 'loading' || authStatus === 'idle';
+  const isEditMode = mode === 'edit';
+  const canSubmit = isEditMode
+    ? authReady && canEditPost(authContext, postRecord)
+    : authReady && canCreatePost(authContext);
+  const authorRestrictionMessage = isEditMode ? getAuthorRestrictionMessage(authContext, postRecord) : null;
+  const lockFields = isEditMode && authReady && !canEditPost(authContext, postRecord);
+  const fieldsReadOnly = lockFields || permissionsLoading;
+  const publishAllowed = authReady && canPublishPost(authContext);
+  const publishDisabledReason = permissionsLoading
+    ? 'Cargando permisos...'
+    : publishAllowed
+      ? null
+      : 'Solo editores o administradores pueden programar publicaciones.';
+  const saveDisabledReason = useMemo(() => {
+    if (permissionsLoading) {
+      return 'Cargando permisos...';
+    }
+    if (!canSubmit) {
+      if (isEditMode) {
+        return authorRestrictionMessage ?? 'No tienes permisos para editar este post.';
+      }
+      return 'No tienes permisos para crear posts.';
+    }
+    return null;
+  }, [authorRestrictionMessage, canSubmit, isEditMode, permissionsLoading]);
+  const restrictionNotice = useMemo(() => {
+    if (!isEditMode) {
+      return null;
+    }
+    if (permissionsLoading) {
+      return null;
+    }
+    if (authorRestrictionMessage) {
+      return authorRestrictionMessage;
+    }
+    if (!canSubmit) {
+      return 'Este post es de solo lectura para tu rol.';
+    }
+    return null;
+  }, [authorRestrictionMessage, canSubmit, isEditMode, permissionsLoading]);
+
+  const renderSaveButton = (reason, forceDisabled = false, tooltipId = saveTooltipId) => {
+    const button = (
+      <Button type={forceDisabled ? 'button' : 'submit'} disabled={forceDisabled || isSubmitting || Boolean(reason)}>
+        {isSubmitting
+          ? t('actions.saving')
+          : mode === 'edit'
+            ? t('actions.saveChanges')
+            : t('actions.createPost')}
+      </Button>
+    );
+
+    if (!reason) {
+      return button;
+    }
+
+    return (
+      <Tooltip content={<span id={tooltipId}>{reason}</span>} trigger="hover" placement="top" style="dark">
+        <span aria-describedby={tooltipId} className="inline-flex cursor-not-allowed">
+          {button}
+        </span>
+      </Tooltip>
+    );
+  };
 
   const titleValue = watch('title');
   const excerptValue = watch('excerpt');
@@ -243,6 +339,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
       }
       try {
         const post = await getPost(postSlug);
+        setPostRecord(post ?? null);
         const tagsData = Array.isArray(post?.tags) ? post.tags : [];
         const categoriesData = Array.isArray(post?.categories) ? post.categories : [];
         const translations = post?.translations ?? {};
@@ -287,8 +384,10 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
           });
           return Array.from(map.values());
         });
+        return post;
       } catch (error) {
         toast.error('No se pudo cargar el post solicitado.');
+        setPostRecord(null);
         if (onCancelRef.current) {
           onCancelRef.current();
         }
@@ -303,6 +402,8 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
       await fetchTaxonomies();
       if (mode === 'edit' && slug) {
         await populatePost(slug);
+      } else {
+        setPostRecord(null);
       }
       setIsLoading(false);
     };
@@ -325,6 +426,9 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
 
   const handleApplyTranslation = useCallback(
     (lang, translatedFields) => {
+      if (lockFields) {
+        return;
+      }
       if (!translatedFields || typeof translatedFields !== 'object') {
         return;
       }
@@ -347,12 +451,15 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
       });
       setActiveTab(lang);
     },
-    [setValue]
+    [lockFields, setActiveTab, setContentError, setValue]
   );
 
   const handleSaveTranslation = useCallback(async (lang, translatedFields) => {
     if (mode !== 'edit') {
       throw new Error('Debes guardar el post antes de enviar traducciones al backend.');
+    }
+    if (!canSubmit) {
+      throw new Error('No tienes permisos para editar este post.');
     }
     const postSlug = (slug ?? slugValue ?? '').trim();
     if (!postSlug) {
@@ -390,7 +497,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
       }
     }
     await updatePostTranslation(postSlug, lang, payload);
-  }, [mode, slug, slugValue, getValues]);
+  }, [canSubmit, mode, slug, slugValue, getValues]);
 
   const handleCreateTag = (inputValue) => {
     const value = inputValue.trim();
@@ -407,6 +514,10 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
   };
 
   const onSubmit = async (values) => {
+    if (!canSubmit) {
+      toast.error('No tienes permisos para guardar este post.');
+      return;
+    }
     const payload = {
       title: values.title.trim(),
       slug: values.slug?.trim() ? values.slug.trim() : undefined,
@@ -474,6 +585,11 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
 
   return (
     <>
+      {restrictionNotice ? (
+        <div className="rounded-3xl border border-amber-400/50 bg-amber-50/60 p-4 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100" role="alert">
+          {restrictionNotice}
+        </div>
+      ) : null}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
         <div className="space-y-6 rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/70">
           <div className="flex flex-col gap-4">
@@ -488,8 +604,14 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
               </div>
               <TranslateButton
                 onClick={() => setTranslateModalOpen(true)}
-                disabled={!titleValue?.trim()}
-                tooltip={!titleValue?.trim() ? t('backoffice.post.sections.fillTitle') : undefined}
+                disabled={fieldsReadOnly || !titleValue?.trim()}
+                tooltip={
+                  fieldsReadOnly
+                    ? 'Este post está en modo solo lectura.'
+                    : !titleValue?.trim()
+                      ? t('backoffice.post.sections.fillTitle')
+                      : undefined
+                }
               />
             </div>
             <LanguageFlags selected={activeTab} onSelect={setActiveTab} statuses={languageStatuses} />
@@ -511,6 +633,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                   label={t('backoffice.post.fields.title')}
                   placeholder={t('backoffice.post.placeholders.title')}
                   autoComplete="off"
+                  readOnly={fieldsReadOnly}
                 />
                 <InputField
                   control={control}
@@ -519,27 +642,30 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                   placeholder="auto-generado"
                   helperText={t('backoffice.post.helpers.slug')}
                   autoComplete="off"
+                  readOnly={fieldsReadOnly}
                 />
               </div>
-              <TextareaField
-                control={control}
-                name="excerpt"
-                label={t('backoffice.post.fields.excerpt')}
-                rows={4}
-                placeholder={t('backoffice.post.placeholders.excerpt')}
-              />
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-200" htmlFor="post-content">
-                  {t('backoffice.post.fields.content')}
-                </label>
-                <ReactQuill
-                  id="post-content"
-                  theme="snow"
-                  value={contentValue}
-                  onChange={(value) => setValue('content', value, { shouldDirty: true })}
-                  modules={quillModules}
-                  aria-label={t('backoffice.post.fields.content')}
+                <TextareaField
+                  control={control}
+                  name="excerpt"
+                  label={t('backoffice.post.fields.excerpt')}
+                  rows={4}
+                  placeholder={t('backoffice.post.placeholders.excerpt')}
+                  readOnly={fieldsReadOnly}
                 />
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-200" htmlFor="post-content">
+                    {t('backoffice.post.fields.content')}
+                  </label>
+                  <ReactQuill
+                    id="post-content"
+                    theme="snow"
+                    value={contentValue}
+                    onChange={(value) => setValue('content', value, { shouldDirty: true })}
+                    modules={fieldsReadOnly ? { toolbar: false } : quillModules}
+                    aria-label={t('backoffice.post.fields.content')}
+                    readOnly={fieldsReadOnly}
+                  />
                 {displayedContentError ? (
                   <p className="text-xs text-red-500">{displayedContentError}</p>
                 ) : (
@@ -555,6 +681,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                   label={t('backoffice.post.fields.category')}
                   placeholder={t('backoffice.post.placeholders.category')}
                   helperText={t('backoffice.post.helpers.category')}
+                  disabled={fieldsReadOnly}
                 >
                   <option value="">{t('backoffice.post.placeholders.noCategory')}</option>
                   {categoryOptions.map((option) => (
@@ -572,6 +699,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                   helperText={t('backoffice.post.helpers.tags')}
                   isCreatable
                   onCreateOption={handleCreateTag}
+                  isDisabled={fieldsReadOnly}
                 />
               </div>
               <div className="grid gap-6 lg:grid-cols-2">
@@ -581,6 +709,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                   label={t('backoffice.post.fields.image')}
                   placeholder="https://..."
                   helperText={t('backoffice.post.helpers.image')}
+                  readOnly={fieldsReadOnly}
                 />
                 <InputField
                   control={control}
@@ -588,6 +717,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                   label={t('backoffice.post.fields.thumbnail')}
                   placeholder="https://..."
                   helperText={t('backoffice.post.helpers.thumbnail')}
+                  readOnly={fieldsReadOnly}
                 />
               </div>
               <div className="grid gap-6 lg:grid-cols-2">
@@ -596,12 +726,14 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                   name="imageAlt"
                   label={t('backoffice.post.fields.imageAlt')}
                   placeholder={t('backoffice.post.placeholders.imageAlt')}
+                  readOnly={fieldsReadOnly}
                 />
                 <InputField
                   control={control}
                   name="author"
                   label={t('backoffice.post.fields.author')}
                   placeholder={t('backoffice.post.placeholders.author')}
+                  readOnly={fieldsReadOnly}
                 />
               </div>
               <div className="grid gap-6 lg:grid-cols-2">
@@ -609,7 +741,8 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                   control={control}
                   name="status"
                   label={t('backoffice.post.fields.status')}
-                  helperText={t('backoffice.post.helpers.status')}
+                  helperText={publishDisabledReason ?? t('backoffice.post.helpers.status')}
+                  disabled={fieldsReadOnly || !publishAllowed}
                 >
                   <option value="published">{t('backoffice.post.status.published')}</option>
                   <option value="scheduled">{t('backoffice.post.status.scheduled')}</option>
@@ -619,6 +752,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                   name="published_at"
                   type="date"
                   label={statusValue === 'scheduled' ? t('backoffice.post.fields.scheduledDate') : t('backoffice.post.fields.publishDate')}
+                  disabled={fieldsReadOnly || !publishAllowed}
                 />
               </div>
             </Tabs.Content>
@@ -631,6 +765,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                   label={t('backoffice.post.fields.titleEn')}
                   placeholder={t('backoffice.post.placeholders.translationTitle', { lang: 'EN' })}
                   autoComplete="off"
+                  readOnly={fieldsReadOnly}
                 />
                 <InputField
                   control={control}
@@ -638,6 +773,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                   label={t('backoffice.post.fields.slugEn')}
                   placeholder="auto-generado"
                   autoComplete="off"
+                  readOnly={fieldsReadOnly}
                 />
               </div>
               <TextareaField
@@ -646,6 +782,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                 label={t('backoffice.post.fields.excerptEn')}
                 rows={4}
                 placeholder={t('backoffice.post.placeholders.translationExcerpt', { lang: 'EN' })}
+                readOnly={fieldsReadOnly}
               />
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-200" htmlFor="post-content-en">
@@ -656,8 +793,9 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                   theme="snow"
                   value={contentEn ?? ''}
                   onChange={(value) => setValue('content_en', value, { shouldDirty: true })}
-                  modules={quillModules}
+                  modules={fieldsReadOnly ? { toolbar: false } : quillModules}
                   aria-label={t('backoffice.post.fields.contentEn')}
+                  readOnly={fieldsReadOnly}
                 />
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {t('backoffice.post.helpers.translationEditor')}
@@ -673,6 +811,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                   label={t('backoffice.post.fields.titleCa')}
                   placeholder={t('backoffice.post.placeholders.translationTitle', { lang: 'CA' })}
                   autoComplete="off"
+                  readOnly={fieldsReadOnly}
                 />
                 <InputField
                   control={control}
@@ -680,6 +819,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                   label={t('backoffice.post.fields.slugCa')}
                   placeholder="auto-generado"
                   autoComplete="off"
+                  readOnly={fieldsReadOnly}
                 />
               </div>
               <TextareaField
@@ -688,6 +828,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                 label={t('backoffice.post.fields.excerptCa')}
                 rows={4}
                 placeholder={t('backoffice.post.placeholders.translationExcerpt', { lang: 'CA' })}
+                  readOnly={fieldsReadOnly}
               />
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-200" htmlFor="post-content-ca">
@@ -698,8 +839,9 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
                   theme="snow"
                   value={contentCa ?? ''}
                   onChange={(value) => setValue('content_ca', value, { shouldDirty: true })}
-                  modules={quillModules}
+                  modules={fieldsReadOnly ? { toolbar: false } : quillModules}
                   aria-label={t('backoffice.post.fields.contentCa')}
+                  readOnly={fieldsReadOnly}
                 />
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {t('backoffice.post.helpers.translationEditor')}
@@ -712,13 +854,13 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
           <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
             {t('actions.cancel')}
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting
-              ? t('actions.saving')
-              : mode === 'edit'
-                ? t('actions.saveChanges')
-                : t('actions.createPost')}
-          </Button>
+          <Can
+            roles={['admin', 'editor', 'author']}
+            permissions={['posts.add_post', 'posts.change_post', 'posts.manage_posts']}
+            fallback={renderSaveButton('No tienes permisos para gestionar posts.', true, fallbackSaveTooltipId)}
+          >
+            {renderSaveButton(saveDisabledReason)}
+          </Can>
         </div>
       </form>
       <TranslateModal
@@ -728,7 +870,7 @@ function PostForm({ mode, slug, onCancel, onSuccess }) {
         idOrSlug={postIdentifier || null}
         fields={translationFields}
         currentLang="es"
-        allowSave={mode === 'edit' && Boolean(postIdentifier)}
+        allowSave={mode === 'edit' && Boolean(postIdentifier) && !fieldsReadOnly}
         onApply={handleApplyTranslation}
         onSave={mode === 'edit' ? handleSaveTranslation : undefined}
         preferredTargetLang={activeTab !== 'es' ? activeTab : 'en'}
