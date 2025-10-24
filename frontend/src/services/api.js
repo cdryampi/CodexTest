@@ -1,6 +1,6 @@
 import axios from 'axios';
 import slugify from 'slugify';
-import { toast } from 'sonner';
+import { showForbiddenToast, showUnauthorizedToast } from '../utils/notifications.js';
 import { API_BASE_URL } from '../utils/apiBase.js';
 import postsMock from '../data/posts.json';
 import commentsMock from '../data/comments.json';
@@ -31,11 +31,6 @@ const isBrowser = typeof window !== 'undefined';
 const ROUTES = {
   login: '/login',
   forbidden: '/forbidden'
-};
-
-const AUTH_TOAST_IDS = {
-  unauthorized: 'auth:session-expired',
-  forbidden: 'auth:forbidden-access'
 };
 
 const resolveRouterBase = () => {
@@ -95,20 +90,14 @@ const notifyUnauthorized = () => {
   if (!isBrowser) {
     return;
   }
-  toast.error('Sesión expirada', {
-    id: AUTH_TOAST_IDS.unauthorized,
-    duration: 4000
-  });
+  showUnauthorizedToast();
 };
 
 const notifyForbidden = () => {
   if (!isBrowser) {
     return;
   }
-  toast.error('No tienes permisos', {
-    id: AUTH_TOAST_IDS.forbidden,
-    duration: 4000
-  });
+  showForbiddenToast();
 };
 
 const handleUnauthorizedRedirect = () => {
