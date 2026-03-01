@@ -44,6 +44,7 @@ import RoleBadge from './rbac/RoleBadge.jsx';
 import Can from './rbac/Can.jsx';
 
 const DASHBOARD_ALLOWED_ROLES = ['admin', 'editor', 'author', 'reviewer'];
+const CRUD_SHORTCUTS = new Set(['/dashboard/posts', '/dashboard/categories', '/dashboard/tags']);
 
 const MAIN_LINKS = [
   {
@@ -255,14 +256,44 @@ function Navbar() {
     );
   };
 
+  const desktopCrudLinks = useMemo(
+    () => accessibleDashboardLinks.filter((link) => CRUD_SHORTCUTS.has(link.to)),
+    [accessibleDashboardLinks]
+  );
+
   const quickActions = isAuthenticated ? (
     <Can roles={DASHBOARD_ALLOWED_ROLES}>
-      <Button asChild className="hidden lg:inline-flex" size="sm">
-        <Link to="/dashboard/posts" className="flex items-center gap-2">
-          <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
-          {t('navbar.panel')}
-        </Link>
-      </Button>
+      <div className="hidden items-center gap-2 lg:flex">
+        <Button asChild size="sm" variant={location.pathname === '/dashboard' ? 'secondary' : 'default'}>
+          <Link to="/dashboard" className="flex items-center gap-2">
+            <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+            {t('navbar.panel')}
+          </Link>
+        </Button>
+        {desktopCrudLinks.map((link) => {
+          const Icon = link.icon;
+          const isActive = link.match ? link.match(location.pathname) : location.pathname === link.to;
+          return (
+            <Button
+              key={`desktop-${link.to}`}
+              asChild
+              size="sm"
+              variant={isActive ? 'secondary' : 'ghost'}
+              className={cn(
+                'px-3',
+                isActive
+                  ? 'bg-sky-100 text-sky-700 hover:bg-sky-100 dark:bg-sky-500/10 dark:text-sky-300'
+                  : 'text-slate-600 dark:text-slate-200'
+              )}
+            >
+              <Link to={link.to} className="flex items-center gap-2">
+                <Icon className="h-4 w-4" aria-hidden="true" />
+                {link.label}
+              </Link>
+            </Button>
+          );
+        })}
+      </div>
     </Can>
   ) : null;
 
